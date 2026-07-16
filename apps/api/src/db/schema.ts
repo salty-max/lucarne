@@ -1,0 +1,140 @@
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+
+/**
+ * SQLite schema (Cloudflare D1 in prod, bun:sqlite locally/tests).
+ * Timestamps are stored as integer unix-ms (Drizzle maps them to/from `Date`),
+ * dates as ISO `text` (lexicographic comparison), JSON blobs as `text` json.
+ */
+
+export const broadcasters = sqliteTable("broadcasters", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#64748b"),
+  logoUrl: text("logo_url"),
+});
+
+export const competitions = sqliteTable("competitions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  apiFootballId: integer("api_football_id").notNull().unique(),
+  country: text("country").notNull(),
+  type: text("type").notNull().default("league"), // "league" | "cup"
+  emblem: text("emblem"),
+});
+
+export const teams = sqliteTable("teams", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  apiFootballId: integer("api_football_id").notNull().unique(),
+  name: text("name").notNull(),
+  shortName: text("short_name"),
+  logo: text("logo"),
+});
+
+export const matches = sqliteTable(
+  "matches",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    apiFootballId: integer("api_football_id").notNull().unique(),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => competitions.id),
+    season: integer("season").notNull(),
+    round: text("round"),
+    kickoff: integer("kickoff", { mode: "timestamp_ms" }).notNull(),
+    statusShort: text("status_short").notNull().default("NS"),
+    status: text("status").notNull().default("scheduled"),
+    elapsed: integer("elapsed"),
+    homeTeamId: integer("home_team_id")
+      .notNull()
+      .references(() => teams.id),
+    awayTeamId: integer("away_team_id")
+      .notNull()
+      .references(() => teams.id),
+    homeGoals: integer("home_goals"),
+    awayGoals: integer("away_goals"),
+    // Penalty-shootout result (knockout ties decided on penalties). Null unless
+    // the match went to a shootout; goals still hold the post-ET score.
+    homePenalties: integer("home_penalties"),
+    awayPenalties: integer("away_penalties"),
+    venue: text("venue"),
+    detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    index("matches_kickoff_idx").on(t.kickoff),
+    index("matches_status_idx").on(t.status),
+    index("matches_competition_idx").on(t.competitionId),
+  ],
+);
+
+export const matchEvents = sqliteTable(
+  "match_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    matchId: integer("match_id")
+      .notNull()
+      .references(() => matches.id),
+    teamId: integer("team_id").references(() => teams.id),
+    minute: integer("minute"),
+    extraMinute: integer("extra_minute"),
+    type: text("type").notNull(), // "Goal" | "Card" | "subst" | "Var"
+    detail: text("detail"),
+    player: text("player"),
+    assist: text("assist"),
+    comments: text("comments"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("match_events_match_idx").on(t.matchId)],
+);
+
+export const broadcastRules = sqliteTable(
+  "broadcast_rules",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => competitions.id),
+    broadcasterId: integer("broadcaster_id")
+      .notNull()
+      .references(() => broadcasters.id),
+    validFrom: text("valid_from").notNull(), // ISO date "YYYY-MM-DD"
+    validTo: text("valid_to").notNull(),
+    coverage: text("coverage").notNull().default("full"), // "full" | "partial"
+    note: text("note"),
+  },
+  (t) => [index("broadcast_rules_competition_idx").on(t.competitionId)],
+);
+
+export const broadcastOverrides = sqliteTable(
+  "broadcast_overrides",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    matchId: integer("match_id")
+      .notNull()
+      .references(() => matches.id),
+    broadcasterId: integer("broadcaster_id")
+      .notNull()
+      .references(() => broadcasters.id),
+    note: text("note"),
+  },
+  (t) => [uniqueIndex("broadcast_overrides_match_broadcaster_idx").on(t.matchId, t.broadcasterId)],
+);
+
+export const syncState = sqliteTable("sync_state", {
+  key: text("key").primaryKey(),
+  value: text("value", { mode: "json" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export type Broadcaster = typeof broadcasters.$inferSelect;
+export type Competition = typeof competitions.$inferSelect;
+export type Team = typeof teams.$inferSelect;
+export type Match = typeof matches.$inferSelect;
+export type MatchEvent = typeof matchEvents.$inferSelect;
+export type BroadcastRule = typeof broadcastRules.$inferSelect;
