@@ -1,0 +1,30 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# build output
+dist
+/build
+
+# turborepo
+.turbo
+
+# env
+.env
+.env*.local
+
+# cloudflare / wrangler
+.wrangler
+.dev.vars
+
+# local sqlite (drizzle/ migrations ARE committed)
+*.db
+*.db-shm
+*.db-wal
+
+# misc
+.DS_Store
+*.pem
+*.log
+*.tsbuildinfo
