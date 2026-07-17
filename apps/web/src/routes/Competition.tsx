@@ -3,7 +3,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useCompetition } from "@/hooks/useCompetition";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { DaySection } from "@/components/DaySection";
+import { MatchTable } from "@/components/DaySection";
 import { CompetitionLogo } from "@/components/Logo";
 import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
@@ -17,17 +17,15 @@ function MatchesTab({ slug }: { slug: string }) {
   if (!days) return <Loading error={error} />;
   if (days.length === 0) {
     return (
-      <EmptyState title="Aucun match à venir">
-        Hors-saison, ou rien de programmé dans les prochaines semaines.
+      <EmptyState title="No upcoming matches">
+        Off-season, or nothing scheduled in the next few weeks.
       </EmptyState>
     );
   }
   return (
-    <div className="flex flex-col gap-6">
-      {days.map((d) => (
-        <DaySection key={d.key} day={d} />
-      ))}
-    </div>
+    <MatchTable
+      groups={days.map((d) => ({ key: d.key, label: d.label, matches: d.matches, tone: "yellow" as const }))}
+    />
   );
 }
 
@@ -43,8 +41,8 @@ export default function Competition() {
   const defaultTab = hasBracket ? "bracket" : hasStandings ? "standings" : "matches";
 
   const tabs: { key: string; label: string }[] = [
-    { key: "matches", label: "Matchs" },
-    ...(hasStandings ? [{ key: "standings", label: "Classement" }] : []),
+    { key: "matches", label: "Matches" },
+    ...(hasStandings ? [{ key: "standings", label: "Standings" }] : []),
     ...(hasBracket ? [{ key: "bracket", label: "Bracket" }] : []),
   ];
 
@@ -57,9 +55,9 @@ export default function Competition() {
         right={
           <Link
             to="/competitions"
-            className="shrink-0 text-sm text-muted-foreground hover:text-foreground"
+            className="shrink-0 text-sm uppercase text-muted-foreground hover:text-foreground"
           >
-            ‹ All
+            ‹ Index
           </Link>
         }
       />
@@ -70,14 +68,15 @@ export default function Competition() {
         <MatchesTab slug={slug} />
       ) : (
         <Tabs.Root defaultValue={defaultTab}>
-          <Tabs.List className="mb-5 flex gap-1 border-b border-border">
+          <Tabs.List className="mb-3 flex flex-wrap gap-1">
             {tabs.map((t) => (
               <Tabs.Trigger
                 key={t.key}
                 value={t.key}
                 className={cn(
-                  "-mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors",
-                  "hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground",
+                  "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 text-[0.72rem] uppercase transition-colors",
+                  "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  "data-[state=active]:border-[hsl(var(--tt-cyan))] data-[state=active]:bg-[hsl(var(--tt-cyan))] data-[state=active]:font-bold data-[state=active]:text-black",
                 )}
               >
                 {t.label}

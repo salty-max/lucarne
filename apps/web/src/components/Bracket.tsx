@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { BracketMatch, BracketRound, Team } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
+import { roundLabel } from "@/lib/labels";
 import { TeamLogo } from "./Logo";
 
 function Side({
@@ -29,7 +30,7 @@ function Side({
           isWinner ? "font-semibold text-foreground" : decided ? "text-muted-foreground" : "",
         )}
       >
-        {team?.shortName ?? team?.name ?? "À déterminer"}
+        {team?.shortName ?? team?.name ?? "TBD"}
       </span>
       {goals != null && (
         <span className={cn("shrink-0 tabular-nums", isWinner ? "font-bold" : "font-medium")}>
@@ -76,8 +77,8 @@ export function Bracket({ rounds }: { rounds: BracketRound[] }) {
       <div className="flex items-stretch gap-3">
         {rounds.map((round) => (
           <div key={round.name} className="flex w-44 shrink-0 flex-col">
-            <h3 className="mb-2 truncate text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {round.name}
+            <h3 className="mb-2 truncate text-center text-xs font-semibold uppercase tracking-wide text-[hsl(var(--tt-magenta))]">
+              {roundLabel(round.name)}
             </h3>
             <div className="flex flex-1 flex-col justify-around gap-3">
               {round.matches.map((m) => (
