@@ -59,7 +59,12 @@ export const matches = sqliteTable(
     homePenalties: integer("home_penalties"),
     awayPenalties: integer("away_penalties"),
     venue: text("venue"),
+    homeFormation: text("home_formation"),
+    awayFormation: text("away_formation"),
+    homeCoach: text("home_coach"),
+    awayCoach: text("away_coach"),
     detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
+    lineupsFetchedAt: integer("lineups_fetched_at", { mode: "timestamp_ms" }),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
@@ -89,6 +94,26 @@ export const matchEvents = sqliteTable(
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [index("match_events_match_idx").on(t.matchId)],
+);
+
+export const matchLineups = sqliteTable(
+  "match_lineups",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    matchId: integer("match_id")
+      .notNull()
+      .references(() => matches.id),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => teams.id),
+    player: text("player").notNull(),
+    number: integer("number"),
+    pos: text("pos"), // "G" | "D" | "M" | "F"
+    grid: text("grid"), // "row:col" for the starting XI, null for substitutes
+    starter: integer("starter", { mode: "boolean" }).notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("match_lineups_match_idx").on(t.matchId)],
 );
 
 export const broadcastRules = sqliteTable(
@@ -137,4 +162,5 @@ export type Competition = typeof competitions.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Match = typeof matches.$inferSelect;
 export type MatchEvent = typeof matchEvents.$inferSelect;
+export type MatchLineup = typeof matchLineups.$inferSelect;
 export type BroadcastRule = typeof broadcastRules.$inferSelect;

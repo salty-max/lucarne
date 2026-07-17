@@ -1,8 +1,17 @@
 import { and, asc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import type { Day, Match, MatchEvent, MatchStatus, Team } from "@lucarne/shared";
+import type {
+  Day,
+  Match,
+  MatchDetail,
+  MatchEvent,
+  MatchLineups,
+  MatchStatus,
+  Team,
+  TeamLineup,
+} from "@lucarne/shared";
 import { db } from "@/db";
-import { competitions, matches, matchEvents, teams } from "@/db/schema";
+import { competitions, matches, matchEvents, matchLineups, teams } from "@/db/schema";
 import { resolveBroadcastersForMatches } from "@/lib/broadcasters";
 import { addDays, parisDayKey, parisDayLabel, startOfParisDay } from "@/lib/time";
 
@@ -12,6 +21,11 @@ export type ScheduleTeam = Team;
 export type ScheduleEvent = MatchEvent;
 export type ScheduleMatch = Omit<Match, "kickoff"> & { kickoff: Date };
 export type ScheduleDay = { key: string; label: string; matches: ScheduleMatch[] };
+export type ScheduleMatchDetail = ScheduleMatch & {
+  venue: string | null;
+  round: string | null;
+  lineups: MatchLineups | null;
+};
 
 /** Serialize to the wire shape (Date → ISO) for a JSON response. */
 export function toWire(days: ScheduleDay[]): Day[] {
@@ -19,6 +33,11 @@ export function toWire(days: ScheduleDay[]): Day[] {
     ...d,
     matches: d.matches.map((m) => ({ ...m, kickoff: m.kickoff.toISOString() })),
   }));
+}
+
+/** Serialize a single detail match (Date → ISO). */
+export function toWireMatchDetail(m: ScheduleMatchDetail): MatchDetail {
+  return { ...m, kickoff: m.kickoff.toISOString() };
 }
 
 export type ScheduleOptions = {
@@ -151,4 +170,144 @@ export async function getSchedule(opts: ScheduleOptions = {}): Promise<ScheduleD
   }
 
   return [...days.values()];
+}
+
+/**
+ * Fetch one match by id with the extra detail-page fields (venue, round) plus
+ * its resolved broadcasters and goal/card timeline. Returns null if not found.
+ */
+export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | null> {
+  const home = alias(teams, "home");
+  const away = alias(teams, "away");
+
+  const rows = await db
+    .select({
+      id: matches.id,
+      competitionId: matches.competitionId,
+      kickoff: matches.kickoff,
+      status: matches.status,
+      statusShort: matches.statusShort,
+      elapsed: matches.elapsed,
+      homeGoals: matches.homeGoals,
+      awayGoals: matches.awayGoals,
+      homePenalties: matches.homePenalties,
+      awayPenalties: matches.awayPenalties,
+      venue: matches.venue,
+      round: matches.round,
+      homeFormation: matches.homeFormation,
+      awayFormation: matches.awayFormation,
+      homeCoach: matches.homeCoach,
+      awayCoach: matches.awayCoach,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
+      competitionName: competitions.name,
+      competitionSlug: competitions.slug,
+      homeName: home.name,
+      homeShort: home.shortName,
+      homeLogo: home.logo,
+      awayName: away.name,
+      awayShort: away.shortName,
+      awayLogo: away.logo,
+    })
+    .from(matches)
+    .innerJoin(competitions, eq(matches.competitionId, competitions.id))
+    .innerJoin(home, eq(matches.homeTeamId, home.id))
+    .innerJoin(away, eq(matches.awayTeamId, away.id))
+    .where(eq(matches.id, id))
+    .limit(1);
+
+  const r = rows[0];
+  if (!r) return null;
+
+  const broadcastersByMatch = await resolveBroadcastersForMatches([
+    { id: r.id, competitionId: r.competitionId, kickoff: r.kickoff },
+  ]);
+
+  // Goals + cards only (subs/VAR stored but not shown; shootout kicks excluded —
+  // the result is carried by home/awayPenalties).
+  const eventRows = await db
+    .select({
+      teamId: matchEvents.teamId,
+      type: matchEvents.type,
+      detail: matchEvents.detail,
+      minute: matchEvents.minute,
+      extraMinute: matchEvents.extraMinute,
+      player: matchEvents.player,
+      assist: matchEvents.assist,
+    })
+    .from(matchEvents)
+    .where(
+      and(
+        eq(matchEvents.matchId, r.id),
+        inArray(matchEvents.type, ["Goal", "Card"]),
+        or(isNull(matchEvents.comments), ne(matchEvents.comments, "Penalty Shootout")),
+      ),
+    )
+    .orderBy(asc(matchEvents.sortOrder));
+
+  const events: ScheduleEvent[] = eventRows.map((e) => ({
+    type: e.type,
+    detail: e.detail,
+    minute: e.minute,
+    extraMinute: e.extraMinute,
+    player: e.player,
+    assist: e.assist,
+    side: e.teamId === r.homeTeamId ? "home" : e.teamId === r.awayTeamId ? "away" : null,
+  }));
+
+  const lineupRows = await db
+    .select({
+      teamId: matchLineups.teamId,
+      player: matchLineups.player,
+      number: matchLineups.number,
+      pos: matchLineups.pos,
+      grid: matchLineups.grid,
+      starter: matchLineups.starter,
+    })
+    .from(matchLineups)
+    .where(eq(matchLineups.matchId, r.id))
+    .orderBy(asc(matchLineups.sortOrder));
+
+  let lineups: MatchLineups | null = null;
+  if (lineupRows.length > 0) {
+    const build = (teamId: number, formation: string | null, coach: string | null): TeamLineup => {
+      const forTeam = lineupRows.filter((l) => l.teamId === teamId);
+      const toP = (l: (typeof lineupRows)[number]) => ({
+        name: l.player,
+        number: l.number,
+        pos: l.pos,
+        grid: l.grid,
+      });
+      return {
+        formation,
+        coach,
+        startXI: forTeam.filter((l) => l.starter).map(toP),
+        substitutes: forTeam.filter((l) => !l.starter).map(toP),
+      };
+    };
+    lineups = {
+      home: build(r.homeTeamId, r.homeFormation, r.homeCoach),
+      away: build(r.awayTeamId, r.awayFormation, r.awayCoach),
+    };
+  }
+
+  return {
+    id: r.id,
+    kickoff: r.kickoff,
+    status: r.status as MatchStatus,
+    statusShort: r.statusShort,
+    elapsed: r.elapsed,
+    homeGoals: r.homeGoals,
+    awayGoals: r.awayGoals,
+    homePenalties: r.homePenalties,
+    awayPenalties: r.awayPenalties,
+    venue: r.venue,
+    round: r.round,
+    lineups,
+    competition: { name: r.competitionName, slug: r.competitionSlug },
+    home: { name: r.homeName, shortName: r.homeShort, logo: r.homeLogo },
+    away: { name: r.awayName, shortName: r.awayShort, logo: r.awayLogo },
+    broadcasters: broadcastersByMatch.get(r.id) ?? [],
+    events,
+  };
 }

@@ -1,10 +1,11 @@
-import { and, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { matches, teams } from "@/db/schema";
 import {
   applyLiveUpdate,
   storeMatchEvents,
+  storeMatchLineups,
   syncFixtures,
   type SyncResult,
 } from "@/lib/ingest";
@@ -115,17 +116,17 @@ async function refreshWindowCache(cache: ScheduleCache): Promise<void> {
 }
 
 export type DrainResult = {
-  matches: number; // matches detailed this run
+  matches: number; // matches touched this run
   events: number; // events stored this run
+  lineups: number; // lineup rows stored this run
   budgetRemaining: number;
 };
 
 /**
- * Post-match details drain. Fetches events (scorers/cards) for finished matches
- * that don't have them yet, one request each, capped by `maxMatches` (Workers
- * subrequest limit) and the remaining daily budget. Because finished-match
- * events are immutable, any leftover backlog simply drains on a later run — so
- * this runs cheaply overnight in a fresh budget bucket.
+ * Post-match details drain. For finished matches that are missing them yet,
+ * fetches events (scorers/cards) and/or lineups (formation + XI) — one request
+ * each — capped by `maxMatches` and the remaining daily budget. Both are
+ * immutable after full-time, so any leftover backlog drains on a later run.
  *
  * `sinceDays` bounds how far back we chase (default 3 — the cron only wants
  * recently-finished games). Pass `null` to drain the entire backlog, e.g. a
@@ -139,11 +140,91 @@ export async function runDetailsDrain(
   const nowMs = now.getTime();
   const state = await loadBudget(nowMs);
   let remaining = budgetRemaining(state);
-  if (remaining <= 0) return { matches: 0, events: 0, budgetRemaining: 0 };
+  if (remaining <= 0) return { matches: 0, events: 0, lineups: 0, budgetRemaining: 0 };
 
   const cutoff = sinceDays == null ? null : new Date(nowMs - sinceDays * 24 * 60 * 60 * 1000);
   const home = alias(teams, "home");
   const away = alias(teams, "away");
+
+  const candidates = await db
+    .select({
+      id: matches.id,
+      apiFootballId: matches.apiFootballId,
+      homeTeamId: matches.homeTeamId,
+      homeApiId: home.apiFootballId,
+      awayTeamId: matches.awayTeamId,
+      awayApiId: away.apiFootballId,
+      hasDetails: matches.detailsFetchedAt,
+      hasLineups: matches.lineupsFetchedAt,
+    })
+    .from(matches)
+    .innerJoin(home, eq(matches.homeTeamId, home.id))
+    .innerJoin(away, eq(matches.awayTeamId, away.id))
+    .where(
+      and(
+        eq(matches.status, "finished"),
+        or(isNull(matches.detailsFetchedAt), isNull(matches.lineupsFetchedAt)),
+        cutoff ? gte(matches.kickoff, cutoff) : undefined,
+      ),
+    )
+    .orderBy(desc(matches.kickoff))
+    .limit(maxMatches);
+
+  let events = 0;
+  let lineups = 0;
+  let requests = 0;
+  let count = 0;
+  for (const m of candidates) {
+    if (remaining <= 0) break;
+    let touched = false;
+    if (m.hasDetails == null && remaining > 0) {
+      try {
+        events += await storeMatchEvents(m);
+        remaining -= 1;
+        requests += 1;
+        touched = true;
+      } catch (err) {
+        console.error("[details] events", m.id, err);
+      }
+    }
+    if (m.hasLineups == null && remaining > 0) {
+      try {
+        lineups += await storeMatchLineups(m);
+        remaining -= 1;
+        requests += 1;
+        touched = true;
+      } catch (err) {
+        console.error("[details] lineups", m.id, err);
+      }
+    }
+    if (touched) count += 1;
+  }
+
+  const next = { ...state, requestsToday: state.requestsToday + requests };
+  await saveBudget(next);
+  return { matches: count, events, lineups, budgetRemaining: budgetRemaining(next) };
+}
+
+export type LineupPollResult = { matches: number; lineups: number; budgetRemaining: number };
+
+/**
+ * Pre-match lineup poll. Confirmed lineups publish on API-Football ~40 min before
+ * kickoff, so this grabs them for scheduled/live matches kicking off soon that
+ * don't have them yet. Runs on the live cadence (every ~2 min in-window),
+ * budget-gated (1 request each). An empty response (not published yet) is left
+ * un-stamped, so a later tick retries once the XI is announced.
+ */
+export async function runLineupPoll(maxMatches = 8): Promise<LineupPollResult> {
+  const now = new Date();
+  const nowMs = now.getTime();
+  const state = await loadBudget(nowMs);
+  let remaining = budgetRemaining(state);
+  if (remaining <= 0) return { matches: 0, lineups: 0, budgetRemaining: 0 };
+
+  const home = alias(teams, "home");
+  const away = alias(teams, "away");
+  const from = new Date(nowMs - 15 * 60_000); // small buffer for just-kicked-off games
+  const to = new Date(nowMs + 45 * 60_000); // ~within the pre-match publish window
 
   const candidates = await db
     .select({
@@ -159,28 +240,34 @@ export async function runDetailsDrain(
     .innerJoin(away, eq(matches.awayTeamId, away.id))
     .where(
       and(
-        eq(matches.status, "finished"),
-        isNull(matches.detailsFetchedAt),
-        cutoff ? gte(matches.kickoff, cutoff) : undefined,
+        inArray(matches.status, ["scheduled", "live"]),
+        isNull(matches.lineupsFetchedAt),
+        gte(matches.kickoff, from),
+        lte(matches.kickoff, to),
       ),
     )
-    .orderBy(desc(matches.kickoff))
-    .limit(Math.min(maxMatches, remaining));
+    .orderBy(asc(matches.kickoff))
+    .limit(maxMatches);
 
-  let events = 0;
+  let lineups = 0;
+  let requests = 0;
   let count = 0;
   for (const m of candidates) {
     if (remaining <= 0) break;
     try {
-      events += await storeMatchEvents(m);
+      const n = await storeMatchLineups(m, { stampWhenEmpty: false });
       remaining -= 1;
-      count += 1;
+      requests += 1;
+      if (n > 0) {
+        lineups += n;
+        count += 1;
+      }
     } catch (err) {
-      console.error("[details] match", m.id, err);
+      console.error("[lineups] match", m.id, err);
     }
   }
 
-  const next = { ...state, requestsToday: state.requestsToday + count };
+  const next = { ...state, requestsToday: state.requestsToday + requests };
   await saveBudget(next);
-  return { matches: count, events, budgetRemaining: budgetRemaining(next) };
+  return { matches: count, lineups, budgetRemaining: budgetRemaining(next) };
 }

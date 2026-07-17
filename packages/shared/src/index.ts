@@ -75,7 +75,31 @@ export type CompetitionInfo = {
   country: string;
 };
 
+export type LineupPlayer = {
+  name: string;
+  number: number | null;
+  pos: string | null; // "G" | "D" | "M" | "F"
+  grid: string | null; // "row:col" for the starting XI, null for the bench
+};
+
+export type TeamLineup = {
+  formation: string | null;
+  coach: string | null;
+  startXI: LineupPlayer[];
+  substitutes: LineupPlayer[];
+};
+
+export type MatchLineups = { home: TeamLineup; away: TeamLineup };
+
+/** A single match with the extra fields worth showing on its detail page. */
+export type MatchDetail = Match & {
+  venue: string | null;
+  round: string | null;
+  lineups: MatchLineups | null;
+};
+
 /** Response bodies. */
 export type ScheduleResponse = { days: Day[] };
+export type MatchDetailResponse = { match: MatchDetail | null };
 export type LiveResponse = { matches: LiveMatch[] };
 export type CompetitionsResponse = { competitions: CompetitionInfo[] };

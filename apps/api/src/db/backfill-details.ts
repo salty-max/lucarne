@@ -1,15 +1,15 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { matches, teams } from "@/db/schema";
 import { initLocalDb } from "@/db/local";
-import { storeMatchEvents } from "@/lib/ingest";
+import { storeMatchEvents, storeMatchLineups } from "@/lib/ingest";
 
 /**
- * One-shot local backfill of post-match details (scorers/cards) for every
- * finished match that doesn't have them yet — no date cutoff, no budget gate
- * (that's a prod-quota concern; locally we just want the data). Costs one
- * API request per match. Re-runnable: already-detailed matches are skipped.
+ * One-shot local backfill of post-match details for every finished match that's
+ * missing them — scorers/cards (events) and/or confirmed lineups. No date cutoff,
+ * no budget gate (that's a prod-quota concern). One API request per missing piece.
+ * Re-runnable: already-fetched matches are skipped.
  *
  *   bun run db:backfill-details
  */
@@ -26,28 +26,37 @@ const candidates = await db
     homeApiId: home.apiFootballId,
     awayTeamId: matches.awayTeamId,
     awayApiId: away.apiFootballId,
+    hasDetails: matches.detailsFetchedAt,
+    hasLineups: matches.lineupsFetchedAt,
   })
   .from(matches)
   .innerJoin(home, eq(matches.homeTeamId, home.id))
   .innerJoin(away, eq(matches.awayTeamId, away.id))
-  .where(and(eq(matches.status, "finished"), isNull(matches.detailsFetchedAt)))
+  .where(
+    and(
+      eq(matches.status, "finished"),
+      or(isNull(matches.detailsFetchedAt), isNull(matches.lineupsFetchedAt)),
+    ),
+  )
   .orderBy(desc(matches.kickoff));
 
-console.log(`Backfilling details for ${candidates.length} matches...`);
+console.log(`Backfilling ${candidates.length} matches...`);
 
 let events = 0;
+let lineups = 0;
 let done = 0;
 for (const m of candidates) {
   try {
-    events += await storeMatchEvents(m); // 1 API request each
+    if (m.hasDetails == null) events += await storeMatchEvents(m); // 1 request
+    if (m.hasLineups == null) lineups += await storeMatchLineups(m); // 1 request
     done += 1;
     if (done % 10 === 0 || done === candidates.length) {
-      console.log(`  ${done}/${candidates.length} matches, ${events} events`);
+      console.log(`  ${done}/${candidates.length} — ${events} events, ${lineups} lineup rows`);
     }
   } catch (err) {
     console.error(`  match ${m.id} (api ${m.apiFootballId}) failed:`, err);
   }
 }
 
-console.log(`Done: ${done}/${candidates.length} matches, ${events} events stored.`);
+console.log(`Done: ${done}/${candidates.length} matches, ${events} events, ${lineups} lineup rows.`);
 process.exit(0);

@@ -1,9 +1,10 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { competitions, teams, matches, matchEvents } from "@/db/schema";
+import { competitions, teams, matches, matchEvents, matchLineups } from "@/db/schema";
 import {
   getFixtures,
   getFixtureEvents,
+  getFixtureLineups,
   getLiveFixtures,
   type ApiFixture,
 } from "@/lib/api-football";
@@ -212,4 +213,71 @@ export async function storeMatchEvents(m: DrainMatch): Promise<number> {
 
   await db.update(matches).set({ detailsFetchedAt: new Date() }).where(eq(matches.id, m.id));
   return events.length;
+}
+
+/**
+ * Fetch + store the confirmed lineups (formation, coach, starting XI w/ grid
+ * positions, bench) for one match, then stamp `lineupsFetchedAt`. Costs ONE API
+ * request. Idempotent: replaces any existing lineup rows for the match.
+ *
+ * Lineups only publish ~40 min before kickoff, so `stampWhenEmpty: false` (the
+ * pre-match poll) leaves an empty response un-stamped so a later tick retries;
+ * the post-match drain stamps regardless (a finished game with no lineup data
+ * shouldn't be chased forever).
+ */
+export async function storeMatchLineups(
+  m: DrainMatch,
+  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+): Promise<number> {
+  const lineups = await getFixtureLineups(m.apiFootballId); // 1 API request
+
+  const teamMap = new Map<number, number>([
+    [m.homeApiId, m.homeTeamId],
+    [m.awayApiId, m.awayTeamId],
+  ]);
+
+  const rows: (typeof matchLineups.$inferInsert)[] = [];
+  const formation: Record<"home" | "away", string | null> = { home: null, away: null };
+  const coach: Record<"home" | "away", string | null> = { home: null, away: null };
+
+  for (const lu of lineups) {
+    const teamId = teamMap.get(lu.team.id);
+    if (!teamId) continue;
+    const side = lu.team.id === m.homeApiId ? "home" : "away";
+    formation[side] = lu.formation;
+    coach[side] = lu.coach?.name ?? null;
+    let order = 0;
+    const push = (p: (typeof lu.startXI)[number], starter: boolean) =>
+      rows.push({
+        matchId: m.id,
+        teamId,
+        player: p.player.name ?? "",
+        number: p.player.number,
+        pos: p.player.pos,
+        grid: p.player.grid,
+        starter,
+        sortOrder: order++,
+      });
+    for (const p of lu.startXI) push(p, true);
+    for (const p of lu.substitutes) push(p, false);
+  }
+
+  // Not published yet (pre-match): don't touch the DB, so a later tick retries.
+  if (rows.length === 0 && !stampWhenEmpty) return 0;
+
+  await db.delete(matchLineups).where(eq(matchLineups.matchId, m.id));
+  if (rows.length > 0) await db.insert(matchLineups).values(rows);
+
+  await db
+    .update(matches)
+    .set({
+      homeFormation: formation.home,
+      awayFormation: formation.away,
+      homeCoach: coach.home,
+      awayCoach: coach.away,
+      lineupsFetchedAt: new Date(),
+    })
+    .where(eq(matches.id, m.id));
+
+  return rows.length;
 }

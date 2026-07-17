@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 import type { D1Database } from "@cloudflare/workers-types";
 import { app } from "@/app";
 import { schema, setDb } from "@/db";
-import { runDetailsDrain, runFixtureSync, runLivePollTick } from "@/lib/poller";
+import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
 import { pickCache } from "@/lib/scheduleCache";
 
 // Minimal Workers types (D1Database is imported for the driver; the rest stay
@@ -45,12 +45,16 @@ export default {
           .catch((err) => console.error("[details] failed", err)),
       );
     } else {
+      // Live cadence: poll live scores + grab confirmed lineups for imminent games.
       ctx.waitUntil(
-        runLivePollTick(new Date(), cache)
-          .then((r) => {
+        Promise.allSettled([
+          runLivePollTick(new Date(), cache).then((r) => {
             if (r.polled) console.log("[live] polled", r);
-          })
-          .catch((err) => console.error("[live] failed", err)),
+          }),
+          runLineupPoll().then((r) => {
+            if (r.matches) console.log("[lineups] fetched", r);
+          }),
+        ]).then(() => {}),
       );
     }
   },

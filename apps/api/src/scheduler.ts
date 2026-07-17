@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { runDetailsDrain, runFixtureSync, runLivePollTick } from "@/lib/poller";
+import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
 import { memoryCache } from "@/lib/scheduleCache";
 
 /**
@@ -25,6 +25,12 @@ export function startScheduler(): void {
       if (r.polled) console.log("[live] polled", r);
     } catch (err) {
       console.error("[live] failed", err);
+    }
+    try {
+      const l = await runLineupPoll();
+      if (l.matches) console.log("[lineups] fetched", l);
+    } catch (err) {
+      console.error("[lineups] failed", err);
     }
   });
 

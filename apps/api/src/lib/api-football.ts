@@ -105,3 +105,27 @@ export type ApiEvent = {
 export function getFixtureEvents(fixtureId: number) {
   return call<ApiEvent[]>("/fixtures/events", { fixture: fixtureId });
 }
+
+export type ApiLineupPlayer = {
+  player: {
+    id: number | null;
+    name: string | null;
+    number: number | null;
+    pos: string | null; // "G" | "D" | "M" | "F"
+    grid: string | null; // "row:col" for the starting XI, null for subs
+  };
+};
+
+export type ApiLineup = {
+  team: { id: number; name: string };
+  formation: string | null;
+  coach: { id: number | null; name: string | null };
+  startXI: ApiLineupPlayer[];
+  substitutes: ApiLineupPlayer[];
+};
+
+/** Confirmed lineups (formation, starting XI w/ grid positions, bench) for ONE
+ *  fixture. One request per match — fetched lazily alongside events. */
+export function getFixtureLineups(fixtureId: number) {
+  return call<ApiLineup[]>("/fixtures/lineups", { fixture: fixtureId });
+}

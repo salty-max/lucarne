@@ -4,12 +4,17 @@ import { db } from "@/db";
 import { competitions, matches } from "@/db/schema";
 import { runSeed } from "@/db/seed-data";
 import { authorizeCron } from "@/lib/auth";
+import { COMPETITIONS } from "@/lib/competitions";
 import { candidateKickoffRange } from "@/lib/live";
-import { runDetailsDrain, runFixtureSync, runLivePollTick } from "@/lib/poller";
+import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
 import { pickCache } from "@/lib/scheduleCache";
-import { getSchedule, toWire } from "@/lib/schedule";
+import { getMatchDetail, getSchedule, toWire, toWireMatchDetail } from "@/lib/schedule";
 import { startOfParisDay } from "@/lib/time";
-import type { CompetitionsResponse, ScheduleResponse } from "@lucarne/shared";
+import type {
+  CompetitionsResponse,
+  MatchDetailResponse,
+  ScheduleResponse,
+} from "@lucarne/shared";
 
 // Portable Hono JSON API — runs on both the Node server and Cloudflare Workers.
 // The React SPA (apps/web) is served separately by Static Assets / Node static.
@@ -34,6 +39,19 @@ app.get("/api/schedule", async (c) => {
   }
 });
 
+// --- one match by id, with detail-page extras (venue/round/timeline) ---
+app.get("/api/match/:id", async (c) => {
+  try {
+    const id = Number(c.req.param("id"));
+    if (!Number.isInteger(id)) return c.json({ match: null } satisfies MatchDetailResponse, 400);
+    const m = await getMatchDetail(id);
+    return c.json({ match: m ? toWireMatchDetail(m) : null } satisfies MatchDetailResponse);
+  } catch (err) {
+    console.error("[/api/match]", err);
+    return c.json({ match: null } satisfies MatchDetailResponse);
+  }
+});
+
 // --- the tracked competitions (for the Competitions view / nav) ---
 app.get("/api/competitions", async (c) => {
   try {
@@ -46,6 +64,10 @@ app.get("/api/competitions", async (c) => {
       })
       .from(competitions)
       .orderBy(asc(competitions.id));
+    // Present them in the catalogue's order (so Ligue 2 sits next to Ligue 1),
+    // not DB-insertion order.
+    const order = new Map(COMPETITIONS.map((cc, i) => [cc.slug, i]));
+    rows.sort((a, b) => (order.get(a.slug) ?? 999) - (order.get(b.slug) ?? 999));
     return c.json({ competitions: rows } satisfies CompetitionsResponse);
   } catch (err) {
     console.error("[/api/competitions]", err);
@@ -100,6 +122,16 @@ app.get("/api/cron/live", async (c) => {
     return c.json(await runLivePollTick(new Date(), pickCache(c.env)));
   } catch (err) {
     console.error("[cron/live]", err);
+    return c.json({ ok: false, error: String(err) }, 500);
+  }
+});
+
+app.get("/api/cron/lineups", async (c) => {
+  if (!authorizeCron(c.req.raw)) return c.text("Unauthorized", 401);
+  try {
+    return c.json({ ok: true, ...(await runLineupPoll()) });
+  } catch (err) {
+    console.error("[cron/lineups]", err);
     return c.json({ ok: false, error: String(err) }, 500);
   }
 });
