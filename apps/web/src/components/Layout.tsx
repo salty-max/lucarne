@@ -1,24 +1,205 @@
-import { useState } from "react";
-import { Outlet, useRouterState } from "@tanstack/react-router";
-import { Footer } from "./Footer";
-import { Header } from "./Header";
-import { Sidebar } from "./Sidebar";
+import { useEffect, useRef, useState } from "react";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useCompetitions } from "@/hooks/useCompetitions";
+import { useLiveCount } from "@/hooks/useLiveCount";
+import {
+  FASTTEXT,
+  PAGE_ORDER,
+  pageNoForPath,
+  routeForPageNo,
+  sectionOf,
+} from "@/lib/teletext";
+
+const dateFmt = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  timeZone: "Europe/Paris",
+});
+const timeFmt = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+  timeZone: "Europe/Paris",
+});
 
 export function Layout() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  // Re-key the content on each route so the entrance animation replays.
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const comps = useCompetitions();
+  const live = useLiveCount();
+
+  const [now, setNow] = useState(() => ({ d: dateFmt.format(new Date()), t: timeFmt.format(new Date()) }));
+  const [entry, setEntry] = useState("");
+  const entryRef = useRef("");
+  const clearId = useRef<number | undefined>(undefined);
+
+  // Live clock in the service line.
+  useEffect(() => {
+    const id = window.setInterval(
+      () => setNow({ d: dateFmt.format(new Date()), t: timeFmt.format(new Date()) }),
+      1000,
+    );
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Keep the freshest nav inputs for the (stable) keyboard listener.
+  const ctx = useRef({ comps, pathname });
+  ctx.current = { comps, pathname };
+
+  // Keep the freshest navigate for the once-attached global listener.
+  const navRef = useRef(navigate);
+  navRef.current = navigate;
+  const mainRef = useRef<HTMLElement>(null);
+  const cursorRef = useRef<HTMLElement | null>(null);
+
+  // Teletext keyboard: page number, ◄ ► page, Backspace back, R/G/Y/C keys.
+  useEffect(() => {
+    const go = (to: string) => navRef.current({ to });
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (/^[0-9]$/.test(e.key)) {
+        const next = (entryRef.current + e.key).slice(-3);
+        entryRef.current = next;
+        setEntry(next);
+        window.clearTimeout(clearId.current);
+        if (next.length === 3) {
+          const to = routeForPageNo(next, ctx.current.comps);
+          if (to) go(to);
+          entryRef.current = "";
+          clearId.current = window.setTimeout(() => setEntry(""), 220);
+        } else {
+          clearId.current = window.setTimeout(() => {
+            entryRef.current = "";
+            setEntry("");
+          }, 1200);
+        }
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key === "Backspace") {
+        window.history.back();
+        e.preventDefault();
+        return;
+      }
+
+      // Arrows move a highlighted cursor through the page's items (terminal-
+      // style) — no browser focus, and they never switch pages.
+      if (e.key.startsWith("Arrow")) {
+        const main = mainRef.current;
+        if (!main) return;
+        const items = Array.from(
+          main.querySelectorAll<HTMLElement>("[data-nav],a[href],button:not([disabled])"),
+        ).filter((el) => el.offsetParent !== null);
+        if (!items.length) return;
+        const dir = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : -1;
+        const cur = cursorRef.current ? items.indexOf(cursorRef.current) : -1;
+        const next =
+          cur === -1 ? (dir === 1 ? 0 : items.length - 1) : (cur + dir + items.length) % items.length;
+        cursorRef.current?.classList.remove("tt-cur");
+        const el = items[next];
+        el.classList.add("tt-cur");
+        el.scrollIntoView({ block: "nearest" });
+        cursorRef.current = el;
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key === "Enter") {
+        cursorRef.current?.click();
+        e.preventDefault();
+        return;
+      }
+
+      const fast = FASTTEXT.find((f) => f.key === e.key.toLowerCase());
+      if (fast) {
+        go(fast.to);
+        e.preventDefault();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Drop the cursor highlight when the page changes.
+  useEffect(() => {
+    cursorRef.current?.classList.remove("tt-cur");
+    cursorRef.current = null;
+  }, [pathname]);
+
+  const pageNo = pageNoForPath(pathname, comps);
+
   return (
-    <div className="min-h-screen bg-background lg:flex">
-      <Sidebar open={menuOpen} onOpenChange={setMenuOpen} />
-      <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
-        <Header onMenu={() => setMenuOpen(true)} />
-        <main className="flex-1">
-          <div key={pathname} className="animate-enter mx-auto w-full max-w-3xl px-4 py-6">
-            <Outlet />
+    <div className="tt-stage">
+      <div className="tt-tv">
+        <div className="tt-screen">
+          {/* Service line */}
+          <div className="tt-service">
+            <span className="pnum">P{pageNo}</span>
+            <Link to="/" className="svc">
+              LUCARNE
+            </Link>
+            {live > 0 && (
+              <span className="flex items-center gap-1 text-live">
+                <span className="live-dot h-1.5 w-1.5 rounded-full bg-current" />
+                {live}
+              </span>
+            )}
+            <span className="sp flex-1" />
+            <span className="entry">{entry ? `${entry}▌` : ""}</span>
+            <span className="hidden text-muted-foreground sm:inline">{now.d.toUpperCase().replace(".", "")}</span>
+            <span className="clk">{now.t}</span>
+            <span className="ml-1 inline-flex gap-0.5">
+              <button
+                className="tt-navbtn"
+                aria-label="Previous page"
+                onClick={() => {
+                  const i = PAGE_ORDER.indexOf(sectionOf(pathname));
+                  navigate({ to: PAGE_ORDER[(i - 1 + PAGE_ORDER.length) % PAGE_ORDER.length] });
+                }}
+              >
+                ◄
+              </button>
+              <button
+                className="tt-navbtn"
+                aria-label="Next page"
+                onClick={() => {
+                  const i = PAGE_ORDER.indexOf(sectionOf(pathname));
+                  navigate({ to: PAGE_ORDER[(i + 1) % PAGE_ORDER.length] });
+                }}
+              >
+                ►
+              </button>
+            </span>
           </div>
-        </main>
-        <Footer />
+
+          {/* Routed page — scrolls inside the screen so the footer stays put */}
+          <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
+            <div key={pathname} className="animate-enter w-full px-3 py-3">
+              <Outlet />
+            </div>
+          </main>
+
+          {/* FastText */}
+          <nav className="tt-fast">
+            {FASTTEXT.map((f) => (
+              <Link key={f.key} to={f.to} className={f.cls}>
+                {f.no} {f.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="tt-kbd">
+            <span className="k">###</span> = go to page · <span className="k">↑</span>{" "}
+            <span className="k">↓</span> <span className="k">←</span> <span className="k">→</span> navigate ·{" "}
+            <span className="k">R</span> <span className="k">G</span> <span className="k">Y</span>{" "}
+            <span className="k">C</span> = sections · <span className="k">⌫</span> back
+          </div>
+        </div>
       </div>
     </div>
   );
