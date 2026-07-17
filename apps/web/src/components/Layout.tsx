@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { useLiveCount } from "@/hooks/useLiveCount";
+import { LiveDot } from "@/components/common";
 import { useSettings } from "@/lib/settings";
 import { formatShort } from "@/lib/dates";
 import {
@@ -140,7 +141,7 @@ export function Layout() {
             </Link>
             {live > 0 && (
               <span className="flex items-center gap-1 text-live">
-                <span className="live-dot h-1.5 w-1.5 rounded-full bg-current" />
+                <LiveDot />
                 {live}
               </span>
             )}

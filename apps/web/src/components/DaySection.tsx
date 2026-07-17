@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import type { Day, Match } from "@lucarne/shared";
+import type { Match } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
 import { MatchCard } from "./MatchCard";
 
@@ -52,18 +52,5 @@ export function MatchTable({ groups }: { groups: MatchGroup[] }) {
         </tbody>
       </table>
     </div>
-  );
-}
-
-/** A plain list (single untitled group). */
-export function MatchList({ matches }: { matches: Match[] }) {
-  return <MatchTable groups={[{ key: "all", matches }]} />;
-}
-
-/** One day's matches under a yellow day bar. */
-export function DaySection({ day }: { day: Day }) {
-  if (day.matches.length === 0) return null;
-  return (
-    <MatchTable groups={[{ key: day.key, label: day.label, matches: day.matches, tone: "yellow" }]} />
   );
 }

@@ -3,160 +3,17 @@ import { useMatch } from "@/hooks/useMatch";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { EventMark } from "@/components/EventMark";
 import { BroadcasterBadge } from "@/components/BroadcasterBadge";
-import { EmptyState, Loading, SectionLabel } from "@/components/common";
+import { Lineups } from "@/components/Lineups";
+import { EmptyState, Loading, LiveDot, SectionLabel, Tag } from "@/components/common";
 import { eventMark, eventName } from "@/lib/matchEvents";
 import { roundLabel } from "@/lib/labels";
 import { useSettings } from "@/lib/settings";
 import { formatLong, formatShort } from "@/lib/dates";
 import { eventMinute, parisTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import type {
-  Broadcaster,
-  LineupPlayer,
-  MatchDetail as Detail,
-  MatchEvent,
-  TeamLineup,
-} from "@lucarne/shared";
+import type { Broadcaster, MatchDetail as Detail, MatchEvent } from "@lucarne/shared";
 
 type Result = "win" | "loss" | "none";
-
-function lastName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return parts[parts.length - 1] || name;
-}
-
-/** Group a starting XI into formation lines, back (GK) to front, by the API grid
- *  "row:col" (col 1 = the team's left). `mirror` reverses each line for the away
- *  team, which attacks downward on the shared pitch. */
-function pitchLines(xi: LineupPlayer[], mirror = false): LineupPlayer[][] {
-  const orient = (lines: LineupPlayer[][]) => (mirror ? lines.map((l) => [...l].reverse()) : lines);
-
-  if (!xi.some((p) => p.grid)) {
-    const byPos = ["G", "D", "M", "F"].map((o) => xi.filter((p) => p.pos === o)).filter((l) => l.length);
-    return orient(byPos.length ? byPos : [xi]);
-  }
-  const rows = new Map<number, LineupPlayer[]>();
-  for (const p of xi) {
-    const row = Number((p.grid ?? "0:0").split(":")[0]);
-    (rows.get(row) ?? rows.set(row, []).get(row)!).push(p);
-  }
-  const lines = [...rows.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, ps]) =>
-      ps.sort(
-        (a, b) => Number((a.grid ?? "0:0").split(":")[1]) - Number((b.grid ?? "0:0").split(":")[1]),
-      ),
-    );
-  return orient(lines);
-}
-
-function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
-  return (
-    <div className="flex w-full min-w-0 flex-col items-center gap-0.5 px-0.5">
-      <span
-        className={cn(
-          "grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold",
-          side === "home" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--tt-cyan))] text-black",
-        )}
-      >
-        {p.number ?? ""}
-      </span>
-      <span className="max-w-full truncate text-center text-[9px] leading-tight text-foreground/90">
-        {lastName(p.name)}
-      </span>
-    </div>
-  );
-}
-
-/** One team's half. Horizontal pitch: home fills left→right (GK leftmost),
- *  away fills right→left. Each formation line is a vertical column of players. */
-function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "away" }) {
-  return (
-    <div className={cn("flex flex-1", side === "home" ? "flex-row" : "flex-row-reverse")}>
-      {lines.map((line, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center justify-around py-1">
-          {line.map((p, j) => (
-            <PitchPlayer key={j} p={p} side={side} />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
-  return (
-    <div
-      className="relative aspect-16/11 overflow-hidden"
-      style={{ background: "linear-gradient(hsl(146 48% 15%), hsl(146 52% 11%))" }}
-    >
-      <div aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-white/30" />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30"
-      />
-      <div className="relative flex h-full flex-row">
-        <PitchHalf lines={pitchLines(home.startXI)} side="home" />
-        <PitchHalf lines={pitchLines(away.startXI, true)} side="away" />
-      </div>
-    </div>
-  );
-}
-
-function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
-  const col = (subs: LineupPlayer[], align: "left" | "right") => (
-    <ul className="flex min-w-0 flex-col gap-1">
-      {subs.map((p, i) => (
-        <li
-          key={i}
-          className={cn(
-            "flex items-center gap-1.5 text-xs",
-            align === "right" && "flex-row-reverse text-right",
-          )}
-        >
-          <span className="min-w-[1.6ch] tabular-nums text-muted-foreground">{p.number ?? ""}</span>
-          <span className="truncate">{p.name}</span>
-        </li>
-      ))}
-    </ul>
-  );
-  return (
-    <div className="mt-3">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Substitutes
-      </p>
-      <div className="grid grid-cols-2 gap-x-4">
-        {col(home.substitutes, "left")}
-        {col(away.substitutes, "right")}
-      </div>
-    </div>
-  );
-}
-
-function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-xs font-bold">
-        <span className="flex items-center gap-1.5 text-primary">
-          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-          {home.formation ?? "—"}
-        </span>
-        <span className="flex items-center gap-1.5 text-[hsl(var(--tt-cyan))]">
-          {away.formation ?? "—"}
-          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--tt-cyan))]" />
-        </span>
-      </div>
-      <Pitch home={home} away={away} />
-      <Bench home={home} away={away} />
-      {(home.coach || away.coach) && (
-        <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="truncate">{home.coach ? `Coach · ${home.coach}` : ""}</span>
-          <span className="truncate text-right">{away.coach ? `${away.coach} · Coach` : ""}</span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function statusLine(m: Detail): { text: string; live: boolean } | null {
   if (m.status === "live") return { text: m.elapsed != null ? `Live ${m.elapsed}'` : "Live", live: true };
@@ -210,10 +67,10 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
       )}
       {status &&
         (status.live ? (
-          <span className="tt-tag bg-live py-0.5 text-white">
-            <span className="live-dot mr-1 h-1.5 w-1.5 rounded-full bg-current" />
+          <Tag className="bg-live py-0.5 text-white">
+            <LiveDot className="mr-1" />
             {status.text}
-          </span>
+          </Tag>
         ) : (
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {status.text}

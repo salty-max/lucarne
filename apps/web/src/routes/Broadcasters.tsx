@@ -1,5 +1,4 @@
-import { PageHeader, SectionLabel } from "@/components/common";
-import { textOn } from "@/lib/utils";
+import { PageHeader, SectionLabel, Tag } from "@/components/common";
 
 const GUIDE = [
   { name: "Ligue 1+", color: "#DC2626", covers: "Ligue 1 — 8 of 9 matches" },
@@ -12,12 +11,9 @@ const GUIDE = [
 function Row({ name, color, covers }: { name: string; color: string; covers: string }) {
   return (
     <div className="tt-dotted flex items-center gap-3 py-2">
-      <span
-        className="tt-tag shrink-0 py-0.5"
-        style={{ backgroundColor: color, color: textOn(color) }}
-      >
+      <Tag color={color} className="shrink-0 py-0.5">
         {name}
-      </span>
+      </Tag>
       <span className="text-sm text-muted-foreground">{covers}</span>
     </div>
   );

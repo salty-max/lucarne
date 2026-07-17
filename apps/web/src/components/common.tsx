@@ -1,5 +1,51 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn, textOn } from "@/lib/utils";
+
+/** The seven-colour teletext rule shown under a heading. */
+export function Rainbow() {
+  return (
+    <div className="tt-rainbow mt-2" aria-hidden>
+      <i />
+      <i />
+      <i />
+      <i />
+      <i />
+      <i />
+      <i />
+    </div>
+  );
+}
+
+/** A solid teletext colour tag (broadcaster pill, status flag, …). Pass a hex
+ *  `color` to tint it (text auto-picks black/white); else style via className. */
+export function Tag({
+  color,
+  title,
+  className,
+  children,
+}: {
+  color?: string;
+  title?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      title={title}
+      className={cn("tt-tag py-px", className)}
+      style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** The pulsing "live" indicator dot. */
+export function LiveDot({ className }: { className?: string }) {
+  return (
+    <span className={cn("live-dot inline-block h-1.5 w-1.5 rounded-full bg-current", className)} />
+  );
+}
 
 export function PageHeader({
   title,
@@ -27,15 +73,7 @@ export function PageHeader({
         </div>
         {right}
       </div>
-      <div className="tt-rainbow mt-2" aria-hidden>
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-      </div>
+      <Rainbow />
     </header>
   );
 }
@@ -50,15 +88,7 @@ export function TeletextHero({ subtitle }: { subtitle?: string }) {
       {subtitle && (
         <div className="mt-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">{subtitle}</div>
       )}
-      <div className="tt-rainbow mt-2" aria-hidden>
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-      </div>
+      <Rainbow />
     </div>
   );
 }
@@ -67,19 +97,9 @@ export function TeletextHero({ subtitle }: { subtitle?: string }) {
 export function SectionLabel({ children, live }: { children: ReactNode; live?: boolean }) {
   return (
     <h2 className={cn("tt-bar mb-2 text-xs", live && "tt-bar-live")}>
-      {live && <span className="live-dot h-2 w-2 rounded-full bg-current" />}
+      {live && <LiveDot className="h-2 w-2" />}
       {children}
     </h2>
-  );
-}
-
-export function LivePill({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <span className="tt-tag bg-live py-0.5 text-white">
-      <span className="live-dot mr-1 h-1.5 w-1.5 rounded-full bg-current" />
-      {count} LIVE
-    </span>
   );
 }
 

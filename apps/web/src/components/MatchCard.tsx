@@ -1,6 +1,7 @@
-import { cn, textOn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { parisTime } from "@/lib/time";
-import type { Broadcaster, Match } from "@lucarne/shared";
+import type { Match } from "@lucarne/shared";
+import { LiveDot, Tag } from "./common";
 
 type Result = "win" | "loss" | "none";
 
@@ -9,7 +10,7 @@ function StatusCell({ m }: { m: Match }) {
   if (m.status === "live") {
     return (
       <span className="flex items-center gap-1 font-bold tabular-nums text-live">
-        <span className="live-dot h-1.5 w-1.5 rounded-full bg-current" />
+        <LiveDot />
         {m.elapsed != null ? `${m.elapsed}'` : "LIVE"}
       </span>
     );
@@ -22,14 +23,6 @@ function StatusCell({ m }: { m: Match }) {
     return <span className="text-xs font-semibold text-[hsl(var(--tt-yellow))]">PP</span>;
   }
   return <span className="font-bold tabular-nums text-[hsl(var(--tt-yellow))]">{parisTime(m.kickoff)}</span>;
-}
-
-function Tag({ b }: { b: Broadcaster }) {
-  return (
-    <span className="tt-tag py-px" style={{ backgroundColor: b.color, color: textOn(b.color) }}>
-      {b.name}
-    </span>
-  );
 }
 
 /** One match as a table row. A trailing spacer column absorbs the slack so the
@@ -90,7 +83,9 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
         {m.broadcasters.length > 0 ? (
           <span className="inline-flex items-center justify-end gap-1">
             {m.broadcasters.map((b) => (
-              <Tag key={b.id} b={b} />
+              <Tag key={b.id} color={b.color}>
+                {b.name}
+              </Tag>
             ))}
           </span>
         ) : (
