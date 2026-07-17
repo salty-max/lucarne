@@ -1,7 +1,10 @@
-import type { DateFormat } from "./settings";
+import type { DateFormat, Lang } from "./settings";
 
 const PARIS = "Europe/Paris";
-const localeFor = (f: DateFormat) => (f === "mdy" ? "en-US" : "en-GB");
+
+/** Intl locale for the language + (English) day/month order preference. */
+const localeFor = (f: DateFormat, lang: Lang) =>
+  lang === "fr" ? "fr-FR" : f === "mdy" ? "en-US" : "en-GB";
 
 /** A YYYY-MM-DD day key → a Date pinned to Paris midday (TZ-edge safe). */
 export function dayKeyToDate(key: string): Date {
@@ -21,10 +24,10 @@ function numeric(d: Date): string {
   return `${get("day")}/${get("month")}/${get("year")}`;
 }
 
-/** Long heading, e.g. "Thursday 16 July" / "Thursday, July 16" / "16/07/2026". */
-export function formatLong(d: Date, f: DateFormat): string {
+/** Long heading, e.g. "Thursday 16 July" / "jeudi 16 juillet" / "16/07/2026". */
+export function formatLong(d: Date, f: DateFormat, lang: Lang): string {
   if (f === "numeric") return numeric(d);
-  return new Intl.DateTimeFormat(localeFor(f), {
+  return new Intl.DateTimeFormat(localeFor(f, lang), {
     timeZone: PARIS,
     weekday: "long",
     day: "numeric",
@@ -32,10 +35,10 @@ export function formatLong(d: Date, f: DateFormat): string {
   }).format(d);
 }
 
-/** Short label, e.g. "Fri 17 Jul" / "Fri, Jul 17" / "17/07/2026". */
-export function formatShort(d: Date, f: DateFormat): string {
+/** Short label, e.g. "Fri 17 Jul" / "ven. 17 juil." / "17/07/2026". */
+export function formatShort(d: Date, f: DateFormat, lang: Lang): string {
   if (f === "numeric") return numeric(d);
-  return new Intl.DateTimeFormat(localeFor(f), {
+  return new Intl.DateTimeFormat(localeFor(f, lang), {
     timeZone: PARIS,
     weekday: "short",
     day: "numeric",
@@ -43,7 +46,10 @@ export function formatShort(d: Date, f: DateFormat): string {
   }).format(d);
 }
 
-/** Weekday abbreviation for the calendar day strip (format-independent). */
-export function weekdayShort(d: Date): string {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: PARIS, weekday: "short" }).format(d);
+/** Weekday abbreviation for the calendar day strip. */
+export function weekdayShort(d: Date, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-GB", {
+    timeZone: PARIS,
+    weekday: "short",
+  }).format(d);
 }

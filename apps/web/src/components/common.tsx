@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn, textOn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /** The seven-colour teletext rule shown under a heading. */
 export function Rainbow() {
@@ -104,6 +105,7 @@ export function SectionLabel({ children, live }: { children: ReactNode; live?: b
 }
 
 export function Loading({ error }: { error?: boolean }) {
+  const t = useT();
   return (
     <p
       className={cn(
@@ -111,7 +113,7 @@ export function Loading({ error }: { error?: boolean }) {
         error ? "text-live" : "animate-pulse text-muted-foreground",
       )}
     >
-      {error ? "Couldn't load — retrying…" : "Loading…"}
+      {error ? t.loadError : t.loading}
     </p>
   );
 }

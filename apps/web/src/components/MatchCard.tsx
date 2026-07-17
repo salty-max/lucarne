@@ -1,26 +1,30 @@
 import { cn } from "@/lib/utils";
 import { parisTime } from "@/lib/time";
 import type { Match } from "@lucarne/shared";
+import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
+import { teamName } from "@/lib/teamNames";
 import { LiveDot, Tag } from "./common";
 
 type Result = "win" | "loss" | "none";
 
 /** Leading "when" cell: kickoff time, live minute, or a full-time tag. */
 function StatusCell({ m }: { m: Match }) {
+  const t = useT();
   if (m.status === "live") {
     return (
       <span className="flex items-center gap-1 font-bold tabular-nums text-live">
         <LiveDot />
-        {m.elapsed != null ? `${m.elapsed}'` : "LIVE"}
+        {m.elapsed != null ? `${m.elapsed}'` : t.card.live}
       </span>
     );
   }
   if (m.status === "finished") {
-    const label = m.statusShort === "PEN" ? "Pens" : m.statusShort === "AET" ? "AET" : "FT";
+    const label = m.statusShort === "PEN" ? t.card.pens : m.statusShort === "AET" ? t.card.aet : t.card.ft;
     return <span className="text-xs font-semibold text-muted-foreground">{label}</span>;
   }
   if (m.status === "postponed") {
-    return <span className="text-xs font-semibold text-[hsl(var(--tt-yellow))]">PP</span>;
+    return <span className="text-xs font-semibold text-[hsl(var(--tt-yellow))]">{t.card.pp}</span>;
   }
   return <span className="font-bold tabular-nums text-[hsl(var(--tt-yellow))]">{parisTime(m.kickoff)}</span>;
 }
@@ -28,6 +32,8 @@ function StatusCell({ m }: { m: Match }) {
 /** One match as a table row. A trailing spacer column absorbs the slack so the
  *  fixture packs left after the time and the broadcasters pin to the right. */
 export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
+  const { lang } = useSettings();
+  const t = useT();
   const pens = m.homePenalties != null && m.awayPenalties != null;
   const homeWins = pens
     ? m.homePenalties! > m.awayPenalties!
@@ -60,7 +66,7 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
       </td>
       <td className="py-1 align-middle">
         <span className="flex items-center gap-2">
-          <span className={nameCls(homeResult)}>{m.home.name}</span>
+          <span className={nameCls(homeResult)}>{teamName(m.home.name, lang)}</span>
           <span className="shrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
             {hasScore ? (
               <span className="block leading-none text-[hsl(var(--tt-yellow))]">
@@ -75,7 +81,7 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
               </span>
             )}
           </span>
-          <span className={nameCls(awayResult)}>{m.away.name}</span>
+          <span className={nameCls(awayResult)}>{teamName(m.away.name, lang)}</span>
         </span>
       </td>
       <td className="w-full" />
@@ -89,7 +95,7 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
             ))}
           </span>
         ) : (
-          <span className="text-[0.65rem] italic text-muted-foreground">TBC</span>
+          <span className="text-[0.65rem] italic text-muted-foreground">{t.card.tbc}</span>
         )}
       </td>
     </tr>

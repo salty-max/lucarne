@@ -1,13 +1,19 @@
 import type { ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
-import { setSettings, useSettings, type DateFormat } from "@/lib/settings";
+import { setSettings, useSettings, type DateFormat, type Lang } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { formatLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-const DATE_OPTIONS: { value: DateFormat; label: string }[] = [
-  { value: "dmy", label: "Day / month / year" },
-  { value: "mdy", label: "Month / day / year" },
-  { value: "numeric", label: "Numeric" },
+const LANG_OPTIONS: { value: Lang; labelKey: "french" | "english" }[] = [
+  { value: "fr", labelKey: "french" },
+  { value: "en", labelKey: "english" },
+];
+
+const DATE_OPTIONS: { value: DateFormat; labelKey: "dmy" | "mdy" | "numeric" }[] = [
+  { value: "dmy", labelKey: "dmy" },
+  { value: "mdy", labelKey: "mdy" },
+  { value: "numeric", labelKey: "numeric" },
 ];
 
 function Radio({
@@ -38,44 +44,60 @@ function Radio({
 }
 
 export default function Settings() {
-  const { dateFormat, crt } = useSettings();
+  const { dateFormat, crt, lang } = useSettings();
+  const t = useT();
   const sample = new Date();
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Display preferences" />
+      <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
 
-      <SectionLabel>Date format</SectionLabel>
+      <SectionLabel>{t.settings.language}</SectionLabel>
       <div className="flex flex-col">
-        {DATE_OPTIONS.map((o) => (
-          <Radio key={o.value} active={dateFormat === o.value} onClick={() => setSettings({ dateFormat: o.value })}>
-            <span className="min-w-0 flex-1 truncate uppercase">{o.label}</span>
-            <span className="shrink-0 text-xs uppercase text-muted-foreground">{formatLong(sample, o.value)}</span>
+        {LANG_OPTIONS.map((o) => (
+          <Radio key={o.value} active={lang === o.value} onClick={() => setSettings({ lang: o.value })}>
+            <span className="min-w-0 flex-1 uppercase">{t.settings[o.labelKey]}</span>
           </Radio>
         ))}
       </div>
 
       <div className="mt-5">
-        <SectionLabel>Display</SectionLabel>
+        <SectionLabel>{t.settings.dateFormat}</SectionLabel>
+        <div className="flex flex-col">
+          {DATE_OPTIONS.map((o) => (
+            <Radio
+              key={o.value}
+              active={dateFormat === o.value}
+              onClick={() => setSettings({ dateFormat: o.value })}
+            >
+              <span className="min-w-0 flex-1 truncate uppercase">{t.settings[o.labelKey]}</span>
+              <span className="shrink-0 text-xs uppercase text-muted-foreground">
+                {formatLong(sample, o.value, lang)}
+              </span>
+            </Radio>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.settings.display}</SectionLabel>
         <button
           data-nav
           onClick={() => setSettings({ crt: !crt })}
           aria-pressed={crt}
           className="tt-dotted flex w-full items-center gap-3 py-2 text-left transition-colors hover:text-foreground"
         >
-          <span className="min-w-0 flex-1 uppercase">CRT filter</span>
+          <span className="min-w-0 flex-1 uppercase">{t.settings.crt}</span>
           <span
             className={cn(
               "tt-tag py-0.5",
               crt ? "bg-[hsl(var(--tt-green))] text-black" : "bg-muted text-muted-foreground",
             )}
           >
-            {crt ? "On" : "Off"}
+            {crt ? t.settings.on : t.settings.off}
           </span>
         </button>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Scanlines, phosphor glow and the TV bezel. Turn off for a flat screen.
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">{t.settings.crtHelp}</p>
       </div>
     </>
   );

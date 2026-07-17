@@ -1,12 +1,13 @@
 import { PageHeader, SectionLabel, Tag } from "@/components/common";
+import { useT } from "@/lib/i18n";
 
 const GUIDE = [
-  { name: "Ligue 1+", color: "#DC2626", covers: "Ligue 1 — 8 of 9 matches" },
-  { name: "Amazon Prime", color: "#0EA5E9", covers: "Ligue 1 — pick of the week" },
-  { name: "CANAL+", color: "#4F46E5", covers: "Premier League · Champions · Europa · Conference League" },
-  { name: "beIN SPORTS", color: "#DB2777", covers: "La Liga · Bundesliga · Ligue 2 · Nations League" },
-  { name: "M6", color: "#14B8A6", covers: "France (free-to-air) — World Cup, Nations League" },
-];
+  { name: "Ligue 1+", color: "#DC2626", cover: "ligue1Most" },
+  { name: "Amazon Prime", color: "#0EA5E9", cover: "ligue1Pick" },
+  { name: "CANAL+", color: "#4F46E5", cover: "canal" },
+  { name: "beIN SPORTS", color: "#DB2777", cover: "bein" },
+  { name: "M6", color: "#14B8A6", cover: "m6" },
+] as const;
 
 function Row({ name, color, covers }: { name: string; color: string; covers: string }) {
   return (
@@ -20,22 +21,23 @@ function Row({ name, color, covers }: { name: string; color: string; covers: str
 }
 
 export default function Broadcasters() {
+  const t = useT();
   return (
     <>
-      <PageHeader title="Broadcasters" subtitle="Channel guide · France" />
+      <PageHeader title={t.broadcasters.title} subtitle={t.broadcasters.subtitle} />
 
-      <SectionLabel>By channel</SectionLabel>
+      <SectionLabel>{t.broadcasters.byChannel}</SectionLabel>
       <div className="flex flex-col">
         {GUIDE.map((g) => (
-          <Row key={g.name} {...g} />
+          <Row key={g.name} name={g.name} color={g.color} covers={t.broadcasters.covers[g.cover]} />
         ))}
       </div>
 
       <div className="mt-5">
-        <SectionLabel>World Cup 2026</SectionLabel>
+        <SectionLabel>{t.broadcasters.worldCup}</SectionLabel>
         <div className="flex flex-col">
-          <Row name="beIN SPORTS" color="#DB2777" covers="All 104 matches" />
-          <Row name="M6" color="#14B8A6" covers="France, semis & final (free-to-air)" />
+          <Row name="beIN SPORTS" color="#DB2777" covers={t.broadcasters.covers.wcBein} />
+          <Row name="M6" color="#14B8A6" covers={t.broadcasters.covers.wcM6} />
         </div>
       </div>
     </>

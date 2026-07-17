@@ -1,5 +1,6 @@
 import type { LineupPlayer, TeamLineup } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 function lastName(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -85,6 +86,7 @@ function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
 }
 
 function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
+  const t = useT();
   const col = (subs: LineupPlayer[], align: "left" | "right") => (
     <ul className="flex min-w-0 flex-col gap-1">
       {subs.map((p, i) => (
@@ -104,7 +106,7 @@ function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
   return (
     <div className="mt-3">
       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Substitutes
+        {t.match.substitutes}
       </p>
       <div className="grid grid-cols-2 gap-x-4">
         {col(home.substitutes, "left")}
@@ -116,6 +118,7 @@ function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
 
 /** Formation pitch + bench + coaches for a match's two lineups. */
 export function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) {
+  const t = useT();
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-xs font-bold">
@@ -132,8 +135,8 @@ export function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) 
       <Bench home={home} away={away} />
       {(home.coach || away.coach) && (
         <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="truncate">{home.coach ? `Coach · ${home.coach}` : ""}</span>
-          <span className="truncate text-right">{away.coach ? `${away.coach} · Coach` : ""}</span>
+          <span className="truncate">{home.coach ? `${t.match.coach} · ${home.coach}` : ""}</span>
+          <span className="truncate text-right">{away.coach ? `${away.coach} · ${t.match.coach}` : ""}</span>
         </div>
       )}
     </div>

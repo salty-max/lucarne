@@ -19,11 +19,12 @@
           document.documentElement.classList.add("dark");
         }
       })();
-      // Apply the CRT-off setting before first paint (no flash).
+      // Apply the CRT-off setting + language before first paint (no flash).
       (function () {
         try {
           var s = JSON.parse(localStorage.getItem("lucarne:settings") || "{}");
           if (s.crt === false) document.documentElement.classList.add("crt-off");
+          document.documentElement.lang = s.lang === "en" ? "en" : "fr";
         } catch (e) {}
       })();
     </script>

@@ -2,6 +2,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { StandingGroup } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
+import { teamName } from "@/lib/teamNames";
 
 /** Last five results as coloured dots. */
 function FormDots({ form }: { form: string | null }) {
@@ -23,7 +26,15 @@ function FormDots({ form }: { form: string | null }) {
   );
 }
 
-type Zone = { key: string; color: string; label: string };
+type ZoneLabel =
+  | "promotion"
+  | "playoffs"
+  | "relegation"
+  | "championsLeague"
+  | "europaLeague"
+  | "conferenceLeague"
+  | "qualified";
+type Zone = { key: string; color: string; labelKey: ZoneLabel };
 
 /** Map a qualification/relegation note to a teletext zone. Order matters:
  *  play-offs must win over the promotion/relegation keywords they contain, and
@@ -31,14 +42,15 @@ type Zone = { key: string; color: string; label: string };
 function zoneOf(desc: string | null): Zone | null {
   if (!desc) return null;
   const d = desc.toLowerCase();
-  if (/play-?off/.test(d)) return { key: "playoff", color: "--tt-yellow", label: "Play-offs" };
-  if (/relegat|eliminat/.test(d)) return { key: "releg", color: "--live", label: "Relegation" };
-  if (/promot/.test(d)) return { key: "promo", color: "--tt-green", label: "Promotion" };
-  if (/champions league/.test(d)) return { key: "ucl", color: "--tt-green", label: "Champions League" };
-  if (/europa/.test(d)) return { key: "uel", color: "--tt-cyan", label: "Europa League" };
-  if (/conference|ecl/.test(d)) return { key: "uecl", color: "--tt-blue", label: "Conference League" };
+  if (/play-?off/.test(d)) return { key: "playoff", color: "--tt-yellow", labelKey: "playoffs" };
+  if (/relegat|eliminat/.test(d)) return { key: "releg", color: "--live", labelKey: "relegation" };
+  if (/promot/.test(d)) return { key: "promo", color: "--tt-green", labelKey: "promotion" };
+  if (/champions league/.test(d))
+    return { key: "ucl", color: "--tt-green", labelKey: "championsLeague" };
+  if (/europa/.test(d)) return { key: "uel", color: "--tt-cyan", labelKey: "europaLeague" };
+  if (/conference|ecl/.test(d)) return { key: "uecl", color: "--tt-blue", labelKey: "conferenceLeague" };
   if (/round of|knockout|advance|qualif|next/.test(d))
-    return { key: "adv", color: "--tt-green", label: "Qualified" };
+    return { key: "adv", color: "--tt-green", labelKey: "qualified" };
   return null;
 }
 
@@ -55,6 +67,8 @@ function Th({ children, className }: { children: ReactNode; className?: string }
 /** One table with a deterministic (table-fixed) column layout so every group's
  *  columns line up, on their own and side by side. `zones` off before kickoff. */
 function GroupTable({ group, zones }: { group: StandingGroup; zones: boolean }) {
+  const { lang } = useSettings();
+  const t = useT();
   return (
     <section>
       {group.label !== "Overall" && <h3 className="tt-bar mb-1 text-xs">{group.label}</h3>}
@@ -73,14 +87,16 @@ function GroupTable({ group, zones }: { group: StandingGroup; zones: boolean }) 
         <thead>
           <tr>
             <Th className="text-center">#</Th>
-            <th className="px-1 py-1 text-left font-bold text-[hsl(var(--tt-cyan))]">Team</th>
-            <Th>Pl</Th>
-            <Th className="hidden sm:table-cell">W</Th>
-            <Th className="hidden sm:table-cell">D</Th>
-            <Th className="hidden sm:table-cell">L</Th>
-            <Th>GD</Th>
-            <Th className="hidden lg:table-cell">Form</Th>
-            <Th>Pts</Th>
+            <th className="px-1 py-1 text-left font-bold text-[hsl(var(--tt-cyan))]">
+              {t.standings.team}
+            </th>
+            <Th>{t.standings.pl}</Th>
+            <Th className="hidden sm:table-cell">{t.standings.w}</Th>
+            <Th className="hidden sm:table-cell">{t.standings.d}</Th>
+            <Th className="hidden sm:table-cell">{t.standings.l}</Th>
+            <Th>{t.standings.gd}</Th>
+            <Th className="hidden lg:table-cell">{t.standings.form}</Th>
+            <Th>{t.standings.pts}</Th>
           </tr>
         </thead>
         <tbody>
@@ -95,7 +111,9 @@ function GroupTable({ group, zones }: { group: StandingGroup; zones: boolean }) 
                 >
                   {r.rank}
                 </td>
-                <td className="truncate px-1 py-1 uppercase">{r.team.shortName ?? r.team.name}</td>
+                <td className="truncate px-1 py-1 uppercase">
+                  {teamName(r.team.shortName ?? r.team.name, lang)}
+                </td>
                 <td className="px-1 text-right text-muted-foreground">{r.played}</td>
                 <td className="hidden px-1 text-right text-muted-foreground sm:table-cell">{r.win}</td>
                 <td className="hidden px-1 text-right text-muted-foreground sm:table-cell">{r.draw}</td>
@@ -129,6 +147,7 @@ function legendZones(groups: StandingGroup[]): Zone[] {
 /** The legend, portaled into the shell slot so it sits glued above the footer
  *  (never scrolls, never jumps). */
 function Legend({ zones }: { zones: Zone[] }) {
+  const t = useT();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setSlot(document.getElementById("tt-legend-slot")), []);
   if (!slot) return null;
@@ -137,7 +156,7 @@ function Legend({ zones }: { zones: Zone[] }) {
       {zones.map((z) => (
         <span key={z.key} className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5" style={{ background: `hsl(var(${z.color}))` }} />
-          {z.label}
+          {t.standings[z.labelKey]}
         </span>
       ))}
     </div>,

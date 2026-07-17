@@ -4,6 +4,7 @@ import { useCompetitions } from "@/hooks/useCompetitions";
 import { useLiveCount } from "@/hooks/useLiveCount";
 import { LiveDot } from "@/components/common";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { formatShort } from "@/lib/dates";
 import {
   FASTTEXT,
@@ -26,7 +27,8 @@ export function Layout() {
   const navigate = useNavigate();
   const comps = useCompetitions();
   const live = useLiveCount();
-  const { dateFormat } = useSettings();
+  const { dateFormat, lang } = useSettings();
+  const t = useT();
 
   const [now, setNow] = useState(() => new Date());
   const [entry, setEntry] = useState("");
@@ -40,8 +42,8 @@ export function Layout() {
   }, []);
 
   // Keep the freshest nav inputs for the (stable) keyboard listener.
-  const ctx = useRef({ comps, pathname });
-  ctx.current = { comps, pathname };
+  const ctx = useRef({ comps, pathname, lang });
+  ctx.current = { comps, pathname, lang };
 
   // Keep the freshest navigate for the once-attached global listener.
   const navRef = useRef(navigate);
@@ -111,7 +113,7 @@ export function Layout() {
         return;
       }
 
-      const fast = FASTTEXT.find((f) => f.key === e.key.toLowerCase());
+      const fast = FASTTEXT.find((f) => f.key[ctx.current.lang] === e.key.toLowerCase());
       if (fast) {
         go(fast.to);
         e.preventDefault();
@@ -148,13 +150,13 @@ export function Layout() {
             <span className="sp flex-1" />
             <span className="entry">{entry ? `${entry}▌` : ""}</span>
             <span className="hidden text-muted-foreground sm:inline">
-              {formatShort(now, dateFormat).toUpperCase()}
+              {formatShort(now, dateFormat, lang).toUpperCase()}
             </span>
             <span className="clk">{timeFmt.format(now)}</span>
             <span className="ml-1 inline-flex gap-0.5">
               <button
                 className="tt-navbtn"
-                aria-label="Previous page"
+                aria-label={t.kbd.prevPage}
                 onClick={() => {
                   const i = PAGE_ORDER.indexOf(sectionOf(pathname));
                   navigate({ to: PAGE_ORDER[(i - 1 + PAGE_ORDER.length) % PAGE_ORDER.length] });
@@ -164,7 +166,7 @@ export function Layout() {
               </button>
               <button
                 className="tt-navbtn"
-                aria-label="Next page"
+                aria-label={t.kbd.nextPage}
                 onClick={() => {
                   const i = PAGE_ORDER.indexOf(sectionOf(pathname));
                   navigate({ to: PAGE_ORDER[(i + 1) % PAGE_ORDER.length] });
@@ -189,16 +191,22 @@ export function Layout() {
           {/* FastText */}
           <nav className="tt-fast">
             {FASTTEXT.map((f) => (
-              <Link key={f.key} to={f.to} className={f.cls}>
-                {f.no} {f.label}
+              <Link key={f.no} to={f.to} className={f.cls}>
+                {f.no} {f.label[lang]}
               </Link>
             ))}
           </nav>
           <div className="tt-kbd">
-            <span className="k">###</span> = go to page · <span className="k">↑</span>{" "}
-            <span className="k">↓</span> <span className="k">←</span> <span className="k">→</span> navigate ·{" "}
-            <span className="k">R</span> <span className="k">G</span> <span className="k">Y</span>{" "}
-            <span className="k">C</span> = sections · <span className="k">⌫</span> back
+            <span className="k">###</span> = {t.kbd.goToPage} · <span className="k">↑</span>{" "}
+            <span className="k">↓</span> <span className="k">←</span> <span className="k">→</span> {t.kbd.navigate}{" "}
+            ·{" "}
+            {FASTTEXT.map((f, i) => (
+              <span key={f.no}>
+                {i > 0 ? " " : ""}
+                <span className="k">{f.key[lang].toUpperCase()}</span>
+              </span>
+            ))}{" "}
+            = {t.kbd.sections} · <span className="k">⌫</span> {t.kbd.back}
           </div>
         </div>
       </div>

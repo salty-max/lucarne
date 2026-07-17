@@ -2,6 +2,9 @@ import { Link } from "@tanstack/react-router";
 import type { BracketMatch, BracketRound, Team } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
 import { roundLabel } from "@/lib/labels";
+import { teamName } from "@/lib/teamNames";
+import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 
 function Side({
   team,
@@ -16,6 +19,8 @@ function Side({
   isWinner: boolean;
   decided: boolean;
 }) {
+  const { lang } = useSettings();
+  const t = useT();
   return (
     <div className="flex items-center gap-2">
       <span
@@ -24,7 +29,7 @@ function Side({
           isWinner ? "font-semibold text-foreground" : decided ? "text-muted-foreground" : "",
         )}
       >
-        {team?.shortName ?? team?.name ?? "TBD"}
+        {team ? teamName(team.shortName ?? team.name, lang) : t.match.tbd}
       </span>
       {goals != null && (
         <span className={cn("shrink-0 tabular-nums", isWinner ? "font-bold" : "font-medium")}>
@@ -66,13 +71,14 @@ function Tie({ m }: { m: BracketMatch }) {
 /** Knockout bracket: one column per round, ties spread to feel like a tree.
  *  Scrolls horizontally on narrow screens. */
 export function Bracket({ rounds }: { rounds: BracketRound[] }) {
+  const { lang } = useSettings();
   return (
     <div className="-mx-4 overflow-x-auto px-4 pb-2">
       <div className="flex items-stretch gap-3">
         {rounds.map((round) => (
           <div key={round.name} className="flex w-44 shrink-0 flex-col">
             <h3 className="mb-2 truncate text-center text-xs font-semibold uppercase tracking-wide text-[hsl(var(--tt-magenta))]">
-              {roundLabel(round.name)}
+              {roundLabel(round.name, lang)}
             </h3>
             <div className="flex flex-1 flex-col justify-around gap-3">
               {round.matches.map((m) => (

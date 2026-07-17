@@ -2,20 +2,25 @@ import { Link } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { Loading, PageHeader, SectionLabel } from "@/components/common";
 import { compPageNo } from "@/lib/teletext";
+import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
+import { competitionLabel, countryLabel } from "@/lib/labels";
 
 const SECTIONS = [
-  { to: "/", label: "Live & today", no: "100" },
-  { to: "/calendar", label: "Calendar", no: "300" },
-  { to: "/broadcasters", label: "Broadcaster guide", no: "600" },
-  { to: "/settings", label: "Settings", no: "700" },
+  { to: "/", labelKey: "liveToday", no: "100" },
+  { to: "/calendar", labelKey: "calendar", no: "300" },
+  { to: "/broadcasters", labelKey: "broadcasterGuide", no: "600" },
+  { to: "/settings", labelKey: "settings", no: "700" },
 ] as const;
 
 export default function Competitions() {
   const comps = useCompetitions();
+  const { lang } = useSettings();
+  const t = useT();
 
   return (
     <>
-      <PageHeader title="Index" subtitle="Page directory" />
+      <PageHeader title={t.index.title} subtitle={t.index.subtitle} />
 
       <div className="flex flex-col">
         {SECTIONS.map((s) => (
@@ -25,14 +30,14 @@ export default function Competitions() {
             className="tt-dotted flex items-center gap-2 py-2 text-sm uppercase text-muted-foreground transition-colors hover:text-foreground"
           >
             <span className="text-[hsl(var(--tt-cyan))]">▸</span>
-            <span className="flex-1">{s.label}</span>
+            <span className="flex-1">{t.index[s.labelKey]}</span>
             <span className="font-bold tabular-nums text-primary">{s.no}</span>
           </Link>
         ))}
       </div>
 
       <div className="mt-5">
-        <SectionLabel>Competitions</SectionLabel>
+        <SectionLabel>{t.index.competitions}</SectionLabel>
         {!comps ? (
           <Loading />
         ) : (
@@ -46,10 +51,10 @@ export default function Competitions() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate uppercase group-hover:text-[hsl(var(--tt-cyan))]">
-                    {c.name}
+                    {competitionLabel(c.name, lang)}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {c.country} · {c.type === "cup" ? "Cup" : "League"}
+                    {countryLabel(c.country, lang)} · {c.type === "cup" ? t.index.cup : t.index.league}
                   </span>
                 </span>
                 <span className="font-bold tabular-nums text-primary">{compPageNo(i)}</span>

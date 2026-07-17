@@ -14,13 +14,14 @@ const NO_TO_PATH: Record<string, string> = Object.fromEntries(
 );
 const COMP_BASE = 410;
 
-/** The four colour "FastText" keys (R/G/Y/C) and the sections they jump to.
- *  Keys track the UI language's colour initials (red/green/yellow/cyan). */
+/** The four colour "FastText" keys and the sections they jump to. Keys AND
+ *  labels track the UI language's colour initials — English red/green/yellow/cyan
+ *  = R/G/Y/C, French rouge/vert/jaune/cyan = R/V/J/C. */
 export const FASTTEXT = [
-  { key: "r", cls: "f-red", no: "100", label: "Live", to: "/" },
-  { key: "g", cls: "f-grn", no: "300", label: "Calendar", to: "/calendar" },
-  { key: "y", cls: "f-yel", no: "400", label: "Competitions", to: "/competitions" },
-  { key: "c", cls: "f-cyn", no: "600", label: "Broadcasters", to: "/broadcasters" },
+  { key: { en: "r", fr: "r" }, cls: "f-red", no: "100", to: "/", label: { en: "Live", fr: "Direct" } },
+  { key: { en: "g", fr: "v" }, cls: "f-grn", no: "300", to: "/calendar", label: { en: "Calendar", fr: "Calendrier" } },
+  { key: { en: "y", fr: "j" }, cls: "f-yel", no: "400", to: "/competitions", label: { en: "Competitions", fr: "Compét." } },
+  { key: { en: "c", fr: "c" }, cls: "f-cyn", no: "600", to: "/broadcasters", label: { en: "Broadcasters", fr: "Diffuseurs" } },
 ] as const;
 
 /** Ordered sections for ◄ ► paging. */

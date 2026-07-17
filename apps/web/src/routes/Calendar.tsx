@@ -3,15 +3,14 @@ import type { Match } from "@lucarne/shared";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { parisDayKey } from "@/lib/time";
+import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
+import { competitionLabel } from "@/lib/labels";
 import { dayKeyToDate, weekdayShort } from "@/lib/dates";
 import { MatchTable } from "@/components/DaySection";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
 import { cn } from "@/lib/utils";
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 const WINDOW = 7; // day cells shown at once (fixed, never scrolls)
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -33,6 +32,8 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 }
 
 export default function Calendar() {
+  const { lang } = useSettings();
+  const t = useT();
   const todayKey = useMemo(() => parisDayKey(), []);
   const [view, setView] = useState(() => {
     const [y, m] = todayKey.split("-").map(Number);
@@ -101,23 +102,23 @@ export default function Calendar() {
 
   return (
     <>
-      <PageHeader title="Calendar" subtitle="Pick a day" />
+      <PageHeader title={t.calendar.title} subtitle={t.calendar.pickADay} />
 
       {/* Month selector */}
       <div className="mb-2 flex items-stretch gap-1">
         <button
           onClick={() => moveMonth(-1)}
-          aria-label="Previous month"
+          aria-label={t.calendar.prevMonth}
           className="grid w-7 place-items-center border border-border text-muted-foreground hover:bg-accent"
         >
           ‹
         </button>
         <div className="tt-bar tt-bar-yellow flex-1 justify-center text-xs">
-          {MONTHS[view.m]} {view.y}
+          {t.calendar.months[view.m]} {view.y}
         </div>
         <button
           onClick={() => moveMonth(1)}
-          aria-label="Next month"
+          aria-label={t.calendar.nextMonth}
           className="grid w-7 place-items-center border border-border text-muted-foreground hover:bg-accent"
         >
           ›
@@ -127,7 +128,7 @@ export default function Calendar() {
       {!days ? (
         <Loading error={error} />
       ) : dayList.length === 0 ? (
-        <EmptyState title="No matches this month" />
+        <EmptyState title={t.calendar.noMonth} />
       ) : (
         <>
           {/* Fixed day window — shifts at the edges, never scrolls */}
@@ -135,7 +136,7 @@ export default function Calendar() {
             <button
               onClick={() => step(-1)}
               disabled={sel === 0}
-              aria-label="Previous day"
+              aria-label={t.calendar.prevDay}
               className="grid w-6 place-items-center border border-border text-muted-foreground hover:bg-accent disabled:opacity-30"
             >
               ◄
@@ -145,7 +146,7 @@ export default function Calendar() {
                 const idx = start + i;
                 const active = idx === sel;
                 const isToday = d.key === todayKey;
-                const wd = weekdayShort(dayKeyToDate(d.key)).slice(0, 3);
+                const wd = weekdayShort(dayKeyToDate(d.key), lang).slice(0, 3);
                 return (
                   <button
                     key={d.key}
@@ -172,7 +173,7 @@ export default function Calendar() {
             <button
               onClick={() => step(1)}
               disabled={sel >= dayList.length - 1}
-              aria-label="Next day"
+              aria-label={t.calendar.nextDay}
               className="grid w-6 place-items-center border border-border text-muted-foreground hover:bg-accent disabled:opacity-30"
             >
               ►
@@ -182,7 +183,7 @@ export default function Calendar() {
           {/* Competition filter — wraps, never scrolls */}
           <div className="mb-3 flex flex-wrap items-center gap-1">
             <Chip active={!filter} onClick={() => setFilter(null)}>
-              All
+              {t.calendar.all}
             </Chip>
             {presentComps.map((c) => (
               <Chip
@@ -190,18 +191,18 @@ export default function Calendar() {
                 active={filter === c.slug}
                 onClick={() => setFilter(filter === c.slug ? null : c.slug)}
               >
-                {c.name}
+                {competitionLabel(c.name, lang)}
               </Chip>
             ))}
           </div>
 
           {groups.length === 0 ? (
-            <EmptyState title="No matches for this filter" />
+            <EmptyState title={t.calendar.noFilter} />
           ) : (
             <MatchTable
               groups={groups.map((g) => ({
                 key: g.slug,
-                label: g.name,
+                label: competitionLabel(g.name, lang),
                 matches: g.matches,
                 tone: "cyan" as const,
               }))}

@@ -6,8 +6,10 @@ import { BroadcasterBadge } from "@/components/BroadcasterBadge";
 import { Lineups } from "@/components/Lineups";
 import { EmptyState, Loading, LiveDot, SectionLabel, Tag } from "@/components/common";
 import { eventMark, eventName } from "@/lib/matchEvents";
-import { roundLabel } from "@/lib/labels";
+import { competitionLabel, countryLabel, noteLabel, roundLabel } from "@/lib/labels";
+import { teamName } from "@/lib/teamNames";
 import { useSettings } from "@/lib/settings";
+import { useT, type Messages } from "@/lib/i18n";
 import { formatLong, formatShort } from "@/lib/dates";
 import { eventMinute, parisTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -15,16 +17,17 @@ import type { Broadcaster, MatchDetail as Detail, MatchEvent } from "@lucarne/sh
 
 type Result = "win" | "loss" | "none";
 
-function statusLine(m: Detail): { text: string; live: boolean } | null {
-  if (m.status === "live") return { text: m.elapsed != null ? `Live ${m.elapsed}'` : "Live", live: true };
-  if (m.status === "postponed") return { text: "Postponed", live: false };
+function statusLine(m: Detail, t: Messages): { text: string; live: boolean } | null {
+  if (m.status === "live")
+    return { text: m.elapsed != null ? `${t.match.live} ${m.elapsed}'` : t.match.live, live: true };
+  if (m.status === "postponed") return { text: t.match.postponed, live: false };
   if (m.status === "finished") {
     const text =
       m.statusShort === "PEN"
-        ? "Penalties"
+        ? t.match.penalties
         : m.statusShort === "AET"
-          ? "After extra time"
-          : "Full time";
+          ? t.match.afterExtraTime
+          : t.match.fullTime;
     return { text, live: false };
   }
   return null;
@@ -32,8 +35,9 @@ function statusLine(m: Detail): { text: string; live: boolean } | null {
 
 /** Compact, flat teletext scoreboard: crests + score on one line, names below. */
 function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Result; awayResult: Result }) {
-  const { dateFormat } = useSettings();
-  const status = statusLine(m);
+  const { dateFormat, lang } = useSettings();
+  const t = useT();
+  const status = statusLine(m, t);
   const pens = m.homePenalties != null && m.awayPenalties != null;
   const nameCls = (r: Result) =>
     cn("min-w-0 flex-1 truncate uppercase", r === "win" ? "font-bold text-[hsl(var(--tt-green))]" : "font-semibold");
@@ -55,14 +59,14 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-center gap-2 text-center text-sm">
-        <span className={cn(nameCls(homeResult), "text-right")}>{m.home.name}</span>
+        <span className={cn(nameCls(homeResult), "text-right")}>{teamName(m.home.name, lang)}</span>
         <span className="shrink-0 text-muted-foreground">—</span>
-        <span className={cn(nameCls(awayResult), "text-left")}>{m.away.name}</span>
+        <span className={cn(nameCls(awayResult), "text-left")}>{teamName(m.away.name, lang)}</span>
       </div>
 
       {pens && (
         <span className="text-xs font-medium text-muted-foreground">
-          Pens {m.homePenalties}–{m.awayPenalties}
+          {t.match.pens} {m.homePenalties}–{m.awayPenalties}
         </span>
       )}
       {status &&
@@ -78,7 +82,7 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
         ))}
       {m.status === "scheduled" && (
         <span className="text-xs uppercase text-muted-foreground">
-          {formatShort(new Date(m.kickoff), dateFormat)}
+          {formatShort(new Date(m.kickoff), dateFormat, lang)}
         </span>
       )}
     </div>
@@ -111,12 +115,15 @@ function EventRow({ e }: { e: MatchEvent }) {
 }
 
 function BroadcasterRow({ b }: { b: Broadcaster }) {
+  const { lang } = useSettings();
+  const t = useT();
+  const note = noteLabel(b.note, lang);
   return (
     <div className="flex items-center justify-between gap-3 border-b border-dotted border-border py-1.5">
       <BroadcasterBadge b={b} />
       <span className="truncate text-right text-xs text-muted-foreground">
-        {b.coverage === "partial" ? "Partial" : "Full"}
-        {b.note ? ` · ${b.note}` : ""}
+        {b.coverage === "partial" ? t.match.partial : t.match.full}
+        {note ? ` · ${note}` : ""}
       </span>
     </div>
   );
@@ -135,14 +142,15 @@ export default function MatchDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
   const { match, loading, error } = useMatch(Number(id));
   const comps = useCompetitions();
-  const { dateFormat } = useSettings();
+  const { dateFormat, lang } = useSettings();
+  const t = useT();
 
   if (loading) return <Loading />;
   if (error || !match) {
     return (
-      <EmptyState title="Match not found">
+      <EmptyState title={t.match.notFound}>
         <Link to="/" className="text-foreground underline underline-offset-2">
-          Back to home
+          {t.match.backHome}
         </Link>
       </EmptyState>
     );
@@ -159,8 +167,10 @@ export default function MatchDetail() {
   const homeResult: Result = decided ? (homeWins ? "win" : "loss") : "none";
   const awayResult: Result = decided ? (awayWins ? "win" : "loss") : "none";
 
-  const country = comps?.find((c) => c.slug === match.competition.slug)?.country;
-  const round = roundLabel(match.round);
+  const rawCountry = comps?.find((c) => c.slug === match.competition.slug)?.country;
+  const country = countryLabel(rawCountry, lang);
+  const competition = competitionLabel(match.competition.name, lang);
+  const round = roundLabel(match.round, lang);
   const goals = match.events.filter((e) => e.type === "Goal");
   const cards = match.events.filter((e) => e.type === "Card");
 
@@ -171,19 +181,19 @@ export default function MatchDetail() {
         params={{ slug: match.competition.slug }}
         className="mb-2 inline-flex items-center gap-1 text-sm uppercase text-muted-foreground hover:text-foreground"
       >
-        ‹ {match.competition.name}
+        ‹ {competition}
       </Link>
 
       {/* Scoreboard — flat, no card/border/gradient */}
       <div className="tt-bar tt-bar-magenta text-xs">
-        <span className="truncate">{match.competition.name}</span>
+        <span className="truncate">{competition}</span>
         {round && <span className="tt-bar-r font-semibold normal-case">{round}</span>}
       </div>
       <Scoreboard m={match} homeResult={homeResult} awayResult={awayResult} />
 
       {goals.length > 0 && (
         <section className="mt-3">
-          <SectionLabel>Goals</SectionLabel>
+          <SectionLabel>{t.match.goals}</SectionLabel>
           <div className="flex flex-col">
             {goals.map((e, i) => (
               <EventRow key={i} e={e} />
@@ -194,7 +204,7 @@ export default function MatchDetail() {
 
       {cards.length > 0 && (
         <section className="mt-3">
-          <SectionLabel>Cards</SectionLabel>
+          <SectionLabel>{t.match.cards}</SectionLabel>
           <div className="flex flex-col">
             {cards.map((e, i) => (
               <EventRow key={i} e={e} />
@@ -204,44 +214,42 @@ export default function MatchDetail() {
       )}
 
       {match.status === "finished" && goals.length === 0 && cards.length === 0 && (
-        <p className="mt-3 py-2 text-sm italic text-muted-foreground">No goals or cards.</p>
+        <p className="mt-3 py-2 text-sm italic text-muted-foreground">{t.match.noGoalsCards}</p>
       )}
 
       {match.lineups ? (
         <section className="mt-3">
-          <SectionLabel>Lineups</SectionLabel>
+          <SectionLabel>{t.match.lineups}</SectionLabel>
           <Lineups home={match.lineups.home} away={match.lineups.away} />
         </section>
       ) : (
         match.status === "scheduled" && (
-          <p className="mt-3 py-2 text-sm text-muted-foreground">
-            Lineups are confirmed about an hour before kick-off.
-          </p>
+          <p className="mt-3 py-2 text-sm text-muted-foreground">{t.match.lineupsSoon}</p>
         )
       )}
 
       <section className="mt-3">
-        <SectionLabel>Where to watch</SectionLabel>
+        <SectionLabel>{t.match.whereToWatch}</SectionLabel>
         <div className="flex flex-col">
           {match.broadcasters.length > 0 ? (
             match.broadcasters.map((b) => <BroadcasterRow key={b.id} b={b} />)
           ) : (
-            <p className="py-2 text-sm italic text-muted-foreground">Broadcaster TBC.</p>
+            <p className="py-2 text-sm italic text-muted-foreground">{t.match.broadcasterTBC}</p>
           )}
         </div>
       </section>
 
       <section className="mt-3">
-        <SectionLabel>Info</SectionLabel>
+        <SectionLabel>{t.match.info}</SectionLabel>
         <dl className="flex flex-col">
-          <InfoRow label="Date" value={formatLong(new Date(match.kickoff), dateFormat)} />
-          <InfoRow label="Kick-off" value={`${parisTime(match.kickoff)} · Europe/Paris`} />
-          {match.venue && <InfoRow label="Venue" value={match.venue} />}
+          <InfoRow label={t.match.date} value={formatLong(new Date(match.kickoff), dateFormat, lang)} />
+          <InfoRow label={t.match.kickoff} value={`${parisTime(match.kickoff)} · Europe/Paris`} />
+          {match.venue && <InfoRow label={t.match.venue} value={match.venue} />}
           <InfoRow
-            label="Competition"
-            value={country ? `${match.competition.name} · ${country}` : match.competition.name}
+            label={t.match.competition}
+            value={country ? `${competition} · ${country}` : competition}
           />
-          {round && <InfoRow label="Round" value={round} />}
+          {round && <InfoRow label={t.match.round} value={round} />}
         </dl>
       </section>
     </>

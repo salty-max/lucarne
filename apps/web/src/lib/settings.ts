@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from "react";
 
 export type DateFormat = "dmy" | "mdy" | "numeric";
-export type Settings = { dateFormat: DateFormat; crt: boolean };
+export type Lang = "en" | "fr";
+export type Settings = { dateFormat: DateFormat; crt: boolean; lang: Lang };
 
 const KEY = "lucarne:settings";
-const DEFAULTS: Settings = { dateFormat: "dmy", crt: true };
+const DEFAULTS: Settings = { dateFormat: "dmy", crt: true, lang: "fr" };
 
 function load(): Settings {
   try {
@@ -23,7 +24,12 @@ const listeners = new Set<() => void>();
 export function applyCrt(on: boolean): void {
   if (typeof document !== "undefined") document.documentElement.classList.toggle("crt-off", !on);
 }
+/** Keep <html lang> in sync for a11y. */
+export function applyLang(lang: Lang): void {
+  if (typeof document !== "undefined") document.documentElement.lang = lang;
+}
 applyCrt(current.crt);
+applyLang(current.lang);
 
 export function getSettings(): Settings {
   return current;
@@ -37,6 +43,7 @@ export function setSettings(patch: Partial<Settings>): void {
     /* ignore */
   }
   applyCrt(current.crt);
+  applyLang(current.lang);
   for (const l of listeners) l();
 }
 

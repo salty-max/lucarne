@@ -8,27 +8,26 @@ import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
+import { competitionLabel, countryLabel } from "@/lib/labels";
 import { dayKeyToDate, formatLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 /** Upcoming matches for the competition (its own fetch, mounted only when the
- *  Matchs tab is active). */
+ *  Matches tab is active). */
 function MatchesTab({ slug }: { slug: string }) {
   const { days, error } = useSchedule({ competition: slug, days: 45 });
-  const { dateFormat } = useSettings();
+  const { dateFormat, lang } = useSettings();
+  const t = useT();
   if (!days) return <Loading error={error} />;
   if (days.length === 0) {
-    return (
-      <EmptyState title="No upcoming matches">
-        Off-season, or nothing scheduled in the next few weeks.
-      </EmptyState>
-    );
+    return <EmptyState title={t.competition.noUpcoming}>{t.competition.offSeason}</EmptyState>;
   }
   return (
     <MatchTable
       groups={days.map((d) => ({
         key: d.key,
-        label: formatLong(dayKeyToDate(d.key), dateFormat),
+        label: formatLong(dayKeyToDate(d.key), dateFormat, lang),
         matches: d.matches,
         tone: "yellow" as const,
       }))}
@@ -40,6 +39,8 @@ export default function Competition() {
   const { slug } = useParams({ strict: false }) as { slug: string };
   const { detail, loading } = useCompetition(slug);
   const comps = useCompetitions();
+  const { lang } = useSettings();
+  const t = useT();
   const name = detail?.name ?? comps?.find((c) => c.slug === slug)?.name ?? slug;
 
   const hasStandings = !!detail?.standings;
@@ -48,22 +49,22 @@ export default function Competition() {
   const defaultTab = hasBracket ? "bracket" : hasStandings ? "standings" : "matches";
 
   const tabs: { key: string; label: string }[] = [
-    { key: "matches", label: "Matches" },
-    ...(hasStandings ? [{ key: "standings", label: "Standings" }] : []),
-    ...(hasBracket ? [{ key: "bracket", label: "Bracket" }] : []),
+    { key: "matches", label: t.competition.matches },
+    ...(hasStandings ? [{ key: "standings", label: t.competition.standings }] : []),
+    ...(hasBracket ? [{ key: "bracket", label: t.competition.bracket }] : []),
   ];
 
   return (
     <>
       <PageHeader
-        title={name}
-        subtitle={detail?.country}
+        title={competitionLabel(name, lang)}
+        subtitle={countryLabel(detail?.country, lang)}
         right={
           <Link
             to="/competitions"
             className="shrink-0 text-sm uppercase text-muted-foreground hover:text-foreground"
           >
-            ‹ Index
+            ‹ {t.competition.backIndex}
           </Link>
         }
       />
@@ -75,17 +76,17 @@ export default function Competition() {
       ) : (
         <Tabs.Root defaultValue={defaultTab}>
           <Tabs.List className="mb-3 flex flex-wrap gap-1">
-            {tabs.map((t) => (
+            {tabs.map((tab) => (
               <Tabs.Trigger
-                key={t.key}
-                value={t.key}
+                key={tab.key}
+                value={tab.key}
                 className={cn(
                   "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 text-[0.72rem] uppercase transition-colors",
                   "text-muted-foreground hover:bg-accent hover:text-foreground",
                   "data-[state=active]:border-[hsl(var(--tt-cyan))] data-[state=active]:bg-[hsl(var(--tt-cyan))] data-[state=active]:font-bold data-[state=active]:text-black",
                 )}
               >
-                {t.label}
+                {tab.label}
               </Tabs.Trigger>
             ))}
           </Tabs.List>

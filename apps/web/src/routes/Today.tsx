@@ -1,13 +1,15 @@
 import { useSchedule } from "@/hooks/useSchedule";
 import { parisDayKey } from "@/lib/time";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n";
 import { dayKeyToDate, formatLong } from "@/lib/dates";
 import { MatchTable, type MatchGroup } from "@/components/DaySection";
 import { EmptyState, Loading, TeletextHero } from "@/components/common";
 
 export default function Today() {
   const { days, error } = useSchedule({ days: 8 }, { live: true });
-  const { dateFormat } = useSettings();
+  const { dateFormat, lang } = useSettings();
+  const t = useT();
   const todayKey = parisDayKey();
 
   if (!days) {
@@ -28,13 +30,13 @@ export default function Today() {
   const groups: MatchGroup[] =
     todayMatches.length > 0
       ? [
-          { key: "live", label: "Live", matches: live, tone: "live" },
-          { key: "up", label: "Upcoming", matches: up, tone: "yellow" },
-          { key: "done", label: "Finished", matches: done, tone: "cyan" },
+          { key: "live", label: t.today.live, matches: live, tone: "live" },
+          { key: "up", label: t.today.upcoming, matches: up, tone: "yellow" },
+          { key: "done", label: t.today.finished, matches: done, tone: "cyan" },
         ]
       : upcoming.slice(0, 5).map((d) => ({
           key: d.key,
-          label: formatLong(dayKeyToDate(d.key), dateFormat),
+          label: formatLong(dayKeyToDate(d.key), dateFormat, lang),
           matches: d.matches,
           tone: "yellow" as const,
         }));
@@ -43,7 +45,7 @@ export default function Today() {
     <>
       <TeletextHero />
       {todayMatches.length === 0 && (
-        <EmptyState title="No matches today">Nothing today — here's what's next.</EmptyState>
+        <EmptyState title={t.today.noMatchesTitle}>{t.today.noMatchesBody}</EmptyState>
       )}
       <MatchTable groups={groups} />
     </>

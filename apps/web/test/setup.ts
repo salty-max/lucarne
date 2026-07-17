@@ -8,4 +8,8 @@ GlobalRegistrator.register();
 const { afterEach } = await import("bun:test");
 const { cleanup } = await import("@testing-library/react");
 
+// Pin tests to English so assertions stay language-stable (app default is French).
+const { setSettings } = await import("../src/lib/settings");
+setSettings({ lang: "en" });
+
 afterEach(() => cleanup());
