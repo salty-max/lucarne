@@ -61,6 +61,7 @@ export type ApiFixture = {
   fixture: {
     id: number;
     date: string; // ISO 8601 with offset
+    referee: string | null;
     venue: { name: string | null };
     status: { short: string; elapsed: number | null };
   };
@@ -128,6 +129,19 @@ export type ApiLineup = {
  *  fixture. One request per match — fetched lazily alongside events. */
 export function getFixtureLineups(fixtureId: number) {
   return call<ApiLineup[]>("/fixtures/lineups", { fixture: fixtureId });
+}
+
+export type ApiTeamStatistics = {
+  team: { id: number; name: string };
+  // e.g. { type: "Ball Possession", value: "61%" }, { type: "Total Shots", value: 16 },
+  //      { type: "expected_goals", value: 1.46 }. Values are often null.
+  statistics: { type: string; value: number | string | null }[];
+};
+
+/** Team match statistics (possession, shots, xG, …) for ONE fixture. One request
+ *  per match — fetched lazily after full-time via the drain, alongside events. */
+export function getFixtureStatistics(fixtureId: number) {
+  return call<ApiTeamStatistics[]>("/fixtures/statistics", { fixture: fixtureId });
 }
 
 export type ApiStandingRow = {

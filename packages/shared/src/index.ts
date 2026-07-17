@@ -143,11 +143,28 @@ export type TeamLineup = {
 
 export type MatchLineups = { home: TeamLineup; away: TeamLineup };
 
+/** A curated set of team match statistics; any field may be null (hidden). */
+export type TeamStats = {
+  possession: number | null; // %
+  shots: number | null; // total shots
+  shotsOnTarget: number | null;
+  xg: number | null; // expected goals
+  corners: number | null;
+  fouls: number | null;
+  offsides: number | null;
+  saves: number | null;
+  passAccuracy: number | null; // %
+};
+
+export type MatchStatistics = { home: TeamStats; away: TeamStats };
+
 /** A single match with the extra fields worth showing on its detail page. */
 export type MatchDetail = Match & {
   venue: string | null;
   round: string | null;
+  referee: string | null;
   lineups: MatchLineups | null;
+  statistics: MatchStatistics | null;
 };
 
 /** Response bodies. */

@@ -6,6 +6,7 @@ import type {
   MatchDetail,
   MatchEvent,
   MatchLineups,
+  MatchStatistics,
   MatchStatus,
   Team,
   TeamLineup,
@@ -24,7 +25,9 @@ export type ScheduleDay = { key: string; label: string; matches: ScheduleMatch[]
 export type ScheduleMatchDetail = ScheduleMatch & {
   venue: string | null;
   round: string | null;
+  referee: string | null;
   lineups: MatchLineups | null;
+  statistics: MatchStatistics | null;
 };
 
 /** Serialize to the wire shape (Date → ISO) for a JSON response. */
@@ -194,6 +197,8 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
       awayPenalties: matches.awayPenalties,
       venue: matches.venue,
       round: matches.round,
+      referee: matches.referee,
+      statistics: matches.statistics,
       homeFormation: matches.homeFormation,
       awayFormation: matches.awayFormation,
       homeCoach: matches.homeCoach,
@@ -303,7 +308,9 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
     awayPenalties: r.awayPenalties,
     venue: r.venue,
     round: r.round,
+    referee: r.referee,
     lineups,
+    statistics: r.statistics,
     competition: { name: r.competitionName, slug: r.competitionSlug },
     home: { name: r.homeName, shortName: r.homeShort, logo: r.homeLogo },
     away: { name: r.awayName, shortName: r.awayShort, logo: r.awayLogo },

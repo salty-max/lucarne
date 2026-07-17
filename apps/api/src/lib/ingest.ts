@@ -1,13 +1,16 @@
 import { and, eq, sql } from "drizzle-orm";
+import type { TeamStats } from "@lucarne/shared";
 import { db } from "@/db";
 import { competitions, teams, matches, matchEvents, matchLineups, standings } from "@/db/schema";
 import {
   getFixtures,
   getFixtureEvents,
   getFixtureLineups,
+  getFixtureStatistics,
   getLiveFixtures,
   getStandings,
   type ApiFixture,
+  type ApiTeamStatistics,
 } from "@/lib/api-football";
 import { COMPETITIONS, TRACKED_LEAGUE_IDS, currentSeason } from "@/lib/competitions";
 import { normalizeStatus } from "@/lib/status";
@@ -78,6 +81,7 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
         homePenalties: f.score?.penalty?.home ?? null,
         awayPenalties: f.score?.penalty?.away ?? null,
         venue: f.fixture.venue.name,
+        referee: f.fixture.referee,
         updatedAt: new Date(),
       };
     })
@@ -100,6 +104,7 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
           homePenalties: sql`excluded.home_penalties`,
           awayPenalties: sql`excluded.away_penalties`,
           venue: sql`excluded.venue`,
+          referee: sql`excluded.referee`,
           updatedAt: sql`(unixepoch() * 1000)`,
         },
       });
@@ -368,4 +373,50 @@ export async function storeMatchLineups(
     .where(eq(matches.id, m.id));
 
   return rows.length;
+}
+
+/** Normalise API-Football's stat list into our curated TeamStats (nulls kept). */
+function normalizeStats(stats: ApiTeamStatistics["statistics"]): TeamStats {
+  const get = (type: string): number | null => {
+    const s = stats.find((x) => x.type === type);
+    if (s == null || s.value == null) return null;
+    const n = typeof s.value === "number" ? s.value : parseFloat(String(s.value).replace("%", ""));
+    return Number.isFinite(n) ? n : null;
+  };
+  return {
+    possession: get("Ball Possession"),
+    shots: get("Total Shots"),
+    shotsOnTarget: get("Shots on Goal"),
+    xg: get("expected_goals"),
+    corners: get("Corner Kicks"),
+    fouls: get("Fouls"),
+    offsides: get("Offsides"),
+    saves: get("Goalkeeper Saves"),
+    passAccuracy: get("Passes %"),
+  };
+}
+
+/**
+ * Fetch + store team match statistics (possession, shots, xG, …) for one match,
+ * then stamp `statsFetchedAt`. Costs ONE API request. Stores null when the API
+ * has no stats for both teams (common for minor fixtures); returns the number of
+ * non-null stat values captured.
+ */
+export async function storeMatchStatistics(m: DrainMatch): Promise<number> {
+  const teams = await getFixtureStatistics(m.apiFootballId); // 1 API request
+
+  let home: TeamStats | null = null;
+  let away: TeamStats | null = null;
+  for (const t of teams) {
+    if (t.team.id === m.homeApiId) home = normalizeStats(t.statistics);
+    else if (t.team.id === m.awayApiId) away = normalizeStats(t.statistics);
+  }
+  const statistics = home && away ? { home, away } : null;
+
+  await db.update(matches).set({ statistics, statsFetchedAt: new Date() }).where(eq(matches.id, m.id));
+
+  return statistics
+    ? [...Object.values(statistics.home), ...Object.values(statistics.away)].filter((v) => v != null)
+        .length
+    : 0;
 }

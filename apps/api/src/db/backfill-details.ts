@@ -3,7 +3,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { matches, teams } from "@/db/schema";
 import { initLocalDb } from "@/db/local";
-import { storeMatchEvents, storeMatchLineups } from "@/lib/ingest";
+import { storeMatchEvents, storeMatchLineups, storeMatchStatistics } from "@/lib/ingest";
 
 /**
  * One-shot local backfill of post-match details for every finished match that's
@@ -28,6 +28,7 @@ const candidates = await db
     awayApiId: away.apiFootballId,
     hasDetails: matches.detailsFetchedAt,
     hasLineups: matches.lineupsFetchedAt,
+    hasStats: matches.statsFetchedAt,
   })
   .from(matches)
   .innerJoin(home, eq(matches.homeTeamId, home.id))
@@ -35,7 +36,11 @@ const candidates = await db
   .where(
     and(
       eq(matches.status, "finished"),
-      or(isNull(matches.detailsFetchedAt), isNull(matches.lineupsFetchedAt)),
+      or(
+        isNull(matches.detailsFetchedAt),
+        isNull(matches.lineupsFetchedAt),
+        isNull(matches.statsFetchedAt),
+      ),
     ),
   )
   .orderBy(desc(matches.kickoff));
@@ -44,19 +49,24 @@ console.log(`Backfilling ${candidates.length} matches...`);
 
 let events = 0;
 let lineups = 0;
+let stats = 0;
 let done = 0;
 for (const m of candidates) {
   try {
     if (m.hasDetails == null) events += await storeMatchEvents(m); // 1 request
     if (m.hasLineups == null) lineups += await storeMatchLineups(m); // 1 request
+    if (m.hasStats == null) {
+      await storeMatchStatistics(m); // 1 request
+      stats += 1;
+    }
     done += 1;
     if (done % 10 === 0 || done === candidates.length) {
-      console.log(`  ${done}/${candidates.length} — ${events} events, ${lineups} lineup rows`);
+      console.log(`  ${done}/${candidates.length} — ${events} events, ${lineups} lineups, ${stats} stats`);
     }
   } catch (err) {
     console.error(`  match ${m.id} (api ${m.apiFootballId}) failed:`, err);
   }
 }
 
-console.log(`Done: ${done}/${candidates.length} matches, ${events} events, ${lineups} lineup rows.`);
+console.log(`Done: ${done}/${candidates.length} matches, ${events} events, ${lineups} lineups, ${stats} stats.`);
 process.exit(0);

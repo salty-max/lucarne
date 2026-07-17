@@ -7,6 +7,7 @@ import {
   backfillFixtures,
   storeMatchEvents,
   storeMatchLineups,
+  storeMatchStatistics,
   syncAllStandings,
   syncFixtures,
   type SyncResult,
@@ -161,6 +162,7 @@ export type DrainResult = {
   matches: number; // matches touched this run
   events: number; // events stored this run
   lineups: number; // lineup rows stored this run
+  stats: number; // matches with statistics stored this run
   budgetRemaining: number;
 };
 
@@ -182,7 +184,7 @@ export async function runDetailsDrain(
   const nowMs = now.getTime();
   const state = await loadBudget(nowMs);
   let remaining = budgetRemaining(state);
-  if (remaining <= 0) return { matches: 0, events: 0, lineups: 0, budgetRemaining: 0 };
+  if (remaining <= 0) return { matches: 0, events: 0, lineups: 0, stats: 0, budgetRemaining: 0 };
 
   const cutoff = sinceDays == null ? null : new Date(nowMs - sinceDays * 24 * 60 * 60 * 1000);
   const home = alias(teams, "home");
@@ -198,6 +200,7 @@ export async function runDetailsDrain(
       awayApiId: away.apiFootballId,
       hasDetails: matches.detailsFetchedAt,
       hasLineups: matches.lineupsFetchedAt,
+      hasStats: matches.statsFetchedAt,
     })
     .from(matches)
     .innerJoin(home, eq(matches.homeTeamId, home.id))
@@ -205,7 +208,11 @@ export async function runDetailsDrain(
     .where(
       and(
         eq(matches.status, "finished"),
-        or(isNull(matches.detailsFetchedAt), isNull(matches.lineupsFetchedAt)),
+        or(
+          isNull(matches.detailsFetchedAt),
+          isNull(matches.lineupsFetchedAt),
+          isNull(matches.statsFetchedAt),
+        ),
         cutoff ? gte(matches.kickoff, cutoff) : undefined,
       ),
     )
@@ -214,6 +221,7 @@ export async function runDetailsDrain(
 
   let events = 0;
   let lineups = 0;
+  let stats = 0;
   let requests = 0;
   let count = 0;
   for (const m of candidates) {
@@ -239,12 +247,23 @@ export async function runDetailsDrain(
         console.error("[details] lineups", m.id, err);
       }
     }
+    if (m.hasStats == null && remaining > 0) {
+      try {
+        await storeMatchStatistics(m);
+        stats += 1;
+        remaining -= 1;
+        requests += 1;
+        touched = true;
+      } catch (err) {
+        console.error("[details] stats", m.id, err);
+      }
+    }
     if (touched) count += 1;
   }
 
   const next = { ...state, requestsToday: state.requestsToday + requests };
   await saveBudget(next);
-  return { matches: count, events, lineups, budgetRemaining: budgetRemaining(next) };
+  return { matches: count, events, lineups, stats, budgetRemaining: budgetRemaining(next) };
 }
 
 export type LineupPollResult = { matches: number; lineups: number; budgetRemaining: number };

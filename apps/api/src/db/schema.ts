@@ -1,4 +1,5 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type { MatchStatistics } from "@lucarne/shared";
 
 /**
  * SQLite schema (Cloudflare D1 in prod, bun:sqlite locally/tests).
@@ -59,12 +60,15 @@ export const matches = sqliteTable(
     homePenalties: integer("home_penalties"),
     awayPenalties: integer("away_penalties"),
     venue: text("venue"),
+    referee: text("referee"),
     homeFormation: text("home_formation"),
     awayFormation: text("away_formation"),
     homeCoach: text("home_coach"),
     awayCoach: text("away_coach"),
+    statistics: text("statistics", { mode: "json" }).$type<MatchStatistics>(),
     detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
     lineupsFetchedAt: integer("lineups_fetched_at", { mode: "timestamp_ms" }),
+    statsFetchedAt: integer("stats_fetched_at", { mode: "timestamp_ms" }),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
