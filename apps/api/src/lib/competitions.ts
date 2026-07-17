@@ -16,6 +16,7 @@ export type CompetitionSeed = {
 
 export const COMPETITIONS: CompetitionSeed[] = [
   { slug: "ligue-1", name: "Ligue 1", apiFootballId: 61, country: "France", type: "league" },
+  { slug: "ligue-2", name: "Ligue 2", apiFootballId: 62, country: "France", type: "league" },
   { slug: "premier-league", name: "Premier League", apiFootballId: 39, country: "England", type: "league" },
   { slug: "la-liga", name: "La Liga", apiFootballId: 140, country: "Spain", type: "league" },
   { slug: "bundesliga", name: "Bundesliga", apiFootballId: 78, country: "Germany", type: "league" },
@@ -28,7 +29,7 @@ export const COMPETITIONS: CompetitionSeed[] = [
 /** Read lazily (not at module eval) so it works on Workers where env is
  *  only populated inside a request/scheduled context. */
 export function currentSeason(): number {
-  return Number(process.env.CURRENT_SEASON ?? "2025");
+  return Number(process.env.CURRENT_SEASON ?? "2026");
 }
 
 /** Set of tracked API-Football league ids (used to filter `live=all`). */

@@ -11,9 +11,10 @@ const BROADCASTERS = [
   { slug: "m6", name: "M6", color: "#14B8A6" },
 ];
 
-// Default validity = the 2025-26 club season; rules can override per entry.
+// Default validity spans the 2025-26 and 2026-27 club seasons; rules can
+// override per entry. (Most French/foreign rights deals run multi-year.)
 const VALID_FROM = "2025-07-01";
-const VALID_TO = "2026-06-30";
+const VALID_TO = "2027-06-30";
 
 const RULES: {
   comp: string;
@@ -26,6 +27,7 @@ const RULES: {
   // Ligue 1 = split rights → two partial rules; refine per match via overrides.
   { comp: "ligue-1", broadcaster: "ligue-1-plus", coverage: "partial", note: "8 matchs sur 9" },
   { comp: "ligue-1", broadcaster: "amazon-prime", coverage: "partial", note: "Pass Ligue 1 — certaines affiches" },
+  { comp: "ligue-2", broadcaster: "bein-sports", coverage: "full", note: "Intégralité de la Ligue 2 BKT" },
   { comp: "premier-league", broadcaster: "canal-plus", coverage: "full", note: "Exclusivité jusqu'en 2028" },
   { comp: "la-liga", broadcaster: "bein-sports", coverage: "full", note: "Jusqu'en 2027" },
   { comp: "bundesliga", broadcaster: "bein-sports", coverage: "full", note: "Jusqu'en 2029" },

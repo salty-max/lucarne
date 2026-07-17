@@ -3,7 +3,7 @@ import { COMPETITIONS, TRACKED_LEAGUE_IDS, currentSeason } from "./competitions"
 
 describe("competitions catalogue", () => {
   it("tracks the competitions with unique slugs + league ids", () => {
-    expect(COMPETITIONS).toHaveLength(8);
+    expect(COMPETITIONS).toHaveLength(9);
     expect(new Set(COMPETITIONS.map((c) => c.slug)).size).toBe(COMPETITIONS.length);
     expect(new Set(COMPETITIONS.map((c) => c.apiFootballId)).size).toBe(COMPETITIONS.length);
   });
@@ -21,13 +21,13 @@ describe("currentSeason", () => {
     else process.env.CURRENT_SEASON = original;
   });
 
-  it("defaults to 2025", () => {
+  it("defaults to 2026", () => {
     delete process.env.CURRENT_SEASON;
-    expect(currentSeason()).toBe(2025);
+    expect(currentSeason()).toBe(2026);
   });
 
   it("reads the env override", () => {
-    process.env.CURRENT_SEASON = "2026";
-    expect(currentSeason()).toBe(2026);
+    process.env.CURRENT_SEASON = "2027";
+    expect(currentSeason()).toBe(2027);
   });
 });
