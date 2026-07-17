@@ -4,6 +4,7 @@ import { useCompetitions } from "@/hooks/useCompetitions";
 import { EventMark } from "@/components/EventMark";
 import { BroadcasterBadge } from "@/components/BroadcasterBadge";
 import { Lineups } from "@/components/Lineups";
+import { MatchStats } from "@/components/MatchStats";
 import { EmptyState, Loading, LiveDot, SectionLabel, Tag } from "@/components/common";
 import { eventMark, eventName } from "@/lib/matchEvents";
 import { competitionLabel, countryLabel, noteLabel, roundLabel } from "@/lib/labels";
@@ -100,7 +101,7 @@ function EventRow({ e }: { e: MatchEvent }) {
         {eventMinute(e.minute, e.extraMinute)}
       </span>
       <EventMark kind={kind} />
-      <span className={cn("min-w-0 truncate", home ? "text-foreground" : "text-[hsl(var(--tt-cyan))]")}>
+      <span className={cn("min-w-0 truncate", home ? "text-[hsl(var(--tt-blue))]" : "text-[hsl(var(--tt-red))]")}>
         {eventName(e)}
         {kind === "goal" && e.assist && <span className="text-muted-foreground"> ({e.assist})</span>}
       </span>
@@ -217,6 +218,13 @@ export default function MatchDetail() {
         <p className="mt-3 py-2 text-sm italic text-muted-foreground">{t.match.noGoalsCards}</p>
       )}
 
+      {match.statistics && (
+        <section className="mt-3">
+          <SectionLabel>{t.stats.title}</SectionLabel>
+          <MatchStats stats={match.statistics} />
+        </section>
+      )}
+
       {match.lineups ? (
         <section className="mt-3">
           <SectionLabel>{t.match.lineups}</SectionLabel>
@@ -245,6 +253,7 @@ export default function MatchDetail() {
           <InfoRow label={t.match.date} value={formatLong(new Date(match.kickoff), dateFormat, lang)} />
           <InfoRow label={t.match.kickoff} value={`${parisTime(match.kickoff)} · Europe/Paris`} />
           {match.venue && <InfoRow label={t.match.venue} value={match.venue} />}
+          {match.referee && <InfoRow label={t.match.referee} value={match.referee} />}
           <InfoRow
             label={t.match.competition}
             value={country ? `${competition} · ${country}` : competition}

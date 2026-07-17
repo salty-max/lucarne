@@ -38,7 +38,7 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       <span
         className={cn(
           "grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold",
-          side === "home" ? "bg-primary text-primary-foreground" : "bg-[hsl(var(--tt-cyan))] text-black",
+          side === "home" ? "bg-[hsl(var(--tt-blue))] text-black" : "bg-[hsl(var(--tt-red))] text-white",
         )}
       >
         {p.number ?? ""}
@@ -122,13 +122,13 @@ export function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) 
   return (
     <div>
       <div className="mb-2 flex items-center justify-between text-xs font-bold">
-        <span className="flex items-center gap-1.5 text-primary">
-          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+        <span className="flex items-center gap-1.5 text-[hsl(var(--tt-blue))]">
+          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--tt-blue))]" />
           {home.formation ?? "—"}
         </span>
-        <span className="flex items-center gap-1.5 text-[hsl(var(--tt-cyan))]">
+        <span className="flex items-center gap-1.5 text-[hsl(var(--tt-red))]">
           {away.formation ?? "—"}
-          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--tt-cyan))]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--tt-red))]" />
         </span>
       </div>
       <Pitch home={home} away={away} />
