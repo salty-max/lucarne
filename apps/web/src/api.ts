@@ -1,4 +1,4 @@
-import type { CompetitionInfo, Day, LiveMatch } from "@lucarne/shared";
+import type { CompetitionInfo, Day, LiveMatch, MatchDetail } from "@lucarne/shared";
 
 export type ScheduleParams = { from?: string; days?: number; competition?: string };
 
@@ -11,6 +11,13 @@ export async function fetchSchedule(params: ScheduleParams = {}): Promise<Day[]>
   if (!res.ok) throw new Error(`schedule ${res.status}`);
   const data = (await res.json()) as { days?: Day[] };
   return data.days ?? [];
+}
+
+export async function fetchMatch(id: number): Promise<MatchDetail | null> {
+  const res = await fetch(`/api/match/${id}`);
+  if (!res.ok) return null;
+  const data = (await res.json()) as { match?: MatchDetail | null };
+  return data.match ?? null;
 }
 
 export async function fetchLive(): Promise<LiveMatch[]> {

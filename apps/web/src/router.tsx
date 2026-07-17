@@ -4,6 +4,7 @@ import Today from "@/routes/Today";
 import Calendar from "@/routes/Calendar";
 import Competitions from "@/routes/Competitions";
 import Competition from "@/routes/Competition";
+import MatchDetail from "@/routes/MatchDetail";
 
 const rootRoute = createRootRoute({ component: Layout });
 
@@ -15,8 +16,19 @@ const competitionRoute = createRoute({
   path: "/competitions/$slug",
   component: Competition,
 });
+const matchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/match/$id",
+  component: MatchDetail,
+});
 
-const routeTree = rootRoute.addChildren([todayRoute, calendarRoute, competitionsRoute, competitionRoute]);
+const routeTree = rootRoute.addChildren([
+  todayRoute,
+  calendarRoute,
+  competitionsRoute,
+  competitionRoute,
+  matchRoute,
+]);
 
 export const router = createRouter({ routeTree, defaultPreload: "intent" });
 
