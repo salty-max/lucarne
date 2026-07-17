@@ -19,6 +19,13 @@
           document.documentElement.classList.add("dark");
         }
       })();
+      // Apply the CRT-off setting before first paint (no flash).
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem("lucarne:settings") || "{}");
+          if (s.crt === false) document.documentElement.classList.add("crt-off");
+        } catch (e) {}
+      })();
     </script>
   </head>
   <body>

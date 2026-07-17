@@ -5,18 +5,15 @@ export function PageHeader({
   title,
   subtitle,
   right,
-  icon,
 }: {
   title: string;
   subtitle?: string;
   right?: ReactNode;
-  icon?: ReactNode;
 }) {
   return (
     <header className="mb-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          {icon}
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-bold uppercase tracking-tight text-[hsl(var(--tt-cyan))]">
               {title}

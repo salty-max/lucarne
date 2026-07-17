@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import type { BracketMatch, BracketRound, Team } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
 import { roundLabel } from "@/lib/labels";
-import { TeamLogo } from "./Logo";
 
 function Side({
   team,
@@ -19,11 +18,6 @@ function Side({
 }) {
   return (
     <div className="flex items-center gap-2">
-      {team ? (
-        <TeamLogo name={team.name} apiLogo={team.logo} size={18} />
-      ) : (
-        <span className="h-4.5 w-4.5 shrink-0 rounded-full bg-muted" />
-      )}
       <span
         className={cn(
           "min-w-0 flex-1 truncate",

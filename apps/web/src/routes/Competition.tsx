@@ -4,16 +4,18 @@ import { useSchedule } from "@/hooks/useSchedule";
 import { useCompetition } from "@/hooks/useCompetition";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { MatchTable } from "@/components/DaySection";
-import { CompetitionLogo } from "@/components/Logo";
 import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
+import { useSettings } from "@/lib/settings";
+import { dayKeyToDate, formatLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 /** Upcoming matches for the competition (its own fetch, mounted only when the
  *  Matchs tab is active). */
 function MatchesTab({ slug }: { slug: string }) {
   const { days, error } = useSchedule({ competition: slug, days: 45 });
+  const { dateFormat } = useSettings();
   if (!days) return <Loading error={error} />;
   if (days.length === 0) {
     return (
@@ -24,7 +26,12 @@ function MatchesTab({ slug }: { slug: string }) {
   }
   return (
     <MatchTable
-      groups={days.map((d) => ({ key: d.key, label: d.label, matches: d.matches, tone: "yellow" as const }))}
+      groups={days.map((d) => ({
+        key: d.key,
+        label: formatLong(dayKeyToDate(d.key), dateFormat),
+        matches: d.matches,
+        tone: "yellow" as const,
+      }))}
     />
   );
 }
@@ -51,7 +58,6 @@ export default function Competition() {
       <PageHeader
         title={name}
         subtitle={detail?.country}
-        icon={<CompetitionLogo slug={slug} size={30} />}
         right={
           <Link
             to="/competitions"

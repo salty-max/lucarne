@@ -1,13 +1,14 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { useMatch } from "@/hooks/useMatch";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { CompetitionLogo, TeamLogo } from "@/components/Logo";
 import { EventMark } from "@/components/EventMark";
 import { BroadcasterBadge } from "@/components/BroadcasterBadge";
 import { EmptyState, Loading, SectionLabel } from "@/components/common";
 import { eventMark, eventName } from "@/lib/matchEvents";
 import { roundLabel } from "@/lib/labels";
-import { eventMinute, parisLongLabel, parisTime } from "@/lib/time";
+import { useSettings } from "@/lib/settings";
+import { formatLong, formatShort } from "@/lib/dates";
+import { eventMinute, parisTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type {
   Broadcaster,
@@ -157,15 +158,6 @@ function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) {
   );
 }
 
-function shortDate(iso: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Paris",
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(new Date(iso));
-}
-
 function statusLine(m: Detail): { text: string; live: boolean } | null {
   if (m.status === "live") return { text: m.elapsed != null ? `Live ${m.elapsed}'` : "Live", live: true };
   if (m.status === "postponed") return { text: "Postponed", live: false };
@@ -183,6 +175,7 @@ function statusLine(m: Detail): { text: string; live: boolean } | null {
 
 /** Compact, flat teletext scoreboard: crests + score on one line, names below. */
 function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Result; awayResult: Result }) {
+  const { dateFormat } = useSettings();
   const status = statusLine(m);
   const pens = m.homePenalties != null && m.awayPenalties != null;
   const nameCls = (r: Result) =>
@@ -191,7 +184,6 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
   return (
     <div className="flex flex-col items-center gap-1.5 py-3">
       <div className="flex items-center justify-center gap-3 sm:gap-4">
-        <TeamLogo name={m.home.name} apiLogo={m.home.logo} size={40} />
         {m.status === "scheduled" ? (
           <span className="text-2xl font-bold leading-none tabular-nums text-[hsl(var(--tt-yellow))]">
             {parisTime(m.kickoff)}
@@ -203,7 +195,6 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
             {m.awayGoals ?? 0}
           </span>
         )}
-        <TeamLogo name={m.away.name} apiLogo={m.away.logo} size={40} />
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-center gap-2 text-center text-sm">
@@ -229,7 +220,9 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
           </span>
         ))}
       {m.status === "scheduled" && (
-        <span className="text-xs uppercase text-muted-foreground">{shortDate(m.kickoff)}</span>
+        <span className="text-xs uppercase text-muted-foreground">
+          {formatShort(new Date(m.kickoff), dateFormat)}
+        </span>
       )}
     </div>
   );
@@ -285,6 +278,7 @@ export default function MatchDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
   const { match, loading, error } = useMatch(Number(id));
   const comps = useCompetitions();
+  const { dateFormat } = useSettings();
 
   if (loading) return <Loading />;
   if (error || !match) {
@@ -325,7 +319,6 @@ export default function MatchDetail() {
 
       {/* Scoreboard — flat, no card/border/gradient */}
       <div className="tt-bar tt-bar-magenta text-xs">
-        <CompetitionLogo slug={match.competition.slug} size={16} />
         <span className="truncate">{match.competition.name}</span>
         {round && <span className="tt-bar-r font-semibold normal-case">{round}</span>}
       </div>
@@ -384,7 +377,7 @@ export default function MatchDetail() {
       <section className="mt-3">
         <SectionLabel>Info</SectionLabel>
         <dl className="flex flex-col">
-          <InfoRow label="Date" value={parisLongLabel(new Date(match.kickoff))} />
+          <InfoRow label="Date" value={formatLong(new Date(match.kickoff), dateFormat)} />
           <InfoRow label="Kick-off" value={`${parisTime(match.kickoff)} · Europe/Paris`} />
           {match.venue && <InfoRow label="Venue" value={match.venue} />}
           <InfoRow

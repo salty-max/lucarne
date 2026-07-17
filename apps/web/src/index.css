@@ -426,3 +426,24 @@
   padding: 0 0.4ch;
   font-weight: 800;
 }
+
+/* ============================================================
+   CRT filter OFF — flat teletext screen (Settings toggle).
+   Drops scanlines, phosphor bloom, screen vignette and the TV
+   bezel so the app reads as a plain rectangular screen.
+   ============================================================ */
+.crt-off body {
+  text-shadow: none;
+}
+.crt-off body::after {
+  display: none;
+}
+.crt-off .tt-tv {
+  background: hsl(var(--background));
+  border-radius: 0;
+  box-shadow: none;
+}
+.crt-off .tt-screen {
+  border-radius: 0;
+  box-shadow: none;
+}

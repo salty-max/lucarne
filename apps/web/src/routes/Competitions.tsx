@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { CompetitionLogo } from "@/components/Logo";
 import { Loading, PageHeader, SectionLabel } from "@/components/common";
 import { compPageNo } from "@/lib/teletext";
 
@@ -8,6 +7,7 @@ const SECTIONS = [
   { to: "/", label: "Live & today", no: "100" },
   { to: "/calendar", label: "Calendar", no: "300" },
   { to: "/broadcasters", label: "Broadcaster guide", no: "600" },
+  { to: "/settings", label: "Settings", no: "700" },
 ] as const;
 
 export default function Competitions() {
@@ -44,7 +44,6 @@ export default function Competitions() {
                 params={{ slug: c.slug }}
                 className="tt-dotted group flex items-center gap-3 py-2"
               >
-                <CompetitionLogo slug={c.slug} size={22} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate uppercase group-hover:text-[hsl(var(--tt-cyan))]">
                     {c.name}

@@ -15,16 +15,6 @@ export function parisDayKey(d: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: PARIS }).format(d);
 }
 
-/** "Thursday 16 July" heading. */
-export function parisLongLabel(d: Date): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: PARIS,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(d);
-}
-
 /** Minute label for a match event, e.g. "45+2'". */
 export function eventMinute(minute: number | null, extra: number | null): string {
   if (minute == null) return "";

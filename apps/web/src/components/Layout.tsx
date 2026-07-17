@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { useLiveCount } from "@/hooks/useLiveCount";
+import { useSettings } from "@/lib/settings";
+import { formatShort } from "@/lib/dates";
 import {
   FASTTEXT,
   PAGE_ORDER,
@@ -10,12 +12,6 @@ import {
   sectionOf,
 } from "@/lib/teletext";
 
-const dateFmt = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
-  day: "2-digit",
-  month: "short",
-  timeZone: "Europe/Paris",
-});
 const timeFmt = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
@@ -29,18 +25,16 @@ export function Layout() {
   const navigate = useNavigate();
   const comps = useCompetitions();
   const live = useLiveCount();
+  const { dateFormat } = useSettings();
 
-  const [now, setNow] = useState(() => ({ d: dateFmt.format(new Date()), t: timeFmt.format(new Date()) }));
+  const [now, setNow] = useState(() => new Date());
   const [entry, setEntry] = useState("");
   const entryRef = useRef("");
   const clearId = useRef<number | undefined>(undefined);
 
   // Live clock in the service line.
   useEffect(() => {
-    const id = window.setInterval(
-      () => setNow({ d: dateFmt.format(new Date()), t: timeFmt.format(new Date()) }),
-      1000,
-    );
+    const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -152,8 +146,10 @@ export function Layout() {
             )}
             <span className="sp flex-1" />
             <span className="entry">{entry ? `${entry}▌` : ""}</span>
-            <span className="hidden text-muted-foreground sm:inline">{now.d.toUpperCase().replace(".", "")}</span>
-            <span className="clk">{now.t}</span>
+            <span className="hidden text-muted-foreground sm:inline">
+              {formatShort(now, dateFormat).toUpperCase()}
+            </span>
+            <span className="clk">{timeFmt.format(now)}</span>
             <span className="ml-1 inline-flex gap-0.5">
               <button
                 className="tt-navbtn"
@@ -184,6 +180,10 @@ export function Layout() {
               <Outlet />
             </div>
           </main>
+
+          {/* Slot for a page's footer bar (e.g. the standings legend), pinned
+              just above the FastText footer — outside the scroll area. */}
+          <div id="tt-legend-slot" />
 
           {/* FastText */}
           <nav className="tt-fast">

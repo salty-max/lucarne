@@ -2,14 +2,12 @@ import { Fragment } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Day, Match } from "@lucarne/shared";
 import { cn } from "@/lib/utils";
-import { CompetitionLogo } from "./Logo";
 import { MatchCard } from "./MatchCard";
 
 export type MatchGroup = {
   key: string;
   label?: string;
   matches: Match[];
-  logo?: string; // competition slug for a crest in the header bar
   tone?: "yellow" | "cyan" | "live";
 };
 
@@ -36,7 +34,6 @@ export function MatchTable({ groups }: { groups: MatchGroup[] }) {
                         g.tone === "live" ? "tt-bar-live" : g.tone === "yellow" ? "tt-bar-yellow" : "",
                       )}
                     >
-                      {g.logo && <CompetitionLogo slug={g.logo} size={14} />}
                       <span className="truncate">{g.label}</span>
                       <span className="tt-bar-r tabular-nums">{g.matches.length}</span>
                     </div>

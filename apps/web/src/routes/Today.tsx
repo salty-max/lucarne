@@ -1,17 +1,19 @@
 import { useSchedule } from "@/hooks/useSchedule";
-import { parisDayKey, parisLongLabel } from "@/lib/time";
+import { parisDayKey } from "@/lib/time";
+import { useSettings } from "@/lib/settings";
+import { dayKeyToDate, formatLong } from "@/lib/dates";
 import { MatchTable, type MatchGroup } from "@/components/DaySection";
 import { EmptyState, Loading, TeletextHero } from "@/components/common";
 
 export default function Today() {
   const { days, error } = useSchedule({ days: 8 }, { live: true });
+  const { dateFormat } = useSettings();
   const todayKey = parisDayKey();
-  const todayLabel = parisLongLabel(new Date());
 
   if (!days) {
     return (
       <>
-        <TeletextHero subtitle={todayLabel} />
+        <TeletextHero />
         <Loading error={error} />
       </>
     );
@@ -30,11 +32,16 @@ export default function Today() {
           { key: "up", label: "Upcoming", matches: up, tone: "yellow" },
           { key: "done", label: "Finished", matches: done, tone: "cyan" },
         ]
-      : upcoming.slice(0, 5).map((d) => ({ key: d.key, label: d.label, matches: d.matches, tone: "yellow" as const }));
+      : upcoming.slice(0, 5).map((d) => ({
+          key: d.key,
+          label: formatLong(dayKeyToDate(d.key), dateFormat),
+          matches: d.matches,
+          tone: "yellow" as const,
+        }));
 
   return (
     <>
-      <TeletextHero subtitle={todayLabel} />
+      <TeletextHero />
       {todayMatches.length === 0 && (
         <EmptyState title="No matches today">Nothing today — here's what's next.</EmptyState>
       )}

@@ -1,7 +1,6 @@
 import { cn, textOn } from "@/lib/utils";
 import { parisTime } from "@/lib/time";
 import type { Broadcaster, Match } from "@lucarne/shared";
-import { TeamLogo } from "./Logo";
 
 type Result = "win" | "loss" | "none";
 
@@ -50,7 +49,7 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
 
   const nameCls = (r: Result) =>
     cn(
-      "max-w-[7rem] truncate uppercase sm:max-w-[16rem]",
+      "inline-block max-w-[7rem] truncate align-middle uppercase sm:max-w-[16rem]",
       r === "win" ? "font-bold text-[hsl(var(--tt-green))]" : "text-foreground",
     );
 
@@ -63,39 +62,39 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
         m.status === "live" && "bg-live/5",
       )}
     >
-      <td className="whitespace-nowrap py-1 pr-3 text-[0.78rem]">
+      <td className="whitespace-nowrap py-1 pr-3 align-middle text-[0.78rem]">
         <StatusCell m={m} />
       </td>
-      <td className="py-1 text-right">
-        <span className="flex items-center justify-end gap-1.5">
+      <td className="py-1 align-middle">
+        <span className="flex items-center gap-2">
           <span className={nameCls(homeResult)}>{m.home.name}</span>
-          <TeamLogo name={m.home.name} apiLogo={m.home.logo} size={16} />
-        </span>
-      </td>
-      <td className="whitespace-nowrap px-2 py-1 text-center font-extrabold tabular-nums text-[hsl(var(--tt-yellow))]">
-        {hasScore ? `${m.homeGoals}–${m.awayGoals}` : "–"}
-        {pens && (
-          <span className="ml-0.5 align-super text-[0.55rem] font-medium text-muted-foreground">
-            ({m.homePenalties}-{m.awayPenalties})
+          <span className="shrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
+            {hasScore ? (
+              <span className="block leading-none text-[hsl(var(--tt-yellow))]">
+                {m.homeGoals}–{m.awayGoals}
+              </span>
+            ) : (
+              <span className="block leading-none text-muted-foreground">—</span>
+            )}
+            {pens && (
+              <span className="mt-0.5 block text-[0.55rem] font-medium leading-none text-muted-foreground">
+                ({m.homePenalties}-{m.awayPenalties})
+              </span>
+            )}
           </span>
-        )}
-      </td>
-      <td className="py-1">
-        <span className="flex items-center gap-1.5">
-          <TeamLogo name={m.away.name} apiLogo={m.away.logo} size={16} />
           <span className={nameCls(awayResult)}>{m.away.name}</span>
         </span>
       </td>
       <td className="w-full" />
-      <td className="py-1 pl-3 text-right">
+      <td className="whitespace-nowrap py-1 pl-3 text-right align-middle">
         {m.broadcasters.length > 0 ? (
-          <span className="flex flex-wrap items-center justify-end gap-1">
+          <span className="inline-flex items-center justify-end gap-1">
             {m.broadcasters.map((b) => (
               <Tag key={b.id} b={b} />
             ))}
           </span>
         ) : (
-          <span className="whitespace-nowrap text-[0.65rem] italic text-muted-foreground">TBC</span>
+          <span className="text-[0.65rem] italic text-muted-foreground">TBC</span>
         )}
       </td>
     </tr>

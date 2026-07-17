@@ -3,6 +3,7 @@ import type { Match } from "@lucarne/shared";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { parisDayKey } from "@/lib/time";
+import { dayKeyToDate, weekdayShort } from "@/lib/dates";
 import { MatchTable } from "@/components/DaySection";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
 import { cn } from "@/lib/utils";
@@ -144,7 +145,7 @@ export default function Calendar() {
                 const idx = start + i;
                 const active = idx === sel;
                 const isToday = d.key === todayKey;
-                const wd = (d.label.split(" ")[0] ?? "").slice(0, 3);
+                const wd = weekdayShort(dayKeyToDate(d.key)).slice(0, 3);
                 return (
                   <button
                     key={d.key}
@@ -201,7 +202,6 @@ export default function Calendar() {
               groups={groups.map((g) => ({
                 key: g.slug,
                 label: g.name,
-                logo: g.slug,
                 matches: g.matches,
                 tone: "cyan" as const,
               }))}
