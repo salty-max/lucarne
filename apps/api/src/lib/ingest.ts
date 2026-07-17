@@ -1,11 +1,12 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { competitions, teams, matches, matchEvents, matchLineups } from "@/db/schema";
+import { competitions, teams, matches, matchEvents, matchLineups, standings } from "@/db/schema";
 import {
   getFixtures,
   getFixtureEvents,
   getFixtureLineups,
   getLiveFixtures,
+  getStandings,
   type ApiFixture,
 } from "@/lib/api-football";
 import { COMPETITIONS, TRACKED_LEAGUE_IDS, currentSeason } from "@/lib/competitions";
@@ -129,6 +130,93 @@ export async function syncFixtures(daysAhead = 14, daysBack = 3): Promise<SyncRe
 
   const fixtures = await upsertFixtures([...byId.values()]);
   return { competitions: COMPETITIONS.length, fixtures, requestsUsed };
+}
+
+/**
+ * Fetch + store the full table(s) for one competition/season — one API request.
+ * Replaces the competition's rows wholesale (idempotent). An empty response
+ * (nothing published yet, e.g. pre-season) leaves any existing table untouched.
+ * Returns the number of rows stored.
+ */
+export async function storeStandings(
+  competitionId: number,
+  apiLeagueId: number,
+  season: number,
+): Promise<number> {
+  const groups = await getStandings(apiLeagueId, season); // 1 API request
+  const flat = groups.flat();
+  if (flat.length === 0) return 0;
+
+  // Every listed team must exist (a few may never have appeared in a fixture).
+  const teamSeen = new Map<number, { apiFootballId: number; name: string; logo: string | null }>();
+  for (const r of flat) {
+    teamSeen.set(r.team.id, { apiFootballId: r.team.id, name: r.team.name, logo: r.team.logo });
+  }
+  const returned = await db
+    .insert(teams)
+    .values([...teamSeen.values()])
+    .onConflictDoUpdate({
+      target: teams.apiFootballId,
+      set: { name: sql`excluded.name`, logo: sql`excluded.logo` },
+    })
+    .returning({ id: teams.id, apiFootballId: teams.apiFootballId });
+  const teamMap = new Map(returned.map((t) => [t.apiFootballId, t.id]));
+
+  let order = 0;
+  const rows = groups.flatMap((group) =>
+    group
+      .map((r) => {
+        const teamId = teamMap.get(r.team.id);
+        if (!teamId) return null;
+        return {
+          competitionId,
+          season,
+          groupLabel: r.group || null,
+          rank: r.rank,
+          teamId,
+          played: r.all.played,
+          win: r.all.win,
+          draw: r.all.draw,
+          lose: r.all.lose,
+          goalsFor: r.all.goals.for,
+          goalsAgainst: r.all.goals.against,
+          goalsDiff: r.goalsDiff,
+          points: r.points,
+          form: r.form,
+          description: r.description,
+          sortOrder: order++,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null),
+  );
+
+  await db
+    .delete(standings)
+    .where(and(eq(standings.competitionId, competitionId), eq(standings.season, season)));
+  if (rows.length > 0) await db.insert(standings).values(rows);
+  return rows.length;
+}
+
+/** Refresh the table(s) for every tracked competition (one request each). */
+export async function syncAllStandings(): Promise<{
+  competitions: number;
+  rows: number;
+  requestsUsed: number;
+}> {
+  const compMap = await competitionIdMap();
+  let rows = 0;
+  let requestsUsed = 0;
+  for (const comp of COMPETITIONS) {
+    const competitionId = compMap.get(comp.apiFootballId);
+    if (!competitionId) continue;
+    try {
+      rows += await storeStandings(competitionId, comp.apiFootballId, comp.season ?? currentSeason());
+    } catch (err) {
+      console.error("[standings]", comp.slug, err);
+    }
+    requestsUsed += 1;
+  }
+  return { competitions: COMPETITIONS.length, rows, requestsUsed };
 }
 
 /** Backfill one competition over an explicit date range (e.g. a whole tournament). */

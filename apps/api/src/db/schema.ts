@@ -116,6 +116,36 @@ export const matchLineups = sqliteTable(
   (t) => [index("match_lineups_match_idx").on(t.matchId)],
 );
 
+export const standings = sqliteTable(
+  "standings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => competitions.id),
+    season: integer("season").notNull(),
+    // Null/"Overall" for a single-table league; "Group A" etc. for cups.
+    groupLabel: text("group_label"),
+    rank: integer("rank").notNull(),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => teams.id),
+    played: integer("played").notNull().default(0),
+    win: integer("win").notNull().default(0),
+    draw: integer("draw").notNull().default(0),
+    lose: integer("lose").notNull().default(0),
+    goalsFor: integer("goals_for").notNull().default(0),
+    goalsAgainst: integer("goals_against").notNull().default(0),
+    goalsDiff: integer("goals_diff").notNull().default(0),
+    points: integer("points").notNull().default(0),
+    form: text("form"),
+    description: text("description"),
+    // Preserves the API's group + rank ordering across a replace-all upsert.
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("standings_competition_idx").on(t.competitionId, t.season)],
+);
+
 export const broadcastRules = sqliteTable(
   "broadcast_rules",
   {
@@ -163,4 +193,5 @@ export type Team = typeof teams.$inferSelect;
 export type Match = typeof matches.$inferSelect;
 export type MatchEvent = typeof matchEvents.$inferSelect;
 export type MatchLineup = typeof matchLineups.$inferSelect;
+export type Standing = typeof standings.$inferSelect;
 export type BroadcastRule = typeof broadcastRules.$inferSelect;

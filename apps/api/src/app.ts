@@ -6,11 +6,13 @@ import { runSeed } from "@/db/seed-data";
 import { authorizeCron } from "@/lib/auth";
 import { COMPETITIONS } from "@/lib/competitions";
 import { candidateKickoffRange } from "@/lib/live";
+import { getCompetitionDetail } from "@/lib/competition";
 import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
 import { pickCache } from "@/lib/scheduleCache";
 import { getMatchDetail, getSchedule, toWire, toWireMatchDetail } from "@/lib/schedule";
 import { startOfParisDay } from "@/lib/time";
 import type {
+  CompetitionDetailResponse,
   CompetitionsResponse,
   MatchDetailResponse,
   ScheduleResponse,
@@ -72,6 +74,17 @@ app.get("/api/competitions", async (c) => {
   } catch (err) {
     console.error("[/api/competitions]", err);
     return c.json({ competitions: [] } satisfies CompetitionsResponse);
+  }
+});
+
+// --- one competition's tables + knockout bracket (for the Competition view) ---
+app.get("/api/competition/:slug", async (c) => {
+  try {
+    const competition = await getCompetitionDetail(c.req.param("slug"));
+    return c.json({ competition } satisfies CompetitionDetailResponse);
+  } catch (err) {
+    console.error("[/api/competition]", err);
+    return c.json({ competition: null } satisfies CompetitionDetailResponse);
   }
 });
 

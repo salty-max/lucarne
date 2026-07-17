@@ -75,6 +75,58 @@ export type CompetitionInfo = {
   country: string;
 };
 
+/** One row of a league/group table. */
+export type StandingRow = {
+  rank: number;
+  team: Team;
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalsDiff: number;
+  points: number;
+  form: string | null; // recent results, e.g. "WWDLW"
+  description: string | null; // qualification note ("Promotion", "Relegation", …)
+};
+
+/** A single table. Leagues have one group ("Overall"); cups can have many. */
+export type StandingGroup = {
+  label: string; // "Overall" | "Group A" | "League Phase"
+  rows: StandingRow[];
+};
+
+/** One knockout tie in a bracket (teams are null until the fixture is drawn). */
+export type BracketMatch = {
+  id: number;
+  kickoff: string; // ISO 8601
+  status: MatchStatus;
+  home: Team | null;
+  away: Team | null;
+  homeGoals: number | null;
+  awayGoals: number | null;
+  homePenalties: number | null;
+  awayPenalties: number | null;
+  winner: "home" | "away" | null;
+};
+
+/** One column of the bracket (all ties of a knockout round). */
+export type BracketRound = {
+  name: string; // "Round of 16" | "Final" | …
+  matches: BracketMatch[];
+};
+
+/** The competition page payload: its tables and/or knockout bracket. */
+export type CompetitionDetail = {
+  slug: string;
+  name: string;
+  type: string; // "league" | "cup"
+  country: string;
+  standings: StandingGroup[] | null;
+  bracket: BracketRound[] | null;
+};
+
 export type LineupPlayer = {
   name: string;
   number: number | null;
@@ -103,3 +155,4 @@ export type ScheduleResponse = { days: Day[] };
 export type MatchDetailResponse = { match: MatchDetail | null };
 export type LiveResponse = { matches: LiveMatch[] };
 export type CompetitionsResponse = { competitions: CompetitionInfo[] };
+export type CompetitionDetailResponse = { competition: CompetitionDetail | null };

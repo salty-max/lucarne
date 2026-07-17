@@ -7,6 +7,7 @@ import {
   backfillFixtures,
   storeMatchEvents,
   storeMatchLineups,
+  syncAllStandings,
   syncFixtures,
   type SyncResult,
 } from "@/lib/ingest";
@@ -123,6 +124,10 @@ export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> 
     }
     requestsUsed += 1; // one request per competition, success or not
   }
+
+  // Same cadence for the tables (one request each) — cheap and always current.
+  const tables = await syncAllStandings();
+  requestsUsed += tables.requestsUsed;
 
   const state = await loadBudget(Date.now());
   await saveBudget({ ...state, requestsToday: state.requestsToday + requestsUsed });

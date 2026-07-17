@@ -129,3 +129,34 @@ export type ApiLineup = {
 export function getFixtureLineups(fixtureId: number) {
   return call<ApiLineup[]>("/fixtures/lineups", { fixture: fixtureId });
 }
+
+export type ApiStandingRow = {
+  rank: number;
+  team: { id: number; name: string; logo: string | null };
+  points: number;
+  goalsDiff: number;
+  group: string; // "Group A" | "League Phase" | the league name
+  form: string | null; // "WWDLW"
+  description: string | null; // "Promotion - Champions League", "Relegation", …
+  all: {
+    played: number;
+    win: number;
+    draw: number;
+    lose: number;
+    goals: { for: number; against: number };
+  };
+};
+
+// `/standings` nests the table(s) under league.standings — an array of groups,
+// each an array of rows (a plain league has exactly one group).
+type ApiStandingsLeague = { league: { id: number; season: number; standings: ApiStandingRow[][] } };
+
+/**
+ * Full league/cup table(s) for one league/season — one request. Returns the
+ * groups array (one entry for a plain league, several for a group cup). Empty
+ * before a competition has played, so callers treat `[]` as "no table yet".
+ */
+export async function getStandings(leagueId: number, season: number): Promise<ApiStandingRow[][]> {
+  const res = await call<ApiStandingsLeague[]>("/standings", { league: leagueId, season });
+  return res[0]?.league.standings ?? [];
+}
