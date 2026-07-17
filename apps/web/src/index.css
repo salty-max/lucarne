@@ -3,44 +3,36 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Lucarne "clair/nuit" identity: a clean, rounded, modern app. Neutral blue-grey
- * surfaces with a single blue accent (deep cobalt in light, brighter indigo in
- * dark) and a red reserved for live. System type, normal case, soft elevation.
- * Dark is the default (set before paint in index.html).
+ * Lucarne "Teletext" identity: an old-school teletext / Antiope revival.
+ * A near-black CRT ground, the seven teletext colours, a fixed-width face,
+ * sharp corners, dotted rules and full-width colour bars. It commits to a
+ * single dark world, so BOTH theme classes resolve to the same palette.
  */
-:root {
-  /* Ultra-flat: cards read against the page by TONE, not borders/shadows.
-     The page is a light grey; cards are white and "pop" one step lighter. */
-  --background: 220 15% 91%;
-  --foreground: 224 16% 9%;
-  --card: 0 0% 100%;
-  --card-foreground: 224 16% 9%;
-  --muted: 220 16% 95%; /* recessed surfaces on cards (event strip, cells) */
-  --muted-foreground: 220 9% 45%;
-  --border: 216 14% 90%; /* faint INTERNAL dividers only (no card outlines) */
-  --input: 216 14% 90%;
-  --primary: 160 90% 36%; /* emerald */
-  --primary-foreground: 0 0% 100%;
-  --accent: 220 16% 93%; /* hover surface */
-  --accent-foreground: 224 16% 9%;
-  --live: 358 69% 57%; /* red, reserved for live */
-  --radius: 0.875rem;
-}
-
+:root,
 .dark {
-  --background: 216 24% 5%; /* near-black page */
-  --foreground: 217 32% 93%;
-  --card: 219 18% 15%; /* a clear step lighter than the page */
-  --card-foreground: 217 32% 93%;
-  --muted: 219 16% 20%;
-  --muted-foreground: 218 13% 63%;
-  --border: 219 16% 23%;
-  --input: 219 16% 23%;
-  --primary: 152 72% 56%; /* emerald */
-  --primary-foreground: 158 50% 9%;
-  --accent: 219 16% 21%;
-  --accent-foreground: 217 32% 93%;
-  --live: 358 100% 70%;
+  --background: 222 47% 4%; /* CRT near-black, faint blue cast */
+  --foreground: 180 6% 90%;
+  --card: 220 40% 6%; /* a hair above the ground */
+  --card-foreground: 180 6% 90%;
+  --muted: 216 30% 13%; /* recessed cells */
+  --muted-foreground: 200 10% 60%;
+  --border: 205 28% 26%; /* dim rules */
+  --input: 205 28% 26%;
+  --primary: 145 100% 52%; /* teletext green — the accent */
+  --primary-foreground: 220 60% 5%;
+  --accent: 210 34% 12%; /* hover surface */
+  --accent-foreground: 180 6% 90%;
+  --live: 0 100% 64%; /* teletext red */
+  --radius: 0rem; /* teletext is sharp-cornered */
+
+  /* Full teletext palette for colour-coded bars & tags. */
+  --tt-red: 0 100% 64%;
+  --tt-green: 145 100% 52%;
+  --tt-yellow: 54 100% 52%;
+  --tt-blue: 225 100% 68%;
+  --tt-magenta: 318 100% 68%;
+  --tt-cyan: 180 100% 54%;
+  --tt-white: 180 6% 92%;
 }
 
 @theme inline {
@@ -67,19 +59,27 @@
     border-color: hsl(var(--border));
   }
   html {
-    color-scheme: light dark;
+    color-scheme: dark;
+    font-size: 15px; /* a touch smaller → denser, teletext-like grid */
   }
   body {
     margin: 0;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-      sans-serif;
+    font-family: "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas,
+      "Courier New", monospace;
     -webkit-font-smoothing: antialiased;
-    /* Smooth the page repaint when toggling light/dark. */
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
+    text-shadow: 0 0 1px rgb(255 255 255 / 0.08); /* faint phosphor bloom */
+  }
+  /* CRT scanlines over the whole screen. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, rgb(0 0 0 / 0.16) 2px 3px);
+    mix-blend-mode: multiply;
   }
 }
 
@@ -213,28 +213,216 @@
   }
 }
 
-/* Sidebar surface — a gentle vertical gradient + a faint accent glow near the
-   brand, so the flat rail keeps some depth without borders or shadows. */
-.sidebar-surface {
-  background:
-    radial-gradient(130% 42% at 50% 0%, hsl(var(--primary) / 0.10), transparent 72%),
-    hsl(var(--card));
+
+/* ============================================================
+   Teletext building blocks
+   ============================================================ */
+
+/* Full-width colour bar used for section headers (cyan by default). */
+.tt-bar {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  padding: 1px 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #05121a;
+  background: hsl(var(--tt-cyan));
 }
-.dark .sidebar-surface {
-  background:
-    radial-gradient(130% 46% at 50% 0%, hsl(var(--primary) / 0.18), transparent 74%),
-    hsl(var(--card));
+.tt-bar-r {
+  margin-left: auto;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.tt-bar-live {
+  background: hsl(var(--live));
+  color: #fff;
+}
+.tt-bar-yellow {
+  background: hsl(var(--tt-yellow));
+}
+.tt-bar-green {
+  background: hsl(var(--tt-green));
+}
+.tt-bar-magenta {
+  background: hsl(var(--tt-magenta));
+  color: #180614;
 }
 
-/* Reusable accent-glow surface for featured cards (e.g. the match-detail hero):
-   a soft top-down wash of the accent, centred, over the card. */
-.glow-surface {
-  background:
-    radial-gradient(130% 62% at 50% 0%, hsl(var(--primary) / 0.10), transparent 72%),
-    hsl(var(--card));
+/* Solid colour block tag (broadcasters, statuses). */
+.tt-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.5ch;
+  font-size: 0.78em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.dark .glow-surface {
-  background:
-    radial-gradient(130% 66% at 50% 0%, hsl(var(--primary) / 0.20), transparent 74%),
-    hsl(var(--card));
+
+/* Dotted leader rule, the teletext table look. */
+.tt-dotted {
+  border-bottom: 1px dotted hsl(var(--border));
+}
+
+/* Keyboard cursor highlight (managed, not browser focus). */
+.tt-cur {
+  outline: 2px solid hsl(var(--tt-cyan));
+  outline-offset: -2px;
+  background: hsl(var(--tt-cyan) / 0.14) !important;
+}
+
+/* The signature 7-colour bar. */
+.tt-rainbow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  height: 0.5rem;
+}
+.tt-rainbow i:nth-child(1) {
+  background: hsl(var(--tt-red));
+}
+.tt-rainbow i:nth-child(2) {
+  background: hsl(var(--tt-green));
+}
+.tt-rainbow i:nth-child(3) {
+  background: hsl(var(--tt-yellow));
+}
+.tt-rainbow i:nth-child(4) {
+  background: hsl(var(--tt-blue));
+}
+.tt-rainbow i:nth-child(5) {
+  background: hsl(var(--tt-magenta));
+}
+.tt-rainbow i:nth-child(6) {
+  background: hsl(var(--tt-cyan));
+}
+.tt-rainbow i:nth-child(7) {
+  background: hsl(var(--tt-white));
+}
+
+/* ============================================================
+   CRT shell — the whole app lives inside one teletext "screen"
+   ============================================================ */
+.tt-stage {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: clamp(0px, 1.4vw, 14px);
+}
+.tt-tv {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 74rem;
+  background: linear-gradient(#17171a, #0b0b0d);
+  border-radius: 20px;
+  padding: clamp(7px, 1.4vw, 15px);
+  box-shadow:
+    0 0 0 2px #000,
+    0 24px 60px -18px rgb(0 0 0 / 0.9),
+    inset 0 2px 0 rgb(255 255 255 / 0.05);
+}
+.tt-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: hsl(var(--background));
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 80px rgb(0 0 0 / 0.9),
+    inset 0 0 20px rgb(0 0 0 / 0.7);
+}
+
+/* Service line */
+.tt-service {
+  display: flex;
+  align-items: center;
+  gap: 0.8ch;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid hsl(var(--border));
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 0.82rem;
+}
+.tt-service .pnum {
+  background: hsl(var(--tt-yellow));
+  color: #000;
+  padding: 0 0.6ch;
+}
+.tt-service .svc {
+  color: hsl(var(--tt-cyan));
+}
+.tt-service .clk {
+  color: hsl(var(--primary));
+  font-variant-numeric: tabular-nums;
+}
+.tt-service .entry {
+  color: hsl(var(--tt-magenta));
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  min-width: 3.6ch;
+  text-align: right;
+}
+.tt-navbtn {
+  background: hsl(var(--tt-white));
+  color: #000;
+  font-weight: 800;
+  padding: 0 0.6ch;
+  cursor: pointer;
+}
+.tt-navbtn:hover {
+  background: hsl(var(--tt-yellow));
+}
+
+/* FastText footer + keyboard hint */
+.tt-fast {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 0.5rem 0.8rem 0;
+}
+.tt-fast a {
+  color: #000;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0.32em 0.5ch;
+  text-align: center;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tt-fast .f-red {
+  background: hsl(var(--tt-red));
+  color: #fff;
+}
+.tt-fast .f-grn {
+  background: hsl(var(--tt-green));
+}
+.tt-fast .f-yel {
+  background: hsl(var(--tt-yellow));
+}
+.tt-fast .f-cyn {
+  background: hsl(var(--tt-cyan));
+}
+.tt-kbd {
+  padding: 0.4rem 0.8rem 0.7rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+.tt-kbd .k {
+  background: hsl(var(--tt-white));
+  color: #000;
+  padding: 0 0.4ch;
+  font-weight: 800;
 }

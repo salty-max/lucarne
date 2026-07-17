@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Skeleton } from "@/components/primitives";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({
@@ -14,28 +13,64 @@ export function PageHeader({
   icon?: ReactNode;
 }) {
   return (
-    <header className="mb-6 flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
-        {icon}
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-0.5 truncate text-sm text-muted-foreground">{subtitle}</p>}
+    <header className="mb-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {icon}
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold uppercase tracking-tight text-[hsl(var(--tt-cyan))]">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="truncate text-xs uppercase tracking-wider text-muted-foreground">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
+        {right}
       </div>
-      {right}
+      <div className="tt-rainbow mt-2" aria-hidden>
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
     </header>
   );
 }
 
+/** The big branded teletext masthead (used on the landing). */
+export function TeletextHero({ subtitle }: { subtitle?: string }) {
+  return (
+    <div className="mb-5">
+      <div className="text-4xl font-bold uppercase leading-none tracking-tight text-[hsl(var(--tt-cyan))]">
+        Lucarne<span className="text-primary">.</span>
+      </div>
+      {subtitle && (
+        <div className="mt-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">{subtitle}</div>
+      )}
+      <div className="tt-rainbow mt-2" aria-hidden>
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
+    </div>
+  );
+}
+
+/** A full-width teletext colour bar for section headers. */
 export function SectionLabel({ children, live }: { children: ReactNode; live?: boolean }) {
   return (
-    <h2
-      className={cn(
-        "mb-3 flex items-center gap-2 text-sm font-semibold",
-        live ? "text-live" : "text-foreground",
-      )}
-    >
-      {live && <span className="live-dot h-2 w-2 rounded-full bg-live" />}
+    <h2 className={cn("tt-bar mb-2 text-xs", live && "tt-bar-live")}>
+      {live && <span className="live-dot h-2 w-2 rounded-full bg-current" />}
       {children}
     </h2>
   );
@@ -44,32 +79,28 @@ export function SectionLabel({ children, live }: { children: ReactNode; live?: b
 export function LivePill({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-live/10 px-2.5 py-1 text-xs font-semibold text-live">
-      <span className="live-dot h-1.5 w-1.5 rounded-full bg-live" />
-      {count} live
+    <span className="tt-tag bg-live py-0.5 text-white">
+      <span className="live-dot mr-1 h-1.5 w-1.5 rounded-full bg-current" />
+      {count} LIVE
     </span>
   );
 }
 
 export function Loading({ error }: { error?: boolean }) {
-  if (error) {
-    return (
-      <p className="rounded-lg bg-muted/50 p-8 text-center text-sm text-muted-foreground">
-        Couldn't load right now — retrying…
-      </p>
-    );
-  }
   return (
-    <div className="flex flex-col gap-2.5">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-22 w-full" />
-      ))}
-    </div>
+    <p
+      className={cn(
+        "py-10 text-center text-sm uppercase tracking-widest",
+        error ? "text-live" : "animate-pulse text-muted-foreground",
+      )}
+    >
+      {error ? "Couldn't load — retrying…" : "Loading…"}
+    </p>
   );
 }
 
 export function EmptyState({
-  icon = "⚽",
+  icon = "◹",
   title,
   children,
 }: {
@@ -78,9 +109,9 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-muted/50 p-10 text-center">
-      <div className="text-3xl">{icon}</div>
-      <p className="mt-2 font-semibold">{title}</p>
+    <div className="py-10 text-center">
+      <div className="text-3xl text-muted-foreground/50">{icon}</div>
+      <p className="mt-2 font-bold uppercase tracking-wide">{title}</p>
       {children && <p className="mt-1 text-sm text-muted-foreground">{children}</p>}
     </div>
   );

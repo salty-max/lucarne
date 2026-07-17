@@ -27,7 +27,7 @@ export function Panel({
 }
 
 const chipVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-full font-medium",
+  "inline-flex items-center gap-1.5 font-semibold uppercase tracking-wide",
   {
     variants: {
       variant: {
