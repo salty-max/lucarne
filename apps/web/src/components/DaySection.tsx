@@ -1,30 +1,72 @@
-import { Link } from "@tanstack/react-router";
+import { Fragment } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import type { Day, Match } from "@lucarne/shared";
+import { cn } from "@/lib/utils";
+import { CompetitionLogo } from "./Logo";
 import { MatchCard } from "./MatchCard";
 
-export function MatchList({ matches }: { matches: Match[] }) {
+export type MatchGroup = {
+  key: string;
+  label?: string;
+  matches: Match[];
+  logo?: string; // competition slug for a crest in the header bar
+  tone?: "yellow" | "cyan" | "live";
+};
+
+const COLS = 6;
+
+/** All groups in ONE table so every column lines up across sections. */
+export function MatchTable({ groups }: { groups: MatchGroup[] }) {
+  const navigate = useNavigate();
+  const shown = groups.filter((g) => g.matches.length > 0);
+  if (shown.length === 0) return null;
+
   return (
-    <div className="flex flex-col gap-2.5">
-      {matches.map((m) => (
-        <Link key={m.id} to="/match/$id" params={{ id: String(m.id) }} className="block">
-          <MatchCard m={m} />
-        </Link>
-      ))}
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm tabular-nums">
+        <tbody>
+          {shown.map((g) => (
+            <Fragment key={g.key}>
+              {g.label && (
+                <tr>
+                  <td colSpan={COLS} className="pt-4 first:pt-0">
+                    <div
+                      className={cn(
+                        "tt-bar text-xs",
+                        g.tone === "live" ? "tt-bar-live" : g.tone === "yellow" ? "tt-bar-yellow" : "",
+                      )}
+                    >
+                      {g.logo && <CompetitionLogo slug={g.logo} size={14} />}
+                      <span className="truncate">{g.label}</span>
+                      <span className="tt-bar-r tabular-nums">{g.matches.length}</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {g.matches.map((m) => (
+                <MatchCard
+                  key={m.id}
+                  m={m}
+                  onOpen={() => navigate({ to: "/match/$id", params: { id: String(m.id) } })}
+                />
+              ))}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-/** A day heading (label + trailing rule + count) and its matches. */
+/** A plain list (single untitled group). */
+export function MatchList({ matches }: { matches: Match[] }) {
+  return <MatchTable groups={[{ key: "all", matches }]} />;
+}
+
+/** One day's matches under a yellow day bar. */
 export function DaySection({ day }: { day: Day }) {
   if (day.matches.length === 0) return null;
   return (
-    <section>
-      <h2 className="mb-3 flex items-center gap-3 text-sm font-semibold text-muted-foreground">
-        <span className="whitespace-nowrap">{day.label}</span>
-        <span className="h-px flex-1 bg-border" />
-        <span className="shrink-0 tabular-nums text-muted-foreground/60">{day.matches.length}</span>
-      </h2>
-      <MatchList matches={day.matches} />
-    </section>
+    <MatchTable groups={[{ key: day.key, label: day.label, matches: day.matches, tone: "yellow" }]} />
   );
 }

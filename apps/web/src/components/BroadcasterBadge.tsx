@@ -1,13 +1,13 @@
 import type { Broadcaster } from "@lucarne/shared";
+import { textOn } from "@/lib/utils";
 
 export function BroadcasterBadge({ b }: { b: Broadcaster }) {
   return (
     <span
       title={b.note ?? b.name}
-      style={{ borderColor: `${b.color}55`, backgroundColor: `${b.color}14`, color: b.color }}
-      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: b.color, color: textOn(b.color) }}
+      className="tt-tag py-px"
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: b.color }} />
       {b.name}
     </span>
   );
@@ -27,7 +27,7 @@ export function BroadcasterList({ list }: { list: Broadcaster[] }) {
           <BroadcasterBadge b={b} />
         </span>
       ))}
-      {isSplit && <span className="text-xs italic text-muted-foreground">depending on selection</span>}
+      {isSplit && <span className="text-xs italic text-muted-foreground">depending on the fixture</span>}
     </div>
   );
 }

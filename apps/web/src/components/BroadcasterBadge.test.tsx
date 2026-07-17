@@ -22,7 +22,7 @@ describe("BroadcasterList", () => {
     expect(screen.queryByText("or")).toBeNull();
   });
 
-  it("marks split rights with 'or' and 'depending on selection'", () => {
+  it("marks split rights with a separator and a caveat", () => {
     render(
       <BroadcasterList
         list={[
