@@ -1,5 +1,11 @@
 import cron from "node-cron";
-import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
+import {
+  runDetailsDrain,
+  runFixtureSync,
+  runFullResync,
+  runLineupPoll,
+  runLivePollTick,
+} from "@/lib/poller";
 import { memoryCache } from "@/lib/scheduleCache";
 
 /**
@@ -16,6 +22,16 @@ export function startScheduler(): void {
       console.log("[sync]", await runFixtureSync(memoryCache));
     } catch (err) {
       console.error("[sync] failed", err);
+    }
+  });
+
+  // Weekly full-season re-sync (~10 requests) — catches fixtures scheduled after
+  // a draw across the whole calendar, not just the daily rolling window.
+  cron.schedule("0 6 * * 1", async () => {
+    try {
+      console.log("[resync]", await runFullResync(memoryCache));
+    } catch (err) {
+      console.error("[resync] failed", err);
     }
   });
 
@@ -43,5 +59,7 @@ export function startScheduler(): void {
     }
   });
 
-  console.log("Scheduler started — fixtures 05:00, details 02:00/04:00, live every 2 min.");
+  console.log(
+    "Scheduler started — fixtures 05:00, full re-sync Mon 06:00, details 02:00/04:00, live every 2 min.",
+  );
 }

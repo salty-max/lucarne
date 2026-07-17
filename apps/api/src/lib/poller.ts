@@ -4,11 +4,13 @@ import { db } from "@/db";
 import { matches, teams } from "@/db/schema";
 import {
   applyLiveUpdate,
+  backfillFixtures,
   storeMatchEvents,
   storeMatchLineups,
   syncFixtures,
   type SyncResult,
 } from "@/lib/ingest";
+import { COMPETITIONS, currentSeason } from "@/lib/competitions";
 import {
   budgetRemaining,
   candidateKickoffRange,
@@ -95,6 +97,37 @@ export async function runFixtureSync(cache?: ScheduleCache): Promise<SyncResult>
   await saveBudget({ ...state, requestsToday: state.requestsToday + result.requestsUsed });
   if (cache) await refreshWindowCache(cache);
   return result;
+}
+
+/**
+ * Weekly full-season re-sync. The daily sync only covers a rolling ~17-day
+ * window, so fixtures confirmed after a draw — e.g. the UEFA league-phase
+ * matchdays set in late August — wouldn't surface until they entered that
+ * window. This refetches every competition's WHOLE season (one request each,
+ * ~10 total) and upserts it, landing the full calendar in one pass. Upserts run
+ * per-competition to keep each batch bounded; the cost counts against the
+ * shared daily budget (idempotent, so a mid-run failure just retries next week).
+ */
+export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> {
+  const season = currentSeason();
+  const from = `${season}-07-01`;
+  const to = `${season + 1}-06-30`;
+
+  let fixtures = 0;
+  let requestsUsed = 0;
+  for (const comp of COMPETITIONS) {
+    try {
+      fixtures += await backfillFixtures(comp.apiFootballId, comp.season ?? season, from, to);
+    } catch (err) {
+      console.error("[resync]", comp.slug, err);
+    }
+    requestsUsed += 1; // one request per competition, success or not
+  }
+
+  const state = await loadBudget(Date.now());
+  await saveBudget({ ...state, requestsToday: state.requestsToday + requestsUsed });
+  if (cache) await refreshWindowCache(cache);
+  return { competitions: COMPETITIONS.length, fixtures, requestsUsed };
 }
 
 /** Recompute the upcoming live windows and store them for the gate. */

@@ -2,7 +2,13 @@ import { drizzle } from "drizzle-orm/d1";
 import type { D1Database } from "@cloudflare/workers-types";
 import { app } from "@/app";
 import { schema, setDb } from "@/db";
-import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
+import {
+  runDetailsDrain,
+  runFixtureSync,
+  runFullResync,
+  runLineupPoll,
+  runLivePollTick,
+} from "@/lib/poller";
 import { pickCache } from "@/lib/scheduleCache";
 
 // Minimal Workers types (D1Database is imported for the driver; the rest stay
@@ -13,6 +19,7 @@ type Env = { DB: D1Database; SCHEDULE_KV?: unknown; CURRENT_SEASON?: string };
 
 // Must match wrangler.jsonc `triggers.crons` exactly.
 const DAILY_SYNC_CRON = "0 5 * * *";
+const WEEKLY_RESYNC_CRON = "0 6 * * 1";
 const DETAILS_CRON = "0 2,4 * * *";
 
 /**
@@ -37,6 +44,12 @@ export default {
         runFixtureSync(cache)
           .then((r) => console.log("[sync]", r))
           .catch((err) => console.error("[sync] failed", err)),
+      );
+    } else if (event.cron === WEEKLY_RESYNC_CRON) {
+      ctx.waitUntil(
+        runFullResync(cache)
+          .then((r) => console.log("[resync]", r))
+          .catch((err) => console.error("[resync] failed", err)),
       );
     } else if (event.cron === DETAILS_CRON) {
       ctx.waitUntil(

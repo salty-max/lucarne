@@ -21,7 +21,7 @@
   // D1 has no CU-hour billing, so the window is purely to minimise API-Football
   // requests; the KV gate skips even the DB read when nothing is live.
   "triggers": {
-    "crons": ["0 5 * * *", "0 2,4 * * *", "*/2 11-22 * * *"]
+    "crons": ["0 5 * * *", "0 6 * * 1", "0 2,4 * * *", "*/2 11-22 * * *"]
   },
 
   "vars": {
