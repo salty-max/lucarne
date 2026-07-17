@@ -1,10 +1,11 @@
-import { TEAM_LOGO_SLUGS } from "./teamLogos";
+import { NATIONAL_TEAM_SLUGS, TEAM_LOGO_SLUGS } from "./teamLogos";
 
 // Competitions with a bundled SVG crest (public/logos/competitions). The World
 // Cup has none in the set → falls back to no logo.
 const COMPETITION_LOGO_SLUGS = new Set([
   "premier-league",
   "ligue-1",
+  "ligue-2",
   "la-liga",
   "bundesliga",
   "champions-league",
@@ -41,14 +42,23 @@ const NATIONAL_TEAM_ALIASES: Record<string, string> = {
   "united-states": "usa-national-team",
 };
 
-/** Bundled team crest src if we have one, else null (→ fall back to API logo). */
+/** Bundled team crest src if we have one, else null (→ fall back to API logo).
+ *  Clubs are PNG; national teams are SVG (crisper at the larger detail sizes). */
 export function teamLogo(name: string): string | null {
   const slug = teamSlug(name);
   if (TEAM_LOGO_SLUGS.has(slug)) return `/logos/teams/${slug}.png`;
+  const national = nationalTeamSlug(slug);
+  if (national) return `/logos/teams/${national}.svg`;
+  return null;
+}
+
+/** Resolve an API team-name slug to a bundled national-team SVG slug, or null. */
+function nationalTeamSlug(slug: string): string | null {
+  if (NATIONAL_TEAM_SLUGS.has(slug)) return slug;
   // National teams are stored as "<country>-national-team".
-  const national = `${slug}-national-team`;
-  if (TEAM_LOGO_SLUGS.has(national)) return `/logos/teams/${national}.png`;
+  const withSuffix = `${slug}-national-team`;
+  if (NATIONAL_TEAM_SLUGS.has(withSuffix)) return withSuffix;
   const alias = NATIONAL_TEAM_ALIASES[slug];
-  if (alias && TEAM_LOGO_SLUGS.has(alias)) return `/logos/teams/${alias}.png`;
+  if (alias && NATIONAL_TEAM_SLUGS.has(alias)) return alias;
   return null;
 }
