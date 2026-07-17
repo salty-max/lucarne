@@ -18,7 +18,10 @@ export default function Competition() {
         subtitle="Upcoming matches"
         icon={<CompetitionLogo slug={slug} size={30} />}
         right={
-          <Link to="/competitions" className="shrink-0 text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/competitions"
+            className="shrink-0 text-sm text-muted-foreground hover:text-foreground"
+          >
             ‹ All
           </Link>
         }

@@ -33,7 +33,7 @@ export default function Today() {
           {upcoming.length > 0 && (
             <div className="mt-6 flex flex-col gap-6">
               <SectionLabel>Next up</SectionLabel>
-              {upcoming.slice(0, 2).map((d) => (
+              {upcoming.slice(0, 4).map((d) => (
                 <DaySection key={d.key} day={d} />
               ))}
             </div>

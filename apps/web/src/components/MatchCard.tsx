@@ -3,6 +3,7 @@ import { eventMinute, parisTime } from "@/lib/time";
 import { eventMark, eventName, type EventMarkKind } from "@/lib/matchEvents";
 import type { Match, MatchEvent, Team } from "@lucarne/shared";
 import { BroadcasterList } from "./BroadcasterBadge";
+import { GoalIcon } from "./GoalIcon";
 import { CompetitionLogo, TeamLogo } from "./Logo";
 
 type Result = "win" | "loss" | "none";
@@ -13,33 +14,19 @@ function StatusRail({ m }: { m: Match }) {
     return (
       <div className="flex flex-col items-center gap-1 text-live">
         <span className="live-dot h-1.5 w-1.5 rounded-full bg-live" />
-        <span className="font-headline text-lg font-semibold leading-none tabular-nums">
+        <span className="text-sm font-bold tabular-nums">
           {m.elapsed != null ? `${m.elapsed}'` : "LIVE"}
         </span>
       </div>
     );
   }
   if (m.status === "finished") {
-    // Extra time / shootout deserve their own badge; otherwise plain full-time.
     const label = m.statusShort === "PEN" ? "Pens" : m.statusShort === "AET" ? "AET" : "FT";
-    return (
-      <span className="font-headline text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </span>
-    );
+    return <div className="text-xs font-semibold text-muted-foreground">{label}</div>;
   }
-  if (m.status === "postponed") {
-    return (
-      <span className="font-headline text-xs font-semibold uppercase tracking-widest text-amber-500">
-        PPD
-      </span>
-    );
-  }
-  return (
-    <span className="font-headline text-lg font-semibold leading-none tabular-nums">
-      {parisTime(m.kickoff)}
-    </span>
-  );
+  if (m.status === "postponed")
+    return <div className="text-xs font-semibold text-amber-500">Postp.</div>;
+  return <div className="text-sm font-semibold tabular-nums">{parisTime(m.kickoff)}</div>;
 }
 
 function TeamRow({
@@ -58,23 +45,23 @@ function TeamRow({
       <TeamLogo name={team.name} apiLogo={team.logo} size={24} />
       <span
         className={cn(
-          "min-w-0 flex-1 truncate font-headline text-[15px] leading-tight",
+          "min-w-0 flex-1 truncate text-sm",
           result === "win" && "font-semibold text-foreground",
-          result === "loss" && "font-medium text-muted-foreground",
+          result === "loss" && "text-muted-foreground",
           result === "none" && "font-medium text-foreground",
         )}
       >
         {team.name}
       </span>
       {goals != null && (
-        <span className="flex items-baseline gap-1">
+        <span className="flex items-baseline gap-1 tabular-nums">
           {pens != null && (
-            <span className="font-headline text-xs font-medium text-muted-foreground">({pens})</span>
+            <span className="text-xs font-medium text-muted-foreground">({pens})</span>
           )}
           <span
             className={cn(
-              "font-headline text-xl leading-none tabular-nums",
-              result === "loss" ? "font-semibold text-muted-foreground" : "font-bold text-foreground",
+              "text-lg font-bold leading-none",
+              result === "loss" ? "text-muted-foreground" : "text-foreground",
             )}
           >
             {goals}
@@ -85,26 +72,28 @@ function TeamRow({
   );
 }
 
-/** A crisp vector mark for an event — a minimal ball for goals, a referee's
- *  card for bookings — so nothing depends on the OS emoji font. */
-function EventMark({ kind }: { kind: EventMarkKind }) {
+/** A crisp vector mark for an event — a soccer ball for goals, a referee's card
+ *  for bookings — so nothing depends on the OS emoji font. */
+export function EventMark({ kind }: { kind: EventMarkKind }) {
   if (kind === "goal") {
-    return (
-      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-foreground" fill="none" aria-hidden>
-        <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.12" />
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M12 8.8 15.04 11.01 13.88 14.59 10.12 14.59 8.96 11.01Z" fill="currentColor" />
-      </svg>
-    );
+    return <GoalIcon className="h-3.5 w-3.5" />;
   }
   return (
-    <span
+    <svg
+      viewBox="6 3 12 18"
+      className={cn("h-3.5 w-3.5", kind === "yellow" ? "text-yellow-400" : "text-red-500")}
       aria-hidden
-      className={cn(
-        "inline-block h-3 w-2.25 rounded-[1.5px] shadow-sm",
-        kind === "yellow" ? "bg-yellow-400" : "bg-red-500",
-      )}
-    />
+    >
+      <rect
+        x="7.5"
+        y="4"
+        width="9"
+        height="16"
+        rx="1.7"
+        fill="currentColor"
+        transform="rotate(9 12 12)"
+      />
+    </svg>
   );
 }
 
@@ -116,7 +105,7 @@ function EventLine({ e, align }: { e: MatchEvent; align: "left" | "right" }) {
       <span className="flex w-3.5 shrink-0 justify-center">
         <EventMark kind={kind} />
       </span>
-      <span className="min-w-[2.1ch] shrink-0 font-headline text-[11px] tabular-nums text-muted-foreground">
+      <span className="min-w-[2.1ch] shrink-0 tabular-nums text-muted-foreground">
         {eventMinute(e.minute, e.extraMinute)}
       </span>
       <span
@@ -169,12 +158,7 @@ export function MatchCard({ m }: { m: Match }) {
   const live = m.status === "live";
 
   return (
-    <article
-      className={cn(
-        "relative overflow-hidden rounded-lg border bg-card transition-colors hover:border-foreground/15",
-        live ? "border-live/40" : "border-border",
-      )}
-    >
+    <article className="relative overflow-hidden rounded-lg bg-card transition-colors hover:bg-accent">
       {live && <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-live" />}
 
       <div className="flex items-stretch gap-3 p-3 sm:gap-4 sm:p-4">
@@ -192,7 +176,7 @@ export function MatchCard({ m }: { m: Match }) {
       <div className="flex items-center justify-between gap-2 border-t px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-1.5">
           <CompetitionLogo slug={m.competition.slug} size={15} />
-          <span className="truncate font-headline text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="truncate text-xs font-medium text-muted-foreground">
             {m.competition.name}
           </span>
         </div>

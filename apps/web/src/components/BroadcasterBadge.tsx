@@ -4,8 +4,8 @@ export function BroadcasterBadge({ b }: { b: Broadcaster }) {
   return (
     <span
       title={b.note ?? b.name}
-      style={{ borderColor: `${b.color}55`, backgroundColor: `${b.color}1a`, color: b.color }}
-      className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-headline text-xs font-semibold uppercase leading-none tracking-wide"
+      style={{ borderColor: `${b.color}55`, backgroundColor: `${b.color}14`, color: b.color }}
+      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium"
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: b.color }} />
       {b.name}

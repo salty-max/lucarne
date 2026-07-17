@@ -2,37 +2,45 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Lucarne "clair/nuit" identity: a clean, rounded, modern app. Neutral blue-grey
+ * surfaces with a single blue accent (deep cobalt in light, brighter indigo in
+ * dark) and a red reserved for live. System type, normal case, soft elevation.
+ * Dark is the default (set before paint in index.html).
+ */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
+  /* Ultra-flat: cards read against the page by TONE, not borders/shadows.
+     The page is a light grey; cards are white and "pop" one step lighter. */
+  --background: 220 15% 91%;
+  --foreground: 224 16% 9%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --live: 0 84% 60%;
-  --radius: 0.75rem;
+  --card-foreground: 224 16% 9%;
+  --muted: 220 16% 95%; /* recessed surfaces on cards (event strip, cells) */
+  --muted-foreground: 220 9% 45%;
+  --border: 216 14% 90%; /* faint INTERNAL dividers only (no card outlines) */
+  --input: 216 14% 90%;
+  --primary: 160 90% 36%; /* emerald */
+  --primary-foreground: 0 0% 100%;
+  --accent: 220 16% 93%; /* hover surface */
+  --accent-foreground: 224 16% 9%;
+  --live: 358 69% 57%; /* red, reserved for live */
+  --radius: 0.875rem;
 }
 
 .dark {
-  --background: 222 47% 6%;
-  --foreground: 210 40% 96%;
-  --card: 222 44% 9%;
-  --card-foreground: 210 40% 96%;
-  --muted: 217 33% 15%;
-  --muted-foreground: 215 20% 62%;
-  --border: 217 30% 16%;
-  --input: 217 30% 16%;
-  --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
-  --accent: 217 33% 15%;
-  --accent-foreground: 210 40% 96%;
-  --live: 0 84% 62%;
+  --background: 216 24% 5%; /* near-black page */
+  --foreground: 217 32% 93%;
+  --card: 219 18% 15%; /* a clear step lighter than the page */
+  --card-foreground: 217 32% 93%;
+  --muted: 219 16% 20%;
+  --muted-foreground: 218 13% 63%;
+  --border: 219 16% 23%;
+  --input: 219 16% 23%;
+  --primary: 152 72% 56%; /* emerald */
+  --primary-foreground: 158 50% 9%;
+  --accent: 219 16% 21%;
+  --accent-foreground: 217 32% 93%;
+  --live: 358 100% 70%;
 }
 
 @theme inline {
@@ -49,11 +57,9 @@
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-live: hsl(var(--live));
-  /* Condensed "scoreboard" headline face (scores, team names, kickers). */
-  --font-headline: "Barlow Condensed", ui-sans-serif, system-ui, sans-serif;
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
 }
 
 @layer base {
@@ -70,6 +76,10 @@
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
       sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Smooth the page repaint when toggling light/dark. */
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 }
 
@@ -79,9 +89,152 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.3;
   }
 }
 .live-dot {
   animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+/* Content entrance — a gentle fade + rise, replayed on each route change. */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-enter {
+  animation: enter 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Radix Accordion — smooth collapse/expand to the measured content height. */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+.accordion-content[data-state="open"] {
+  animation: accordion-down 0.22s ease-out;
+}
+.accordion-content[data-state="closed"] {
+  animation: accordion-up 0.2s ease-out;
+}
+
+/* Radix Popover — a quick fade + rise on open. */
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.popover-content[data-state="open"] {
+  transform-origin: var(--radix-popover-content-transform-origin);
+  animation: popover-in 0.14s ease-out;
+}
+
+/* Radix Dialog drawer (mobile sidebar) — slide from the left + overlay fade. */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes drawer-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+.drawer-overlay[data-state="open"] {
+  animation: overlay-in 0.2s ease-out;
+}
+.drawer-overlay[data-state="closed"] {
+  animation: overlay-out 0.18s ease-in;
+}
+.drawer-content[data-state="open"] {
+  animation: drawer-in 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.drawer-content[data-state="closed"] {
+  animation: drawer-out 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-enter,
+  .accordion-content,
+  .popover-content,
+  .drawer-overlay,
+  .drawer-content {
+    animation: none !important;
+  }
+  .live-dot {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Sidebar surface — a gentle vertical gradient + a faint accent glow near the
+   brand, so the flat rail keeps some depth without borders or shadows. */
+.sidebar-surface {
+  background:
+    radial-gradient(130% 42% at 50% 0%, hsl(var(--primary) / 0.10), transparent 72%),
+    hsl(var(--card));
+}
+.dark .sidebar-surface {
+  background:
+    radial-gradient(130% 46% at 50% 0%, hsl(var(--primary) / 0.18), transparent 74%),
+    hsl(var(--card));
+}
+
+/* Reusable accent-glow surface for featured cards (e.g. the match-detail hero):
+   a soft top-down wash of the accent, centred, over the card. */
+.glow-surface {
+  background:
+    radial-gradient(130% 62% at 50% 0%, hsl(var(--primary) / 0.10), transparent 72%),
+    hsl(var(--card));
+}
+.dark .glow-surface {
+  background:
+    radial-gradient(130% 66% at 50% 0%, hsl(var(--primary) / 0.20), transparent 74%),
+    hsl(var(--card));
 }
