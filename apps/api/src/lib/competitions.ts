@@ -23,6 +23,7 @@ export const COMPETITIONS: CompetitionSeed[] = [
   { slug: "champions-league", name: "Champions League", apiFootballId: 2, country: "Europe", type: "cup" },
   { slug: "europa-league", name: "Europa League", apiFootballId: 3, country: "Europe", type: "cup" },
   { slug: "conference-league", name: "Conference League", apiFootballId: 848, country: "Europe", type: "cup" },
+  { slug: "nations-league", name: "Nations League", apiFootballId: 5, country: "Europe", type: "cup" },
   { slug: "world-cup", name: "World Cup", apiFootballId: 1, country: "World", type: "cup", season: 2026 },
 ];
 

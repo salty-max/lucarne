@@ -34,6 +34,9 @@ const RULES: {
   { comp: "champions-league", broadcaster: "canal-plus", coverage: "full", note: "Intégralité 2024-27" },
   { comp: "europa-league", broadcaster: "canal-plus", coverage: "full", note: "Jusqu'en 2027" },
   { comp: "conference-league", broadcaster: "canal-plus", coverage: "full", note: "Jusqu'en 2027" },
+  // Nations League: M6 in clair for Les Bleus + beIN Sports for everything.
+  { comp: "nations-league", broadcaster: "m6", coverage: "partial", note: "En clair — matchs de l'équipe de France" },
+  { comp: "nations-league", broadcaster: "bein-sports", coverage: "full", note: "Intégralité de la Ligue des Nations" },
   // World Cup 2026: M6 in clair (France, semis, final) + beIN Sports (all 104).
   { comp: "world-cup", broadcaster: "m6", coverage: "partial", note: "En clair — France, demies & finale", from: "2026-06-11", to: "2026-07-19" },
   { comp: "world-cup", broadcaster: "bein-sports", coverage: "full", note: "Intégralité (104 matchs)", from: "2026-06-11", to: "2026-07-19" },

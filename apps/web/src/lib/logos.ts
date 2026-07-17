@@ -11,6 +11,7 @@ const COMPETITION_LOGO_SLUGS = new Set([
   "champions-league",
   "europa-league",
   "conference-league",
+  "nations-league",
   "world-cup",
 ]);
 
