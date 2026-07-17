@@ -25,21 +25,21 @@ const RULES: {
   to?: string;
 }[] = [
   // Ligue 1 = split rights → two partial rules; refine per match via overrides.
-  { comp: "ligue-1", broadcaster: "ligue-1-plus", coverage: "partial", note: "8 matchs sur 9" },
-  { comp: "ligue-1", broadcaster: "amazon-prime", coverage: "partial", note: "Pass Ligue 1 — certaines affiches" },
-  { comp: "ligue-2", broadcaster: "bein-sports", coverage: "full", note: "Intégralité de la Ligue 2 BKT" },
-  { comp: "premier-league", broadcaster: "canal-plus", coverage: "full", note: "Exclusivité jusqu'en 2028" },
-  { comp: "la-liga", broadcaster: "bein-sports", coverage: "full", note: "Jusqu'en 2027" },
-  { comp: "bundesliga", broadcaster: "bein-sports", coverage: "full", note: "Jusqu'en 2029" },
-  { comp: "champions-league", broadcaster: "canal-plus", coverage: "full", note: "Intégralité 2024-27" },
-  { comp: "europa-league", broadcaster: "canal-plus", coverage: "full", note: "Jusqu'en 2027" },
-  { comp: "conference-league", broadcaster: "canal-plus", coverage: "full", note: "Jusqu'en 2027" },
-  // Nations League: M6 in clair for Les Bleus + beIN Sports for everything.
-  { comp: "nations-league", broadcaster: "m6", coverage: "partial", note: "En clair — matchs de l'équipe de France" },
-  { comp: "nations-league", broadcaster: "bein-sports", coverage: "full", note: "Intégralité de la Ligue des Nations" },
-  // World Cup 2026: M6 in clair (France, semis, final) + beIN Sports (all 104).
-  { comp: "world-cup", broadcaster: "m6", coverage: "partial", note: "En clair — France, demies & finale", from: "2026-06-11", to: "2026-07-19" },
-  { comp: "world-cup", broadcaster: "bein-sports", coverage: "full", note: "Intégralité (104 matchs)", from: "2026-06-11", to: "2026-07-19" },
+  { comp: "ligue-1", broadcaster: "ligue-1-plus", coverage: "partial", note: "8 of 9 matches" },
+  { comp: "ligue-1", broadcaster: "amazon-prime", coverage: "partial", note: "Ligue 1 Pass — selected fixtures" },
+  { comp: "ligue-2", broadcaster: "bein-sports", coverage: "full", note: "All of Ligue 2 BKT" },
+  { comp: "premier-league", broadcaster: "canal-plus", coverage: "full", note: "Exclusive until 2028" },
+  { comp: "la-liga", broadcaster: "bein-sports", coverage: "full", note: "Until 2027" },
+  { comp: "bundesliga", broadcaster: "bein-sports", coverage: "full", note: "Until 2029" },
+  { comp: "champions-league", broadcaster: "canal-plus", coverage: "full", note: "All matches 2024–27" },
+  { comp: "europa-league", broadcaster: "canal-plus", coverage: "full", note: "Until 2027" },
+  { comp: "conference-league", broadcaster: "canal-plus", coverage: "full", note: "Until 2027" },
+  // Nations League: M6 free-to-air for France + beIN Sports for everything.
+  { comp: "nations-league", broadcaster: "m6", coverage: "partial", note: "Free-to-air — France matches" },
+  { comp: "nations-league", broadcaster: "bein-sports", coverage: "full", note: "All of the Nations League" },
+  // World Cup 2026: M6 free-to-air (France, semis, final) + beIN Sports (all 104).
+  { comp: "world-cup", broadcaster: "m6", coverage: "partial", note: "Free-to-air — France, semis & final", from: "2026-06-11", to: "2026-07-19" },
+  { comp: "world-cup", broadcaster: "bein-sports", coverage: "full", note: "All 104 matches", from: "2026-06-11", to: "2026-07-19" },
 ];
 
 export type SeedResult = { broadcasters: number; competitions: number; rules: number };

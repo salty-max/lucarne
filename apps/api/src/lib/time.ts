@@ -14,7 +14,7 @@ export function parisDayKey(d: Date): string {
   }).format(d);
 }
 
-/** "Saturday 16 August" style heading (English for now). */
+/** "Saturday 16 August" style heading. */
 export function parisDayLabel(d: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: PARIS_TZ,
@@ -26,7 +26,7 @@ export function parisDayLabel(d: Date): string {
 
 /** "21:00" kickoff time in Paris. */
 export function parisTime(d: Date): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat("en-GB", {
     timeZone: PARIS_TZ,
     hour: "2-digit",
     minute: "2-digit",

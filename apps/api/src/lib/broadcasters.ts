@@ -5,7 +5,7 @@ import { broadcasters, broadcastOverrides, broadcastRules } from "@/db/schema";
 import type { Broadcaster as DbBroadcaster, Match } from "@/db/schema";
 import { parisDayKey } from "@/lib/time";
 
-/** The resolved diffuseur exactly matches the shared wire `Broadcaster` shape. */
+/** The resolved broadcaster exactly matches the shared wire `Broadcaster` shape. */
 export type ResolvedBroadcaster = Broadcaster;
 
 export type RuleRow = {
@@ -56,7 +56,7 @@ export function resolveForMatch(
 }
 
 /**
- * The heart of the app: resolve the French diffuseur(s) for a set of matches.
+ * The heart of the app: resolve the French broadcaster(s) for a set of matches.
  * Batched — loads broadcasters/rules/overrides once, resolves in memory via
  * `resolveForMatch`.
  */
