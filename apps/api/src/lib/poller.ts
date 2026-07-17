@@ -90,12 +90,19 @@ export async function runLivePollTick(
   };
 }
 
-/** Daily fixture sync (~7 API requests), counted against the shared budget.
- *  Also refreshes the live-window cache used to gate the live poller. */
+/** Daily fixture + standings sync (~7 + ~10 API requests), counted against the
+ *  shared budget. League tables refresh on the same daily cadence (one request
+ *  per competition, cheap and idempotent) so standings are never more than a day
+ *  stale, and a table that only appears mid-season (e.g. Ligue 2 once the API
+ *  publishes it) surfaces within a day. Also refreshes the live-window cache. */
 export async function runFixtureSync(cache?: ScheduleCache): Promise<SyncResult> {
   const result = await syncFixtures();
+  const tables = await syncAllStandings();
   const state = await loadBudget(Date.now());
-  await saveBudget({ ...state, requestsToday: state.requestsToday + result.requestsUsed });
+  await saveBudget({
+    ...state,
+    requestsToday: state.requestsToday + result.requestsUsed + tables.requestsUsed,
+  });
   if (cache) await refreshWindowCache(cache);
   return result;
 }
@@ -108,6 +115,7 @@ export async function runFixtureSync(cache?: ScheduleCache): Promise<SyncResult>
  * ~10 total) and upserts it, landing the full calendar in one pass. Upserts run
  * per-competition to keep each batch bounded; the cost counts against the
  * shared daily budget (idempotent, so a mid-run failure just retries next week).
+ * (Standings ride the daily sync — see `runFixtureSync` — not this pass.)
  */
 export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> {
   const season = currentSeason();
@@ -124,10 +132,6 @@ export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> 
     }
     requestsUsed += 1; // one request per competition, success or not
   }
-
-  // Same cadence for the tables (one request each) — cheap and always current.
-  const tables = await syncAllStandings();
-  requestsUsed += tables.requestsUsed;
 
   const state = await loadBudget(Date.now());
   await saveBudget({ ...state, requestsToday: state.requestsToday + requestsUsed });

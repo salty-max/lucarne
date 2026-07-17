@@ -24,7 +24,7 @@ describe("api routes", () => {
   });
 
   it("cron routes reject unauthenticated requests with 401", async () => {
-    for (const path of ["/api/cron/fixtures", "/api/cron/live", "/api/cron/details"]) {
+    for (const path of ["/api/cron/fixtures", "/api/cron/live", "/api/cron/details", "/api/cron/resync"]) {
       const res = await app.request(path);
       expect(res.status).toBe(401);
     }

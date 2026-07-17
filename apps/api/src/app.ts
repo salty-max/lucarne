@@ -7,7 +7,13 @@ import { authorizeCron } from "@/lib/auth";
 import { COMPETITIONS } from "@/lib/competitions";
 import { candidateKickoffRange } from "@/lib/live";
 import { getCompetitionDetail } from "@/lib/competition";
-import { runDetailsDrain, runFixtureSync, runLineupPoll, runLivePollTick } from "@/lib/poller";
+import {
+  runDetailsDrain,
+  runFixtureSync,
+  runFullResync,
+  runLineupPoll,
+  runLivePollTick,
+} from "@/lib/poller";
 import { pickCache } from "@/lib/scheduleCache";
 import { getMatchDetail, getSchedule, toWire, toWireMatchDetail } from "@/lib/schedule";
 import { startOfParisDay } from "@/lib/time";
@@ -155,6 +161,18 @@ app.get("/api/cron/details", async (c) => {
     return c.json({ ok: true, ...(await runDetailsDrain()) });
   } catch (err) {
     console.error("[cron/details]", err);
+    return c.json({ ok: false, error: String(err) }, 500);
+  }
+});
+
+// Force the weekly full-season fixture re-sync on demand (also usable to pull a
+// competition's whole calendar after a draw). Standings ride the daily sync.
+app.get("/api/cron/resync", async (c) => {
+  if (!authorizeCron(c.req.raw)) return c.text("Unauthorized", 401);
+  try {
+    return c.json({ ok: true, ...(await runFullResync(pickCache(c.env))) });
+  } catch (err) {
+    console.error("[cron/resync]", err);
     return c.json({ ok: false, error: String(err) }, 500);
   }
 });
