@@ -1,34 +1,64 @@
 import { Link } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { Panel } from "@/components/primitives";
 import { CompetitionLogo } from "@/components/Logo";
-import { Loading, PageHeader } from "@/components/common";
+import { Loading, PageHeader, SectionLabel } from "@/components/common";
+import { compPageNo } from "@/lib/teletext";
+
+const SECTIONS = [
+  { to: "/", label: "Live & today", no: "100" },
+  { to: "/calendar", label: "Calendar", no: "300" },
+  { to: "/broadcasters", label: "Broadcaster guide", no: "600" },
+] as const;
 
 export default function Competitions() {
   const comps = useCompetitions();
 
   return (
     <>
-      <PageHeader title="Competitions" subtitle="Browse fixtures by competition" />
-      {!comps ? (
-        <Loading />
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {comps.map((c) => (
-            <Link key={c.slug} to="/competitions/$slug" params={{ slug: c.slug }} className="block">
-              <Panel interactive className="flex h-full items-center gap-3 p-4">
-                <CompetitionLogo slug={c.slug} size={38} />
-                <div className="min-w-0">
-                  <div className="truncate font-semibold leading-tight">{c.name}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+      <PageHeader title="Index" subtitle="Page directory" />
+
+      <div className="flex flex-col">
+        {SECTIONS.map((s) => (
+          <Link
+            key={s.to}
+            to={s.to}
+            className="tt-dotted flex items-center gap-2 py-2 text-sm uppercase text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span className="text-[hsl(var(--tt-cyan))]">▸</span>
+            <span className="flex-1">{s.label}</span>
+            <span className="font-bold tabular-nums text-primary">{s.no}</span>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>Competitions</SectionLabel>
+        {!comps ? (
+          <Loading />
+        ) : (
+          <div className="flex flex-col">
+            {comps.map((c, i) => (
+              <Link
+                key={c.slug}
+                to="/competitions/$slug"
+                params={{ slug: c.slug }}
+                className="tt-dotted group flex items-center gap-3 py-2"
+              >
+                <CompetitionLogo slug={c.slug} size={22} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate uppercase group-hover:text-[hsl(var(--tt-cyan))]">
+                    {c.name}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
                     {c.country} · {c.type === "cup" ? "Cup" : "League"}
-                  </div>
-                </div>
-              </Panel>
-            </Link>
-          ))}
-        </div>
-      )}
+                  </span>
+                </span>
+                <span className="font-bold tabular-nums text-primary">{compPageNo(i)}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </>
   );
 }
