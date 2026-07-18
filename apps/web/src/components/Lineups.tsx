@@ -100,7 +100,9 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       <span
         className={cn(
           "grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold",
-          side === "home" ? "bg-[hsl(var(--tt-blue))] text-black" : "bg-[hsl(var(--tt-red))] text-black",
+          side === "home"
+            ? "bg-[hsl(var(--tt-blue))] text-[hsl(var(--tt-blue-on))]"
+            : "bg-[hsl(var(--tt-red))] text-[hsl(var(--tt-red-on))]",
         )}
       >
         {p.number ?? ""}

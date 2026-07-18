@@ -35,7 +35,7 @@ export function Tag({
   children: ReactNode;
 }) {
   const style = ttColor
-    ? { background: `hsl(var(--tt-${ttColor}))`, color: "hsl(var(--primary-foreground))" }
+    ? { background: `hsl(var(--tt-${ttColor}))`, color: `hsl(var(--tt-${ttColor}-on))` }
     : color
       ? { backgroundColor: color, color: textOn(color) }
       : undefined;

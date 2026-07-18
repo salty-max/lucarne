@@ -38,6 +38,16 @@
   --tt-magenta: 300 100% 50%; /* #ff00ff */
   --tt-cyan: 180 100% 50%; /* #00ffff */
   --tt-white: 0 0% 100%; /* #ffffff */
+
+  /* Text colour to sit on each teletext background. Light colours take dark
+     text; the dark ones (red, blue) take white text, as on real teletext. */
+  --tt-red-on: 0 0% 100%;
+  --tt-green-on: 0 0% 0%;
+  --tt-yellow-on: 0 0% 0%;
+  --tt-blue-on: 0 0% 100%;
+  --tt-magenta-on: 0 0% 0%;
+  --tt-cyan-on: 0 0% 0%;
+  --tt-white-on: 0 0% 0%;
 }
 
 /* Neon — the softened, modern variant (brighter, faint blue-cast ground). */
@@ -63,6 +73,9 @@
   --tt-magenta: 318 100% 68%;
   --tt-cyan: 180 100% 54%;
   --tt-white: 180 6% 92%;
+  /* Neon's red/blue are light enough that dark text reads better. */
+  --tt-red-on: 0 0% 0%;
+  --tt-blue-on: 0 0% 0%;
 }
 
 /* Grayscale — a black-and-white CRT. Colour coding becomes intensity (bright =
@@ -89,6 +102,8 @@
   --tt-magenta: 0 0% 68%;
   --tt-cyan: 0 0% 85%;
   --tt-white: 0 0% 96%;
+  /* The "red" slot is light here, so dark text; the "blue" slot stays dark → white. */
+  --tt-red-on: 0 0% 0%;
 }
 
 /* Game Boy DMG — the original 1989 handheld's 4-tone pea-green LCD, redrawn for
@@ -115,12 +130,15 @@
   --tt-magenta: 90 50% 54%;
   --tt-cyan: 82 65% 58%;
   --tt-white: 74 78% 72%;
+  /* Light "red" slot → dark text; dark "blue" slot stays → white (from base). */
+  --tt-red-on: 0 0% 0%;
 }
 
 /* Retro CRT face (opt-in via the font pref). VT323 sits small on the em, so
-   nudge the base size up a touch so the dense teletext text stays legible. */
+   bump the base size so the dense teletext text stays legible — more so on
+   phones, where it was too small to read. */
 .font-retro {
-  font-size: 16px;
+  font-size: 17px;
 }
 .font-retro body {
   font-family: "VT323", "Cascadia Mono", "DejaVu Sans Mono", monospace;
@@ -335,6 +353,7 @@
 }
 .tt-bar-live {
   background: hsl(var(--live));
+  color: hsl(var(--tt-red-on));
 }
 .tt-bar-yellow {
   background: hsl(var(--tt-yellow));
@@ -514,6 +533,7 @@
 }
 .tt-fast .f-red {
   background: hsl(var(--tt-red));
+  color: hsl(var(--tt-red-on));
 }
 .tt-fast .f-grn {
   background: hsl(var(--tt-green));
@@ -532,6 +552,7 @@
 }
 .tt-fast .f-blu {
   background: hsl(var(--tt-blue));
+  color: hsl(var(--tt-blue-on));
 }
 /* Secondary FastText row (favourites, settings, logs) — under the main four. */
 .tt-fast--more {
@@ -554,6 +575,11 @@
 
 /* Phones / narrow screens. */
 @media (max-width: 640px) {
+  /* VT323 is small on phones — give the retro face extra size here. */
+  .font-retro {
+    font-size: 18.5px;
+  }
+
   /* Edge-to-edge: drop the TV bezel so the screen fills the whole display; keep
      only the safe-area insets so content clears the notch + home indicator. */
   .tt-stage {

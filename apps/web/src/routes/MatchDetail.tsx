@@ -73,7 +73,7 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
       )}
       {status &&
         (status.live ? (
-          <Tag className="bg-live py-0.5 text-black">
+          <Tag className="bg-live py-0.5 text-[hsl(var(--tt-red-on))]">
             <LiveDot className="mr-1" />
             {status.text}
           </Tag>
