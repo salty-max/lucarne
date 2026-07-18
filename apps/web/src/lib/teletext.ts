@@ -25,6 +25,13 @@ export const FASTTEXT = [
   { key: { en: "c", fr: "c" }, cls: "f-cyn", no: "600", to: "/broadcasters", label: { en: "Broadcasters", fr: "Diffuseurs" } },
 ] as const;
 
+/** Secondary footer buttons (utility pages) — reached by number or click, no
+ *  colour key. Rendered as a second FastText row under the main four. */
+export const FOOTER_MORE = [
+  { cls: "f-mag", no: "700", to: "/settings", label: { en: "Settings", fr: "Réglages" } },
+  { cls: "f-wht", no: "800", to: "/logs", label: { en: "Logs", fr: "Logs" } },
+] as const;
+
 /** Ordered sections for ◄ ► paging. */
 export const PAGE_ORDER = ["/", "/calendar", "/competitions", "/broadcasters", "/settings", "/logs"];
 

@@ -411,6 +411,17 @@
 .tt-fast .f-cyn {
   background: hsl(var(--tt-cyan));
 }
+.tt-fast .f-mag {
+  background: hsl(var(--tt-magenta));
+}
+.tt-fast .f-wht {
+  background: hsl(var(--tt-white));
+}
+/* Secondary FastText row (settings, logs) — two buttons under the main four. */
+.tt-fast--pair {
+  grid-template-columns: repeat(2, 1fr);
+  padding-top: 2px;
+}
 .tt-kbd {
   padding: 0.4rem 0.8rem 0.7rem;
   color: hsl(var(--muted-foreground));

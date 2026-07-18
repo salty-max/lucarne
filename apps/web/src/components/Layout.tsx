@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n";
 import { formatShort } from "@/lib/dates";
 import {
   FASTTEXT,
+  FOOTER_MORE,
   PAGE_ORDER,
   pageNoForPath,
   routeForPageNo,
@@ -191,6 +192,13 @@ export function Layout() {
           {/* FastText */}
           <nav className="tt-fast">
             {FASTTEXT.map((f) => (
+              <Link key={f.no} to={f.to} className={f.cls}>
+                {f.no} {f.label[lang]}
+              </Link>
+            ))}
+          </nav>
+          <nav className="tt-fast tt-fast--pair">
+            {FOOTER_MORE.map((f) => (
               <Link key={f.no} to={f.to} className={f.cls}>
                 {f.no} {f.label[lang]}
               </Link>
