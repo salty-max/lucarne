@@ -8,10 +8,12 @@ Statut : `[ ]` à faire · `[~]` en cours · `[x]` fait.
 
 ## Phase 1 — Perso & mobile (zéro / peu de backend)
 
-- [~] **Équipes favorites + « Mes matchs » (P200)** ⭐
-  Store `localStorage` (même pattern que `settings.ts`), un ★ sur les équipes, une
-  page qui filtre le planning aux matchs de mes équipes. Débloque tout le reste
-  (filtre télé ciblé, .ics ciblé, push ciblé).
+- [x] **Équipes favorites + « Mes matchs » (P200)** ⭐
+  Store `localStorage` (`favorites.ts`), ★/☆ sur la fiche match, page P200 filtrant
+  le planning aux équipes suivies, bouton footer. Débloque le reste (filtre télé
+  ciblé, .ics ciblé, push ciblé).
+  *Reste (polish, optionnel)* : ★ aussi dans les classements + un indicateur ★ sur
+  les lignes de match des listes.
 - [ ] **« Ce soir à la télé » + filtre diffuseur**
   Vue groupée **par chaîne** (l'USP de l'app), + filtre « je n'ai que Canal+/beIN
   → cache le reste » (`localStorage`).
