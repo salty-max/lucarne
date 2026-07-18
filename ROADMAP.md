@@ -14,9 +14,10 @@ Statut : `[ ]` à faire · `[~]` en cours · `[x]` fait.
   le **seul** endroit pour gérer les favoris (pas d'étoile ailleurs). Les matchs
   des équipes suivies restent sur Today/Calendrier. Débloque le reste (filtre télé
   ciblé, .ics ciblé, push ciblé).
-- [ ] **« Ce soir à la télé » + filtre diffuseur**
-  Vue groupée **par chaîne** (l'USP de l'app), + filtre « je n'ai que Canal+/beIN
-  → cache le reste » (`localStorage`).
+- [x] **« Ce soir à la télé » + filtre diffuseur**
+  P600 (Diffuseurs) réécrite : matchs du jour **groupés par chaîne** + filtre
+  « mes chaînes » persistant (`localStorage`, `channels.ts`). Guide statique en
+  repli les jours sans match.
 - [ ] **Export calendrier (.ics)**
   Bouton « Ajouter au calendrier » (un match, ou tous les matchs d'une équipe
   favorite) → iCal généré par le Worker, fuseau Paris + diffuseur en note.
