@@ -95,34 +95,74 @@ function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "a
   );
 }
 
+/** Full pitch markings as SVG (outline, halfway line, centre circle + spot,
+ *  penalty + goal areas, penalty spots and arcs). Two orientations — vertical for
+ *  mobile, horizontal for desktop; `preserveAspectRatio="none"` + a matching
+ *  container aspect keep the circles round. Real proportions (68 × 105 m). */
+function PitchMarkings() {
+  const line = { fill: "none", stroke: "rgb(255 255 255 / 0.35)", strokeWidth: 0.4 };
+  const spot = { fill: "rgb(255 255 255 / 0.35)" };
+  return (
+    <>
+      <svg
+        viewBox="0 0 68 105"
+        preserveAspectRatio="none"
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full sm:hidden"
+      >
+        <g {...line}>
+          <rect x="0.6" y="0.6" width="66.8" height="103.8" />
+          <line x1="0.6" y1="52.5" x2="67.4" y2="52.5" />
+          <circle cx="34" cy="52.5" r="9.15" />
+          <rect x="13.84" y="0.6" width="40.32" height="16.5" />
+          <rect x="24.84" y="0.6" width="18.32" height="5.5" />
+          <path d="M27.2 17.1 A9.15 9.15 0 0 0 40.8 17.1" />
+          <rect x="13.84" y="87.9" width="40.32" height="16.5" />
+          <rect x="24.84" y="98.9" width="18.32" height="5.5" />
+          <path d="M27.2 87.9 A9.15 9.15 0 0 1 40.8 87.9" />
+        </g>
+        <g {...spot}>
+          <circle cx="34" cy="52.5" r="0.5" />
+          <circle cx="34" cy="11" r="0.5" />
+          <circle cx="34" cy="94" r="0.5" />
+        </g>
+      </svg>
+      <svg
+        viewBox="0 0 105 68"
+        preserveAspectRatio="none"
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden h-full w-full sm:block"
+      >
+        <g {...line}>
+          <rect x="0.6" y="0.6" width="103.8" height="66.8" />
+          <line x1="52.5" y1="0.6" x2="52.5" y2="67.4" />
+          <circle cx="52.5" cy="34" r="9.15" />
+          <rect x="0.6" y="13.84" width="16.5" height="40.32" />
+          <rect x="0.6" y="24.84" width="5.5" height="18.32" />
+          <path d="M17.1 27.2 A9.15 9.15 0 0 1 17.1 40.8" />
+          <rect x="87.9" y="13.84" width="16.5" height="40.32" />
+          <rect x="98.9" y="24.84" width="5.5" height="18.32" />
+          <path d="M87.9 27.2 A9.15 9.15 0 0 0 87.9 40.8" />
+        </g>
+        <g {...spot}>
+          <circle cx="52.5" cy="34" r="0.5" />
+          <circle cx="11" cy="34" r="0.5" />
+          <circle cx="94" cy="34" r="0.5" />
+        </g>
+      </svg>
+    </>
+  );
+}
+
 function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
   return (
     <div
-      className="relative aspect-[3/4] overflow-hidden sm:aspect-16/11"
+      className="relative aspect-[68/105] overflow-hidden sm:aspect-[105/68]"
       style={{ background: "linear-gradient(hsl(146 48% 15%), hsl(146 52% 11%))" }}
     >
-      {/* Halfway line: horizontal on mobile (vertical pitch), vertical on desktop. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/30 sm:inset-x-auto sm:inset-y-0 sm:left-1/2 sm:h-auto sm:w-px"
-      />
-      {/* Centre circle */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30"
-      />
-      {/* Penalty areas — top/bottom on mobile (vertical), left/right on desktop. The
-          open side is the goal line (the pitch edge), so its border is dropped. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 h-[16%] w-3/5 -translate-x-1/2 border border-t-0 border-white/30 sm:left-0 sm:top-1/2 sm:h-3/5 sm:w-[16%] sm:translate-x-0 sm:-translate-y-1/2 sm:border-t sm:border-l-0"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 left-1/2 h-[16%] w-3/5 -translate-x-1/2 border border-b-0 border-white/30 sm:bottom-auto sm:left-auto sm:right-0 sm:top-1/2 sm:h-3/5 sm:w-[16%] sm:translate-x-0 sm:-translate-y-1/2 sm:border-b sm:border-r-0"
-      />
+      <PitchMarkings />
       {/* Players — away on top, home on bottom (mobile); home left, away right
-          (desktop). Padding keeps the goalkeepers off the touchlines. */}
+          (desktop). Padding keeps the goalkeepers off the goal lines. */}
       <div className="relative flex h-full flex-col-reverse px-1 py-3 sm:flex-row sm:px-3 sm:py-2">
         <PitchHalf lines={pitchLines(home.startXI)} side="home" />
         <PitchHalf lines={pitchLines(away.startXI, true)} side="away" />
