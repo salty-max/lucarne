@@ -90,6 +90,10 @@ const en = {
   broadcasters: {
     title: "Broadcasters",
     subtitle: "Channel guide · France",
+    onTv: "Tonight on TV",
+    all: "All",
+    noMatchesToday: "No matches today.",
+    noneToday: "None of your channels are on tonight.",
     byChannel: "By channel",
     worldCup: "World Cup 2026",
     covers: {
@@ -254,6 +258,10 @@ const fr: Messages = {
   broadcasters: {
     title: "Diffuseurs",
     subtitle: "Guide des chaînes · France",
+    onTv: "Ce soir à la télé",
+    all: "Toutes",
+    noMatchesToday: "Aucun match aujourd'hui.",
+    noneToday: "Aucune de vos chaînes ce soir.",
     byChannel: "Par chaîne",
     worldCup: "Coupe du Monde 2026",
     covers: {
