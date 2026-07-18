@@ -31,9 +31,9 @@ export default defineConfig({
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,ico}"],
-        // Don't precache the (currently unused) crest/logo assets — ~9.5 MB that
-        // would otherwise land in every install's precache.
-        globIgnores: ["**/logos/**"],
+        // Keep the precache to the app shell: skip the unused crest/logo assets
+        // (~9.5 MB) and the iOS launch images (~335 KB, fetched on demand by iOS).
+        globIgnores: ["**/logos/**", "**/splash/**"],
         runtimeCaching: [
           {
             // Read data: serve the last-seen copy instantly (so a PWA relaunch has
