@@ -7,6 +7,7 @@ import {
   runFixtureSync,
   runFullResync,
   runLineupPoll,
+  runLiveEnrich,
   runLivePollTick,
 } from "@/lib/poller";
 import { memoryCache } from "@/lib/scheduleCache";
@@ -32,6 +33,7 @@ export function startScheduler(): void {
   // counter; each is gated to log/record only when it actually did something.
   cron.schedule("* * * * *", async () => {
     await runJob("live", () => runLivePollTick(new Date(), memoryCache), (r) => r.polled);
+    await runJob("live-enrich", () => runLiveEnrich(), (r) => r.matches > 0);
     await runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0);
     await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
   });

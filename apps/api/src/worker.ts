@@ -10,6 +10,7 @@ import {
   runFixtureSync,
   runFullResync,
   runLineupPoll,
+  runLiveEnrich,
   runLivePollTick,
 } from "@/lib/poller";
 import { pickCache } from "@/lib/scheduleCache";
@@ -61,12 +62,14 @@ export default {
       // enriches, so the eager drain stops chasing them.
       ctx.waitUntil(runJob("details", () => runDetailsDrain(40)));
     } else {
-      // Live cadence (every minute): poll live scores, grab confirmed lineups for
-      // imminent games, and eagerly drain details of freshly-finished ones. Each
-      // is gated to log/record only when it actually did something.
+      // Live cadence (every minute): poll live scores, refresh in-play events +
+      // stats, grab confirmed lineups for imminent games, and eagerly drain details
+      // of freshly-finished ones. Each is gated to log/record only when it actually
+      // did something.
       ctx.waitUntil(
         Promise.all([
           runJob("live", () => runLivePollTick(new Date(), cache), (r) => r.polled),
+          runJob("live-enrich", () => runLiveEnrich(), (r) => r.matches > 0),
           runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0),
           runJob("eager", () => runEagerDrain(), (r) => r.matches > 0),
         ]).then(() => {}),

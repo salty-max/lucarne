@@ -300,6 +300,79 @@ export function runEagerDrain(): Promise<DrainResult> {
   return runDetailsDrain(8, { sinceMs: 5 * 60 * 60 * 1000, stampWhenEmpty: false });
 }
 
+export type LiveEnrichResult = {
+  matches: number;
+  events: number;
+  stats: number;
+  budgetRemaining: number;
+};
+
+/**
+ * In-play enrichment, folded into the live cadence. For matches currently live it
+ * refreshes events (scorers/cards) and team statistics every tick WITHOUT stamping
+ * (`stamp: false`) — the detail page shows them in near-real-time, while the
+ * post-match drain still does the final authoritative, stamped fetch at full-time.
+ * Budget-gated; ~2 requests per live match per tick, capped by `maxMatches`.
+ * (`live=all` carries only the scoreboard, so events + statistics each need their
+ * own endpoint — hence the per-match cost.)
+ */
+export async function runLiveEnrich(maxMatches = 12): Promise<LiveEnrichResult> {
+  const nowMs = Date.now();
+  const state = await loadBudget(nowMs);
+  let remaining = budgetRemaining(state);
+  if (remaining <= 0) return { matches: 0, events: 0, stats: 0, budgetRemaining: 0 };
+
+  const home = alias(teams, "home");
+  const away = alias(teams, "away");
+  const candidates = await db
+    .select({
+      id: matches.id,
+      apiFootballId: matches.apiFootballId,
+      homeTeamId: matches.homeTeamId,
+      homeApiId: home.apiFootballId,
+      awayTeamId: matches.awayTeamId,
+      awayApiId: away.apiFootballId,
+    })
+    .from(matches)
+    .innerJoin(home, eq(matches.homeTeamId, home.id))
+    .innerJoin(away, eq(matches.awayTeamId, away.id))
+    .where(eq(matches.status, "live"))
+    .limit(maxMatches);
+
+  const opts = { stamp: false, stampWhenEmpty: false } as const;
+  let events = 0;
+  let stats = 0;
+  let requests = 0;
+  let count = 0;
+  for (const m of candidates) {
+    if (remaining <= 0) break;
+    let touched = false;
+    try {
+      events += await storeMatchEvents(m, opts);
+      remaining -= 1;
+      requests += 1;
+      touched = true;
+    } catch (err) {
+      log.warn("live-enrich.events.fail", { matchId: m.id, err: String(err) });
+    }
+    if (remaining > 0) {
+      try {
+        stats += (await storeMatchStatistics(m, opts)) > 0 ? 1 : 0;
+        remaining -= 1;
+        requests += 1;
+        touched = true;
+      } catch (err) {
+        log.warn("live-enrich.stats.fail", { matchId: m.id, err: String(err) });
+      }
+    }
+    if (touched) count += 1;
+  }
+
+  const next = { ...state, requestsToday: state.requestsToday + requests };
+  await saveBudget(next);
+  return { matches: count, events, stats, budgetRemaining: budgetRemaining(next) };
+}
+
 export type LineupPollResult = { matches: number; lineups: number; budgetRemaining: number };
 
 /**

@@ -278,14 +278,24 @@ export type DrainMatch = {
  * then stamp `detailsFetchedAt`. Costs ONE API request. Idempotent: replaces any
  * existing events for the match. Returns the number of events stored.
  */
+/**
+ * Options shared by the per-match detail stores.
+ *  - `stamp`: write the `*FetchedAt` marker. `false` = live enrichment — store the
+ *    running snapshot but leave it un-stamped so the post-match drain still does
+ *    the final authoritative fetch at full-time.
+ *  - `stampWhenEmpty`: when the API returns nothing, stamp anyway (the nightly
+ *    drain giving up) vs leave un-stamped for a retry (eager drain / live).
+ */
+type StoreOpts = { stamp?: boolean; stampWhenEmpty?: boolean };
+
 export async function storeMatchEvents(
   m: DrainMatch,
-  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+  { stamp = true, stampWhenEmpty = true }: StoreOpts = {},
 ): Promise<number> {
   const events = await getFixtureEvents(m.apiFootballId); // 1 API request
 
-  // Not published yet (match just kicked off / still settling): leave the row
-  // un-stamped so the eager drain retries; the nightly drain stamps regardless.
+  // Nothing to store yet: leave the DB untouched so the previous snapshot stands
+  // and a later tick retries (pre-match eager drain, or a live blip returning []).
   if (events.length === 0 && !stampWhenEmpty) return 0;
 
   const teamMap = new Map<number, number>([
@@ -312,7 +322,9 @@ export async function storeMatchEvents(
     );
   }
 
-  await db.update(matches).set({ detailsFetchedAt: new Date() }).where(eq(matches.id, m.id));
+  // Live enrichment (stamp:false) stores the running snapshot without stamping, so
+  // the post-match drain still does the final authoritative fetch at full-time.
+  if (stamp) await db.update(matches).set({ detailsFetchedAt: new Date() }).where(eq(matches.id, m.id));
   return events.length;
 }
 
@@ -414,7 +426,7 @@ function normalizeStats(stats: ApiTeamStatistics["statistics"]): TeamStats {
  */
 export async function storeMatchStatistics(
   m: DrainMatch,
-  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+  { stamp = true, stampWhenEmpty = true }: StoreOpts = {},
 ): Promise<number> {
   const teams = await getFixtureStatistics(m.apiFootballId); // 1 API request
 
@@ -428,7 +440,9 @@ export async function storeMatchStatistics(
 
   if (statistics === null && !stampWhenEmpty) return 0;
 
-  await db.update(matches).set({ statistics, statsFetchedAt: new Date() }).where(eq(matches.id, m.id));
+  const set: Partial<typeof matches.$inferInsert> = { statistics };
+  if (stamp) set.statsFetchedAt = new Date();
+  await db.update(matches).set(set).where(eq(matches.id, m.id));
 
   return statistics
     ? [...Object.values(statistics.home), ...Object.values(statistics.away)].filter((v) => v != null)
@@ -446,7 +460,7 @@ export async function storeMatchStatistics(
  */
 export async function storeMatchPlayerRatings(
   m: DrainMatch,
-  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+  { stamp = true, stampWhenEmpty = true }: StoreOpts = {},
 ): Promise<number> {
   const teams = await getFixturePlayers(m.apiFootballId); // 1 API request
 
@@ -465,9 +479,11 @@ export async function storeMatchPlayerRatings(
 
   if (playerRatings === null && !stampWhenEmpty) return 0;
 
+  const set: Partial<typeof matches.$inferInsert> = { playerRatings };
+  if (stamp) set.ratingsFetchedAt = new Date();
   await db
     .update(matches)
-    .set({ playerRatings, ratingsFetchedAt: new Date() })
+    .set(set)
     .where(eq(matches.id, m.id));
 
   return count;
