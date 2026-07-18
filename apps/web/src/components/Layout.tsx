@@ -6,14 +6,7 @@ import { LiveDot } from "@/components/common";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { formatShort } from "@/lib/dates";
-import {
-  FASTTEXT,
-  FOOTER_MORE,
-  PAGE_ORDER,
-  pageNoForPath,
-  routeForPageNo,
-  sectionOf,
-} from "@/lib/teletext";
+import { FASTTEXT, FOOTER_MORE, pageNoForPath, routeForPageNo } from "@/lib/teletext";
 
 const timeFmt = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
@@ -154,28 +147,15 @@ export function Layout() {
               {formatShort(now, dateFormat, lang).toUpperCase()}
             </span>
             <span className="clk">{timeFmt.format(now)}</span>
-            <span className="ml-1 inline-flex gap-0.5">
+            {pathname !== "/" && (
               <button
-                className="tt-navbtn"
-                aria-label={t.kbd.prevPage}
-                onClick={() => {
-                  const i = PAGE_ORDER.indexOf(sectionOf(pathname));
-                  navigate({ to: PAGE_ORDER[(i - 1 + PAGE_ORDER.length) % PAGE_ORDER.length] });
-                }}
+                className="tt-navbtn ml-1"
+                aria-label={t.kbd.back}
+                onClick={() => window.history.back()}
               >
-                ◄
+                ←
               </button>
-              <button
-                className="tt-navbtn"
-                aria-label={t.kbd.nextPage}
-                onClick={() => {
-                  const i = PAGE_ORDER.indexOf(sectionOf(pathname));
-                  navigate({ to: PAGE_ORDER[(i + 1) % PAGE_ORDER.length] });
-                }}
-              >
-                ►
-              </button>
-            </span>
+            )}
           </div>
 
           {/* Routed page — scrolls inside the screen so the footer stays put */}

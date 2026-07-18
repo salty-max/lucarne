@@ -34,28 +34,6 @@ export const FOOTER_MORE = [
   { cls: "f-wht", no: "800", to: "/logs", label: { en: "Logs", fr: "Logs" } },
 ] as const;
 
-/** Ordered sections for ◄ ► paging. */
-export const PAGE_ORDER = [
-  "/",
-  "/favorites",
-  "/calendar",
-  "/competitions",
-  "/broadcasters",
-  "/settings",
-  "/logs",
-];
-
-/** Which ordered section a path belongs to (match/competition fold into their base). */
-export function sectionOf(path: string): string {
-  if (path.startsWith("/favorites")) return "/favorites";
-  if (path.startsWith("/calendar")) return "/calendar";
-  if (path.startsWith("/competitions")) return "/competitions";
-  if (path.startsWith("/broadcasters")) return "/broadcasters";
-  if (path.startsWith("/settings")) return "/settings";
-  if (path.startsWith("/logs")) return "/logs";
-  return "/";
-}
-
 export function compPageNo(index: number): string {
   return String(COMP_BASE + index);
 }

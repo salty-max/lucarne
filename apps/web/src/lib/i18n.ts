@@ -162,8 +162,6 @@ const en = {
     navigate: "navigate",
     sections: "sections",
     back: "back",
-    prevPage: "Previous page",
-    nextPage: "Next page",
   },
 };
 
@@ -330,8 +328,6 @@ const fr: Messages = {
     navigate: "naviguer",
     sections: "sections",
     back: "retour",
-    prevPage: "Page précédente",
-    nextPage: "Page suivante",
   },
 };
 
