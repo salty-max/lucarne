@@ -179,8 +179,12 @@ export type RunLogEntry = {
   ms: number | null;
 };
 
+/** A pickable team for the "My teams" search (no fixtures attached). */
+export type TeamOption = { name: string; shortName: string | null };
+
 /** Response bodies. */
 export type ScheduleResponse = { days: Day[] };
+export type TeamsResponse = { teams: TeamOption[] };
 export type MatchDetailResponse = { match: MatchDetail | null };
 export type LiveResponse = { matches: LiveMatch[] };
 export type CompetitionsResponse = { competitions: CompetitionInfo[] };

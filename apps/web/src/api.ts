@@ -5,6 +5,7 @@ import type {
   LiveMatch,
   MatchDetail,
   RunLogEntry,
+  TeamOption,
 } from "@lucarne/shared";
 
 export type ScheduleParams = { from?: string; days?: number; competition?: string };
@@ -53,4 +54,11 @@ export async function fetchLogs(limit = 100): Promise<RunLogEntry[]> {
   if (!res.ok) throw new Error(`logs ${res.status}`);
   const data = (await res.json()) as { runs?: RunLogEntry[] };
   return data.runs ?? [];
+}
+
+export async function fetchTeams(): Promise<TeamOption[]> {
+  const res = await fetch("/api/teams");
+  if (!res.ok) throw new Error(`teams ${res.status}`);
+  const data = (await res.json()) as { teams?: TeamOption[] };
+  return data.teams ?? [];
 }

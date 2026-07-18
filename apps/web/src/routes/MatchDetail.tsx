@@ -5,7 +5,6 @@ import { EventMark } from "@/components/EventMark";
 import { BroadcasterBadge } from "@/components/BroadcasterBadge";
 import { Lineups } from "@/components/Lineups";
 import { MatchStats } from "@/components/MatchStats";
-import { FavoriteStar } from "@/components/FavoriteStar";
 import { EmptyState, Loading, LiveDot, SectionLabel, Tag } from "@/components/common";
 import { eventMark, eventName } from "@/lib/matchEvents";
 import { competitionLabel, countryLabel, noteLabel, roundLabel } from "@/lib/labels";
@@ -60,12 +59,10 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
         )}
       </div>
 
-      <div className="flex w-full max-w-sm items-center justify-center gap-1.5 text-center text-sm">
-        <FavoriteStar team={m.home.name} />
+      <div className="flex w-full max-w-sm items-center justify-center gap-2 text-center text-sm">
         <span className={cn(nameCls(homeResult), "text-right")}>{teamName(m.home.name, lang)}</span>
         <span className="shrink-0 text-muted-foreground">—</span>
         <span className={cn(nameCls(awayResult), "text-left")}>{teamName(m.away.name, lang)}</span>
-        <FavoriteStar team={m.away.name} />
       </div>
 
       {pens && (

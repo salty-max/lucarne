@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { and, asc, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { competitions, matches } from "@/db/schema";
+import { competitions, matches, teams } from "@/db/schema";
 import { runSeed } from "@/db/seed-data";
 import { authorizeCron } from "@/lib/auth";
 import { COMPETITIONS } from "@/lib/competitions";
@@ -25,6 +25,7 @@ import type {
   MatchDetailResponse,
   RunLogEntry,
   ScheduleResponse,
+  TeamsResponse,
 } from "@lucarne/shared";
 
 // Portable Hono JSON API — runs on both the Node server and Cloudflare Workers.
@@ -123,6 +124,20 @@ app.get("/api/live", async (c) => {
   } catch (err) {
     console.error("[/api/live]", err);
     return c.json({ matches: [] });
+  }
+});
+
+// All known teams (name + short name), for the "My teams" follow picker.
+app.get("/api/teams", async (c) => {
+  try {
+    const rows = await db
+      .select({ name: teams.name, shortName: teams.shortName })
+      .from(teams)
+      .orderBy(asc(teams.name));
+    return c.json({ teams: rows } satisfies TeamsResponse);
+  } catch (err) {
+    console.error("[/api/teams]", err);
+    return c.json({ teams: [] } satisfies TeamsResponse, 500);
   }
 });
 

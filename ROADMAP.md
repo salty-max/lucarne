@@ -8,12 +8,12 @@ Statut : `[ ]` à faire · `[~]` en cours · `[x]` fait.
 
 ## Phase 1 — Perso & mobile (zéro / peu de backend)
 
-- [x] **Équipes favorites + « Mes matchs » (P200)** ⭐
-  Store `localStorage` (`favorites.ts`), ★/☆ sur la fiche match, page P200 filtrant
-  le planning aux équipes suivies, bouton footer. Débloque le reste (filtre télé
+- [x] **Équipes favorites — « Mes équipes » (P200)** ⭐
+  Store `localStorage` (`favorites.ts`) + endpoint `/api/teams`. La P200 est une
+  page de **gestion pure** : recherche pour ajouter une équipe, ★ pour retirer —
+  le **seul** endroit pour gérer les favoris (pas d'étoile ailleurs). Les matchs
+  des équipes suivies restent sur Today/Calendrier. Débloque le reste (filtre télé
   ciblé, .ics ciblé, push ciblé).
-  *Reste (polish, optionnel)* : ★ aussi dans les classements + un indicateur ★ sur
-  les lignes de match des listes.
 - [ ] **« Ce soir à la télé » + filtre diffuseur**
   Vue groupée **par chaîne** (l'USP de l'app), + filtre « je n'ai que Canal+/beIN
   → cache le reste » (`localStorage`).
