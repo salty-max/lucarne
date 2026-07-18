@@ -195,7 +195,7 @@ app.post("/api/admin/seed", async (c) => {
 app.post("/api/admin/backfill-details", async (c) => {
   if (!authorizeCron(c.req.raw)) return c.text("Unauthorized", 401);
   try {
-    return c.json({ ok: true, ...(await runDetailsDrain(50, { sinceDays: null })) });
+    return c.json({ ok: true, ...(await runDetailsDrain(50, { sinceMs: null })) });
   } catch (err) {
     console.error("[admin/backfill-details]", err);
     return c.json({ ok: false, error: String(err) }, 500);

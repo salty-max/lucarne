@@ -15,13 +15,16 @@
   },
 
   // Cron Triggers are free and fire without traffic (no keep-warm needed).
-  //   0 5 * * *        → daily fixture sync (~7 API requests)
-  //   0 2,4 * * *      → post-match details drain (scorers/cards), fresh bucket
-  //   */2 11-22 * * *  → live tick every 2 min during European match hours (UTC).
-  // D1 has no CU-hour billing, so the window is purely to minimise API-Football
-  // requests; the KV gate skips even the DB read when nothing is live.
+  //   0 5 * * *      → daily fixture + standings sync (~17 API requests)
+  //   0 6 * * 1      → weekly full-season re-sync (~10 requests)
+  //   0 2,4 * * *    → nightly deep details drain (backstop; stamps stragglers)
+  //   * * * * *      → live tick every minute, 24h: scores + imminent lineups +
+  //                   eager post-match drain. Window-gated inside the tick, so
+  //                   idle minutes cost ZERO API requests; running 24h (vs a
+  //                   European-hours window) means no late kickoff misses its
+  //                   lineup, at no extra API cost thanks to the gate.
   "triggers": {
-    "crons": ["0 5 * * *", "0 6 * * 1", "0 2,4 * * *", "*/2 11-22 * * *"]
+    "crons": ["0 5 * * *", "0 6 * * 1", "0 2,4 * * *", "* * * * *"]
   },
 
   "vars": {

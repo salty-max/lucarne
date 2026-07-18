@@ -70,12 +70,25 @@ describe("decideLivePoll", () => {
   it("throttles when the last poll was too recent", () => {
     const d = decideLivePoll({
       nowMs: now,
-      liveCount: 4, // base interval 3 min
+      liveCount: 4, // base interval 60s
       windowEndMs: soon,
       state: state({ lastPollAt: new Date(now - 30_000).toISOString() }),
     });
     expect(d.poll).toBe(false);
     expect(d.reason).toBe("throttled");
+  });
+
+  it("uses a 60s base cadence when the budget is ample (Pro plan)", () => {
+    // Full budget + a long live window → the budget-aware stretch is a no-op, so
+    // the base cadence rules: a fresh 60s.
+    const d = decideLivePoll({
+      nowMs: now,
+      liveCount: 1,
+      windowEndMs: now + 300 * 60_000,
+      state: state(),
+    });
+    expect(d.poll).toBe(true);
+    expect(d.intervalMs).toBe(60_000);
   });
 
   it("polls again once the interval has elapsed", () => {

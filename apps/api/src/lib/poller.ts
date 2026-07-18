@@ -169,18 +169,24 @@ export type DrainResult = {
 };
 
 /**
- * Post-match details drain. For finished matches that are missing them yet,
- * fetches events (scorers/cards) and/or lineups (formation + XI) — one request
- * each — capped by `maxMatches` and the remaining daily budget. Both are
- * immutable after full-time, so any leftover backlog drains on a later run.
+ * Post-match details drain. For finished matches still missing them, fetches
+ * events (scorers/cards), lineups, team statistics and player ratings — one
+ * request each — capped by `maxMatches` and the remaining daily budget.
  *
- * `sinceDays` bounds how far back we chase (default 3 — the cron only wants
- * recently-finished games). Pass `null` to drain the entire backlog, e.g. a
- * one-time backfill of a tournament's history.
+ * `sinceMs` bounds how far back we chase (default 3 days — the nightly backstop).
+ * The eager path (live cadence) passes a short window of a few hours so it only
+ * chases freshly-finished games, together with `stampWhenEmpty: false` so stats
+ * and ratings that publish minutes after full-time are retried until they land,
+ * not stamped empty. Pass `sinceMs: null` to drain the entire backlog (one-time
+ * backfill). The nightly default (`stampWhenEmpty: true`) closes out any match
+ * the API never provides data for, so nothing is chased forever.
  */
 export async function runDetailsDrain(
   maxMatches = 10,
-  { sinceDays = 3 }: { sinceDays?: number | null } = {},
+  {
+    sinceMs = 3 * 24 * 60 * 60 * 1000,
+    stampWhenEmpty = true,
+  }: { sinceMs?: number | null; stampWhenEmpty?: boolean } = {},
 ): Promise<DrainResult> {
   const now = new Date();
   const nowMs = now.getTime();
@@ -189,7 +195,7 @@ export async function runDetailsDrain(
   if (remaining <= 0)
     return { matches: 0, events: 0, lineups: 0, stats: 0, ratings: 0, budgetRemaining: 0 };
 
-  const cutoff = sinceDays == null ? null : new Date(nowMs - sinceDays * 24 * 60 * 60 * 1000);
+  const cutoff = sinceMs == null ? null : new Date(nowMs - sinceMs);
   const home = alias(teams, "home");
   const away = alias(teams, "away");
 
@@ -235,7 +241,7 @@ export async function runDetailsDrain(
     let touched = false;
     if (m.hasDetails == null && remaining > 0) {
       try {
-        events += await storeMatchEvents(m);
+        events += await storeMatchEvents(m, { stampWhenEmpty });
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -245,7 +251,7 @@ export async function runDetailsDrain(
     }
     if (m.hasLineups == null && remaining > 0) {
       try {
-        lineups += await storeMatchLineups(m);
+        lineups += await storeMatchLineups(m, { stampWhenEmpty });
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -255,8 +261,7 @@ export async function runDetailsDrain(
     }
     if (m.hasStats == null && remaining > 0) {
       try {
-        await storeMatchStatistics(m);
-        stats += 1;
+        stats += (await storeMatchStatistics(m, { stampWhenEmpty })) > 0 ? 1 : 0;
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -266,8 +271,7 @@ export async function runDetailsDrain(
     }
     if (m.hasRatings == null && remaining > 0) {
       try {
-        await storeMatchPlayerRatings(m);
-        ratings += 1;
+        ratings += (await storeMatchPlayerRatings(m, { stampWhenEmpty })) > 0 ? 1 : 0;
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -283,6 +287,18 @@ export async function runDetailsDrain(
   return { matches: count, events, lineups, stats, ratings, budgetRemaining: budgetRemaining(next) };
 }
 
+/**
+ * Eager post-match drain, folded into the live cadence (every minute). Chases
+ * only games that finished in the last few hours and — crucially — does NOT
+ * stamp empty stats/ratings (`stampWhenEmpty: false`), so the ones that publish
+ * minutes after full-time are retried until they land. Time-bounded, so a fixture
+ * the API never enriches isn't chased forever — the nightly `runDetailsDrain`
+ * (which stamps) closes it out.
+ */
+export function runEagerDrain(): Promise<DrainResult> {
+  return runDetailsDrain(8, { sinceMs: 5 * 60 * 60 * 1000, stampWhenEmpty: false });
+}
+
 export type LineupPollResult = { matches: number; lineups: number; budgetRemaining: number };
 
 /**
@@ -292,7 +308,7 @@ export type LineupPollResult = { matches: number; lineups: number; budgetRemaini
  * budget-gated (1 request each). An empty response (not published yet) is left
  * un-stamped, so a later tick retries once the XI is announced.
  */
-export async function runLineupPoll(maxMatches = 8): Promise<LineupPollResult> {
+export async function runLineupPoll(maxMatches = 12): Promise<LineupPollResult> {
   const now = new Date();
   const nowMs = now.getTime();
   const state = await loadBudget(nowMs);
@@ -302,7 +318,7 @@ export async function runLineupPoll(maxMatches = 8): Promise<LineupPollResult> {
   const home = alias(teams, "home");
   const away = alias(teams, "away");
   const from = new Date(nowMs - 15 * 60_000); // small buffer for just-kicked-off games
-  const to = new Date(nowMs + 45 * 60_000); // ~within the pre-match publish window
+  const to = new Date(nowMs + 60 * 60_000); // pre-match publish window (~40 min out, + margin)
 
   const candidates = await db
     .select({

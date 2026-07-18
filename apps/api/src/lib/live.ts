@@ -3,14 +3,16 @@ import { db } from "@/db";
 import { syncState } from "@/db/schema";
 
 /**
- * Shared daily API budget. The free API-Football plan is 100 requests/day; we
- * cap ourselves a little under that and spend the pool across three consumers:
- *   - fixture sync (~7/day)
- *   - live polling (window-gated, adaptive)
- *   - the post-match details drain (1 request per finished match)
- * All three read/write the SAME per-UTC-day counter, so they self-balance.
+ * Shared daily API budget. On the API-Football Pro plan (7,500 requests/day) we
+ * cap a little under the ceiling and spend the pool across the consumers:
+ *   - fixture + standings sync (~17/day)
+ *   - live polling (window-gated, ~60s cadence while matches are on)
+ *   - pre-match lineup poll + the post-match details drain (eager, near-real-time)
+ * All read/write the SAME per-UTC-day counter, so they self-balance and a runaway
+ * loop can never blow past the ceiling. It's the only number to touch if the plan
+ * changes — bump to ~74000 (Ultra) / ~148000 (Mega).
  */
-export const DAILY_API_BUDGET = 95;
+export const DAILY_API_BUDGET = 7000;
 
 const MATCH_PREROLL_MS = 5 * 60_000; // start watching 5 min before kickoff
 const MATCH_DURATION_MS = 150 * 60_000; // covers HT + stoppage + extra time
@@ -33,14 +35,14 @@ export function candidateKickoffRange(nowMs: number): { earliest: Date; latest: 
 }
 
 /**
- * Adaptive base cadence: poll faster when many matches overlap (goals cluster),
- * slower when a single match is on. Same daily budget, better freshness when it
- * actually matters.
+ * Base live cadence. One `/fixtures?live=all` request covers every live match at
+ * once and the Pro budget is ample, so we poll at the freshest cadence the cron
+ * grain allows — 60s (the cron fires every minute; sub-minute isn't reachable).
+ * The budget-aware stretch in `decideLivePoll` still widens this if the day's
+ * budget ever runs genuinely low.
  */
-function baseIntervalMs(liveCount: number): number {
-  if (liveCount >= 4) return 3 * 60_000;
-  if (liveCount >= 2) return 5 * 60_000;
-  return 8 * 60_000;
+function baseIntervalMs(): number {
+  return 60_000;
 }
 
 export type BudgetState = {
@@ -77,7 +79,7 @@ export function decideLivePoll(args: {
   if (liveCount === 0) return { poll: false, reason: "no-live", intervalMs: 0, budgetRemaining: remaining };
   if (remaining <= 0) return { poll: false, reason: "budget-exhausted", intervalMs: 0, budgetRemaining: remaining };
 
-  let interval = baseIntervalMs(liveCount);
+  let interval = baseIntervalMs();
 
   // Budget-aware stretch: never burn the day's budget before the live window
   // ends. If the base cadence would run us dry, widen it to spread evenly.

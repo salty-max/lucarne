@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import {
   runDetailsDrain,
+  runEagerDrain,
   runFixtureSync,
   runFullResync,
   runLineupPoll,
@@ -12,9 +13,10 @@ import { memoryCache } from "@/lib/scheduleCache";
  * In-process scheduler. Because Lucarne runs as a long-lived Node process, we
  * don't need any platform cron (and thus dodge Vercel Hobby's once-a-day limit):
  *
- *   - fixtures: synced once a day (~7 API requests)
- *   - live: a tick every 2 min, but window-gated + budget-throttled inside
- *     runLivePollTick(), so most ticks cost ZERO API-Football requests.
+ *   - fixtures: synced once a day (~17 API requests, incl. standings)
+ *   - live: a tick every minute, but window-gated + budget-throttled inside
+ *     runLivePollTick(), so idle ticks cost ZERO API-Football requests. The same
+ *     tick grabs imminent lineups and eagerly drains freshly-finished games.
  */
 export function startScheduler(): void {
   cron.schedule("0 5 * * *", async () => {
@@ -35,7 +37,7 @@ export function startScheduler(): void {
     }
   });
 
-  cron.schedule("*/2 * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     try {
       const r = await runLivePollTick(new Date(), memoryCache);
       if (r.polled) console.log("[live] polled", r);
@@ -48,18 +50,25 @@ export function startScheduler(): void {
     } catch (err) {
       console.error("[lineups] failed", err);
     }
+    try {
+      const d = await runEagerDrain();
+      if (d.matches) console.log("[details] eager", d);
+    } catch (err) {
+      console.error("[details] eager failed", err);
+    }
   });
 
-  // Post-match details drain (scorers/cards) — nightly, fresh budget bucket.
+  // Nightly deep drain — backstop that also stamps matches the API never enriches
+  // (so the eager drain stops chasing them), on a fresh budget bucket.
   cron.schedule("0 2,4 * * *", async () => {
     try {
-      console.log("[details]", await runDetailsDrain());
+      console.log("[details]", await runDetailsDrain(40));
     } catch (err) {
       console.error("[details] failed", err);
     }
   });
 
   console.log(
-    "Scheduler started — fixtures 05:00, full re-sync Mon 06:00, details 02:00/04:00, live every 2 min.",
+    "Scheduler started — fixtures 05:00, full re-sync Mon 06:00, nightly drain 02:00/04:00, live every minute (scores + lineups + eager drain).",
   );
 }

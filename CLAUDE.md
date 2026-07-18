@@ -29,7 +29,7 @@ DB (Drizzle) : `bun run db:generate` (migration depuis `apps/api/src/db/schema.t
 
 ## API-Football & budget
 
-Budget quotidien partagé `DAILY_API_BUDGET = 95` (voir `apps/api/src/lib/live.ts`). `getFixtures(league, saison, from, to)` = **1 requête par compétition** quelle que soit la plage. Le sync quotidien + le re-sync hebdo pleine saison sont non-budget-gated ; live/lineups/details sont gated (s'arrêtent à 0). Le calendrier complet est seedé une fois (`backfill-all`) puis maintenu par cron.
+Plan **API-Football Pro** (7 500 req/j). Budget quotidien partagé `DAILY_API_BUDGET = 7000` (voir `apps/api/src/lib/live.ts`, seule constante à changer pour Ultra/Mega). `getFixtures(league, saison, from, to)` = **1 requête par compétition** quelle que soit la plage. Le sync quotidien + le re-sync hebdo pleine saison sont non-budget-gated ; live/lineups/details sont gated (s'arrêtent à 0). Cron live **chaque minute, 24h/24** (`* * * * *`) : scores (~60 s) + compos imminentes + drain « eager » des matchs fraîchement terminés (`stampWhenEmpty:false` → les stats/notes qui sortent après le coup de sifflet sont re-tentées). Drain nocturne 02:00/04:00 = backstop qui tamponne les matchs sans données. Le calendrier complet est seedé une fois (`backfill-all`) puis maintenu par cron.
 
 ## Conventions
 

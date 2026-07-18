@@ -4,6 +4,7 @@ import { app } from "@/app";
 import { schema, setDb } from "@/db";
 import {
   runDetailsDrain,
+  runEagerDrain,
   runFixtureSync,
   runFullResync,
   runLineupPoll,
@@ -27,7 +28,7 @@ const DETAILS_CRON = "0 2,4 * * *";
  * called at the top of each handler before any query runs.
  *
  *   fetch      → the Hono app (JSON APIs); the SPA is served by Static Assets
- *   scheduled  → Cron Triggers: sync (0 5), details (0 2,4), else live tick
+ *   scheduled  → Cron Triggers: sync (0 5), nightly drain (0 2,4), else live tick
  */
 export default {
   fetch(req: Request, env: Env): Response | Promise<Response> {
@@ -52,13 +53,16 @@ export default {
           .catch((err) => console.error("[resync] failed", err)),
       );
     } else if (event.cron === DETAILS_CRON) {
+      // Nightly deep drain — backstop that also stamps matches the API never
+      // enriches, so the eager drain stops chasing them.
       ctx.waitUntil(
-        runDetailsDrain()
+        runDetailsDrain(40)
           .then((r) => console.log("[details]", r))
           .catch((err) => console.error("[details] failed", err)),
       );
     } else {
-      // Live cadence: poll live scores + grab confirmed lineups for imminent games.
+      // Live cadence (every minute): poll live scores, grab confirmed lineups for
+      // imminent games, and eagerly drain details of freshly-finished ones.
       ctx.waitUntil(
         Promise.allSettled([
           runLivePollTick(new Date(), cache).then((r) => {
@@ -66,6 +70,9 @@ export default {
           }),
           runLineupPoll().then((r) => {
             if (r.matches) console.log("[lineups] fetched", r);
+          }),
+          runEagerDrain().then((r) => {
+            if (r.matches) console.log("[details] eager", r);
           }),
         ]).then(() => {}),
       );

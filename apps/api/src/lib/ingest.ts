@@ -278,8 +278,15 @@ export type DrainMatch = {
  * then stamp `detailsFetchedAt`. Costs ONE API request. Idempotent: replaces any
  * existing events for the match. Returns the number of events stored.
  */
-export async function storeMatchEvents(m: DrainMatch): Promise<number> {
+export async function storeMatchEvents(
+  m: DrainMatch,
+  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+): Promise<number> {
   const events = await getFixtureEvents(m.apiFootballId); // 1 API request
+
+  // Not published yet (match just kicked off / still settling): leave the row
+  // un-stamped so the eager drain retries; the nightly drain stamps regardless.
+  if (events.length === 0 && !stampWhenEmpty) return 0;
 
   const teamMap = new Map<number, number>([
     [m.homeApiId, m.homeTeamId],
@@ -401,9 +408,14 @@ function normalizeStats(stats: ApiTeamStatistics["statistics"]): TeamStats {
  * Fetch + store team match statistics (possession, shots, xG, …) for one match,
  * then stamp `statsFetchedAt`. Costs ONE API request. Stores null when the API
  * has no stats for both teams (common for minor fixtures); returns the number of
- * non-null stat values captured.
+ * non-null stat values captured. Stats settle a few minutes after full-time, so
+ * `stampWhenEmpty: false` (the eager drain) leaves an empty response un-stamped
+ * for a later retry; the nightly drain stamps regardless.
  */
-export async function storeMatchStatistics(m: DrainMatch): Promise<number> {
+export async function storeMatchStatistics(
+  m: DrainMatch,
+  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+): Promise<number> {
   const teams = await getFixtureStatistics(m.apiFootballId); // 1 API request
 
   let home: TeamStats | null = null;
@@ -413,6 +425,8 @@ export async function storeMatchStatistics(m: DrainMatch): Promise<number> {
     else if (t.team.id === m.awayApiId) away = normalizeStats(t.statistics);
   }
   const statistics = home && away ? { home, away } : null;
+
+  if (statistics === null && !stampWhenEmpty) return 0;
 
   await db.update(matches).set({ statistics, statsFetchedAt: new Date() }).where(eq(matches.id, m.id));
 
@@ -426,8 +440,14 @@ export async function storeMatchStatistics(m: DrainMatch): Promise<number> {
  * Fetch + store per-player match ratings for one match as a name→rating map on
  * `matches.playerRatings` (attached to lineups by name at read time), then stamp
  * `ratingsFetchedAt`. Costs ONE API request. Returns the number of rated players.
+ * Ratings lag ~10-20 min after full-time, so `stampWhenEmpty: false` (the eager
+ * drain) leaves an empty response un-stamped for a later retry; the nightly drain
+ * stamps regardless.
  */
-export async function storeMatchPlayerRatings(m: DrainMatch): Promise<number> {
+export async function storeMatchPlayerRatings(
+  m: DrainMatch,
+  { stampWhenEmpty = true }: { stampWhenEmpty?: boolean } = {},
+): Promise<number> {
   const teams = await getFixturePlayers(m.apiFootballId); // 1 API request
 
   const byNumber = { home: {} as Record<string, number>, away: {} as Record<string, number> };
@@ -442,6 +462,8 @@ export async function storeMatchPlayerRatings(m: DrainMatch): Promise<number> {
   }
   const count = Object.keys(byNumber.home).length + Object.keys(byNumber.away).length;
   const playerRatings = count > 0 ? byNumber : null;
+
+  if (playerRatings === null && !stampWhenEmpty) return 0;
 
   await db
     .update(matches)
