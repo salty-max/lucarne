@@ -10,14 +10,14 @@ function lastName(name: string): string {
 /** Rating badge colour — green (good) / yellow (ok) / red (poor). The red badge
  *  (a pill) reads distinctly from the away team's red number disc. */
 function ratingClass(r: number): string {
-  if (r >= 7) return "bg-[hsl(var(--tt-green))] text-black";
-  if (r >= 6) return "bg-[hsl(var(--tt-yellow))] text-black";
-  return "bg-[hsl(var(--tt-red))] text-white";
+  if (r >= 7) return "bg-[hsl(var(--tt-green))]";
+  if (r >= 6) return "bg-[hsl(var(--tt-yellow))]";
+  return "bg-[hsl(var(--tt-red))]";
 }
 
 function Rating({ value }: { value: number }) {
   return (
-    <span className={cn("rounded px-1 text-[9px] font-bold leading-tight tabular-nums", ratingClass(value))}>
+    <span className={cn("px-1 text-[9px] font-bold leading-tight tabular-nums text-black", ratingClass(value))}>
       {value.toFixed(1)}
     </span>
   );
@@ -54,7 +54,7 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       <span
         className={cn(
           "grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold",
-          side === "home" ? "bg-[hsl(var(--tt-blue))] text-black" : "bg-[hsl(var(--tt-red))] text-white",
+          side === "home" ? "bg-[hsl(var(--tt-blue))] text-black" : "bg-[hsl(var(--tt-red))] text-black",
         )}
       >
         {p.number ?? ""}
