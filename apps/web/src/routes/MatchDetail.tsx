@@ -174,6 +174,10 @@ export default function MatchDetail() {
   const round = roundLabel(match.round, lang);
   const goals = match.events.filter((e) => e.type === "Goal");
   const cards = match.events.filter((e) => e.type === "Card");
+  const stats = match.statistics;
+  const hasStats = stats
+    ? [...Object.values(stats.home), ...Object.values(stats.away)].some((v) => v != null)
+    : false;
 
   return (
     <>
@@ -218,10 +222,10 @@ export default function MatchDetail() {
         <p className="mt-3 py-2 text-sm italic text-muted-foreground">{t.match.noGoalsCards}</p>
       )}
 
-      {match.statistics && (
+      {stats && hasStats && (
         <section className="mt-3">
           <SectionLabel>{t.stats.title}</SectionLabel>
-          <MatchStats stats={match.statistics} />
+          <MatchStats stats={stats} />
         </section>
       )}
 
