@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
-import { setSettings, useSettings, type DateFormat, type Lang } from "@/lib/settings";
+import { setSettings, useSettings, type DateFormat, type Lang, type Theme } from "@/lib/settings";
+import { THEMES } from "@/lib/themes";
 import { toggleCompetition, useHiddenCompetitions } from "@/lib/competitionFilter";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { competitionLabel } from "@/lib/labels";
@@ -12,6 +13,13 @@ const LANG_OPTIONS: { value: Lang; labelKey: "french" | "english" }[] = [
   { value: "fr", labelKey: "french" },
   { value: "en", labelKey: "english" },
 ];
+
+const THEME_META: Record<Theme, { name: string; tag: string }> = {
+  cept1: { name: "themeCept1", tag: "themeCept1Tag" },
+  neon: { name: "themeNeon", tag: "themeNeonTag" },
+  amber: { name: "themeAmber", tag: "themeAmberTag" },
+  green: { name: "themeGreen", tag: "themeGreenTag" },
+};
 
 const DATE_OPTIONS: { value: DateFormat; labelKey: "dmy" | "mdy" | "numeric" }[] = [
   { value: "dmy", labelKey: "dmy" },
@@ -47,23 +55,51 @@ function Radio({
 }
 
 export default function Settings() {
-  const { dateFormat, crt, lang } = useSettings();
+  const { dateFormat, crt, lang, theme } = useSettings();
   const comps = useCompetitions();
   const hidden = useHiddenCompetitions();
   const t = useT();
   const sample = new Date();
+  const s = t.settings as Record<string, string>;
 
   return (
     <>
       <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
 
-      <SectionLabel>{t.settings.language}</SectionLabel>
+      <SectionLabel>{t.settings.theme}</SectionLabel>
+      <p className="mb-1 text-xs text-muted-foreground">{t.settings.themeHelp}</p>
       <div className="flex flex-col">
-        {LANG_OPTIONS.map((o) => (
-          <Radio key={o.value} active={lang === o.value} onClick={() => setSettings({ lang: o.value })}>
-            <span className="min-w-0 flex-1 uppercase">{t.settings[o.labelKey]}</span>
-          </Radio>
-        ))}
+        {THEMES.map((th) => {
+          const meta = THEME_META[th.id];
+          return (
+            <Radio key={th.id} active={theme === th.id} onClick={() => setSettings({ theme: th.id })}>
+              <span className="min-w-0 flex-1">
+                <span className="block uppercase">{s[meta.name]}</span>
+                <span className="block text-xs text-muted-foreground">{s[meta.tag]}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-px" aria-hidden>
+                {th.swatch.map((c, i) => (
+                  <span key={i} className="h-3.5 w-3.5" style={{ background: `hsl(${c})` }} />
+                ))}
+              </span>
+            </Radio>
+          );
+        })}
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.settings.language}</SectionLabel>
+        <div className="flex flex-col">
+          {LANG_OPTIONS.map((o) => (
+            <Radio
+              key={o.value}
+              active={lang === o.value}
+              onClick={() => setSettings({ lang: o.value })}
+            >
+              <span className="min-w-0 flex-1 uppercase">{t.settings[o.labelKey]}</span>
+            </Radio>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5">

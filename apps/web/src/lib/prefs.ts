@@ -6,11 +6,13 @@ import { useSyncExternalStore } from "react";
 // channels.ts, competitionFilter.ts) are thin facades over this.
 export type DateFormat = "dmy" | "mdy" | "numeric";
 export type Lang = "en" | "fr";
+export type Theme = "cept1" | "neon" | "amber" | "green";
 
 export type Prefs = {
   dateFormat: DateFormat;
   crt: boolean;
   lang: Lang;
+  theme: Theme; // colour palette (see lib/themes.ts + index.css)
   favorites: string[]; // followed team names
   channels: string[]; // selected broadcaster slugs (empty = all shown)
   hiddenCompetitions: string[]; // competition slugs to hide (empty = all shown)
@@ -23,6 +25,7 @@ const DEFAULTS: Prefs = {
   dateFormat: "dmy",
   crt: true,
   lang: "fr",
+  theme: "cept1", // authentic teletext by default
   favorites: [],
   channels: [],
   hiddenCompetitions: [],
@@ -58,12 +61,15 @@ function load(): Prefs {
   }
 }
 
-/** Mirror crt/lang onto <html> — index.html sets them pre-paint to avoid a flash. */
+/** Mirror crt/lang/theme onto <html> — index.html sets them pre-paint (no flash). */
 export function applyCrt(on: boolean): void {
   if (typeof document !== "undefined") document.documentElement.classList.toggle("crt-off", !on);
 }
 export function applyLang(lang: Lang): void {
   if (typeof document !== "undefined") document.documentElement.lang = lang;
+}
+export function applyTheme(theme: Theme): void {
+  if (typeof document !== "undefined") document.documentElement.setAttribute("data-theme", theme);
 }
 
 let current: Prefs = load();
@@ -71,6 +77,7 @@ const listeners = new Set<() => void>();
 
 applyCrt(current.crt);
 applyLang(current.lang);
+applyTheme(current.theme);
 
 // First run under the new key: persist the (possibly migrated) prefs and drop the
 // legacy per-domain keys.
@@ -96,6 +103,7 @@ export function setPrefs(patch: Partial<Prefs>): void {
   }
   applyCrt(current.crt);
   applyLang(current.lang);
+  applyTheme(current.theme);
   for (const l of listeners) l();
 }
 

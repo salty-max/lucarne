@@ -5,27 +5,57 @@
 /*
  * Lucarne "Teletext" identity: an old-school teletext / Antiope revival.
  * A near-black CRT ground, the seven teletext colours, a fixed-width face,
- * sharp corners, dotted rules and full-width colour bars. It commits to a
- * single dark world, so BOTH theme classes resolve to the same palette.
+ * sharp corners, dotted rules and full-width colour bars.
+ *
+ * The palette is themeable via `data-theme` on <html> (set pre-paint from
+ * prefs; see index.html + lib/themes.ts). The default — and the base below —
+ * is CEPT-1: the authentic 3-bit RGB teletext/Antiope colours (each channel
+ * full or off) on pure black. `.dark` is always on (single dark world).
  */
 :root,
 .dark {
-  --background: 222 47% 4%; /* CRT near-black, faint blue cast */
-  --foreground: 180 6% 90%;
-  --card: 220 40% 6%; /* a hair above the ground */
-  --card-foreground: 180 6% 90%;
-  --muted: 216 30% 13%; /* recessed cells */
-  --muted-foreground: 200 10% 60%;
-  --border: 205 28% 26%; /* dim rules */
-  --input: 205 28% 26%;
-  --primary: 145 100% 52%; /* teletext green — the accent */
-  --primary-foreground: 220 60% 5%;
-  --accent: 210 34% 12%; /* hover surface */
-  --accent-foreground: 180 6% 90%;
-  --live: 0 100% 64%; /* teletext red */
   --radius: 0rem; /* teletext is sharp-cornered */
 
-  /* Full teletext palette for colour-coded bars & tags. */
+  /* CEPT-1 — authentic teletext / Antiope (the default). Pure #RGB corners. */
+  --background: 0 0% 0%; /* pure black, as broadcast */
+  --foreground: 0 0% 100%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 100%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 66%;
+  --border: 0 0% 33%;
+  --input: 0 0% 33%;
+  --primary: 120 100% 50%; /* green — the accent */
+  --primary-foreground: 0 0% 0%;
+  --accent: 0 0% 14%;
+  --accent-foreground: 0 0% 100%;
+  --live: 0 100% 50%; /* red */
+
+  --tt-red: 0 100% 50%; /* #ff0000 */
+  --tt-green: 120 100% 50%; /* #00ff00 */
+  --tt-yellow: 60 100% 50%; /* #ffff00 */
+  --tt-blue: 240 100% 50%; /* #0000ff */
+  --tt-magenta: 300 100% 50%; /* #ff00ff */
+  --tt-cyan: 180 100% 50%; /* #00ffff */
+  --tt-white: 0 0% 100%; /* #ffffff */
+}
+
+/* Neon — the softened, modern variant (brighter, faint blue-cast ground). */
+:root[data-theme="neon"] {
+  --background: 222 47% 4%;
+  --foreground: 180 6% 90%;
+  --card: 220 40% 6%;
+  --card-foreground: 180 6% 90%;
+  --muted: 216 30% 13%;
+  --muted-foreground: 200 10% 60%;
+  --border: 205 28% 26%;
+  --input: 205 28% 26%;
+  --primary: 145 100% 52%;
+  --primary-foreground: 220 60% 5%;
+  --accent: 210 34% 12%;
+  --accent-foreground: 180 6% 90%;
+  --live: 0 100% 64%;
+
   --tt-red: 0 100% 64%;
   --tt-green: 145 100% 52%;
   --tt-yellow: 54 100% 52%;
@@ -33,6 +63,57 @@
   --tt-magenta: 318 100% 68%;
   --tt-cyan: 180 100% 54%;
   --tt-white: 180 6% 92%;
+}
+
+/* Amber — single-phosphor amber CRT. Colour coding degrades to intensity, the
+   way a monochrome terminal showed bright/normal/dim text. */
+:root[data-theme="amber"] {
+  --background: 30 25% 4%;
+  --foreground: 38 100% 60%;
+  --card: 32 30% 6%;
+  --card-foreground: 38 100% 60%;
+  --muted: 34 30% 12%;
+  --muted-foreground: 38 55% 50%;
+  --border: 36 45% 24%;
+  --input: 36 45% 24%;
+  --primary: 40 100% 55%;
+  --primary-foreground: 30 40% 6%;
+  --accent: 34 40% 12%;
+  --accent-foreground: 40 100% 62%;
+  --live: 25 100% 55%;
+
+  --tt-red: 25 100% 58%;
+  --tt-green: 45 100% 55%;
+  --tt-yellow: 50 100% 62%;
+  --tt-blue: 36 45% 42%;
+  --tt-magenta: 30 90% 55%;
+  --tt-cyan: 44 100% 58%;
+  --tt-white: 40 60% 82%;
+}
+
+/* Green — single-phosphor P1 green CRT (the classic terminal look). */
+:root[data-theme="green"] {
+  --background: 128 30% 3%;
+  --foreground: 128 90% 66%;
+  --card: 128 30% 5%;
+  --card-foreground: 128 90% 66%;
+  --muted: 128 25% 11%;
+  --muted-foreground: 128 45% 50%;
+  --border: 128 35% 22%;
+  --input: 128 35% 22%;
+  --primary: 128 100% 58%;
+  --primary-foreground: 128 40% 6%;
+  --accent: 128 30% 12%;
+  --accent-foreground: 128 90% 70%;
+  --live: 128 100% 78%;
+
+  --tt-red: 128 100% 80%;
+  --tt-green: 128 100% 55%;
+  --tt-yellow: 128 100% 72%;
+  --tt-blue: 128 45% 44%;
+  --tt-magenta: 128 70% 62%;
+  --tt-cyan: 128 100% 68%;
+  --tt-white: 128 55% 85%;
 }
 
 @theme inline {
