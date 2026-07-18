@@ -142,6 +142,15 @@ const en = {
     ok: "OK",
     failed: "FAIL",
   },
+  favorites: {
+    title: "My matches",
+    subtitle: "Your followed teams",
+    add: "Follow",
+    remove: "Unfollow",
+    emptyTitle: "No teams followed yet",
+    emptyBody: "Tap the ☆ next to a team to follow it.",
+    noUpcoming: "No upcoming matches for your teams.",
+  },
   kbd: {
     goToPage: "go to page",
     navigate: "navigate",
@@ -294,6 +303,15 @@ const fr: Messages = {
     empty: "Aucune exécution enregistrée.",
     ok: "OK",
     failed: "ÉCHEC",
+  },
+  favorites: {
+    title: "Mes matchs",
+    subtitle: "Vos équipes suivies",
+    add: "Suivre",
+    remove: "Ne plus suivre",
+    emptyTitle: "Aucune équipe suivie",
+    emptyBody: "Touchez l'☆ à côté d'une équipe pour la suivre.",
+    noUpcoming: "Aucun match à venir pour vos équipes.",
   },
   kbd: {
     goToPage: "aller à la page",

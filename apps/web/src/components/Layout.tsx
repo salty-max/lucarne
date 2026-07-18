@@ -197,7 +197,7 @@ export function Layout() {
               </Link>
             ))}
           </nav>
-          <nav className="tt-fast tt-fast--pair">
+          <nav className="tt-fast tt-fast--more">
             {FOOTER_MORE.map((f) => (
               <Link key={f.no} to={f.to} className={f.cls}>
                 {f.no} {f.label[lang]}

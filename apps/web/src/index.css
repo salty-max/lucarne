@@ -417,9 +417,12 @@
 .tt-fast .f-wht {
   background: hsl(var(--tt-white));
 }
-/* Secondary FastText row (settings, logs) — two buttons under the main four. */
-.tt-fast--pair {
-  grid-template-columns: repeat(2, 1fr);
+.tt-fast .f-blu {
+  background: hsl(var(--tt-blue));
+}
+/* Secondary FastText row (favourites, settings, logs) — under the main four. */
+.tt-fast--more {
+  grid-template-columns: repeat(3, 1fr);
   padding-top: 2px;
 }
 .tt-kbd {

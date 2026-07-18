@@ -4,6 +4,7 @@ import type { CompetitionInfo } from "@lucarne/shared";
  *  competition gets 410, 411, … so it's reachable by typing its number. */
 const STATIC: Record<string, string> = {
   "/": "100",
+  "/favorites": "200",
   "/calendar": "300",
   "/competitions": "400",
   "/broadcasters": "600",
@@ -25,18 +26,28 @@ export const FASTTEXT = [
   { key: { en: "c", fr: "c" }, cls: "f-cyn", no: "600", to: "/broadcasters", label: { en: "Broadcasters", fr: "Diffuseurs" } },
 ] as const;
 
-/** Secondary footer buttons (utility pages) — reached by number or click, no
- *  colour key. Rendered as a second FastText row under the main four. */
+/** Secondary footer buttons (personal + utility pages) — reached by number or
+ *  click, no colour key. Rendered as a second FastText row under the main four. */
 export const FOOTER_MORE = [
+  { cls: "f-blu", no: "200", to: "/favorites", label: { en: "My games", fr: "Mes matchs" } },
   { cls: "f-mag", no: "700", to: "/settings", label: { en: "Settings", fr: "Réglages" } },
   { cls: "f-wht", no: "800", to: "/logs", label: { en: "Logs", fr: "Logs" } },
 ] as const;
 
 /** Ordered sections for ◄ ► paging. */
-export const PAGE_ORDER = ["/", "/calendar", "/competitions", "/broadcasters", "/settings", "/logs"];
+export const PAGE_ORDER = [
+  "/",
+  "/favorites",
+  "/calendar",
+  "/competitions",
+  "/broadcasters",
+  "/settings",
+  "/logs",
+];
 
 /** Which ordered section a path belongs to (match/competition fold into their base). */
 export function sectionOf(path: string): string {
+  if (path.startsWith("/favorites")) return "/favorites";
   if (path.startsWith("/calendar")) return "/calendar";
   if (path.startsWith("/competitions")) return "/competitions";
   if (path.startsWith("/broadcasters")) return "/broadcasters";
