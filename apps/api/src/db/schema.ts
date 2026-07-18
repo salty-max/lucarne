@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { MatchStatistics } from "@lucarne/shared";
 
 /**
@@ -214,6 +214,35 @@ export const runLog = sqliteTable(
   (t) => [index("run_log_at_idx").on(t.at)],
 );
 
+// A browser's Web Push subscription + who/what it wants to hear about. `teams`
+// are the followed team names to match against; `triggers` are the event kinds
+// (goal, yellow, red, kickoff, ft) the user opted into.
+export const pushSubscription = sqliteTable("push_subscription", {
+  endpoint: text("endpoint").primaryKey(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  teams: text("teams", { mode: "json" }).$type<string[]>().notNull(),
+  triggers: text("triggers", { mode: "json" }).$type<string[]>().notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+// Dedup ledger: one row per (match, event) already pushed, so re-fetching a
+// match's events on the next tick never sends a goal/card twice. `key` is a
+// stable event key, or "KO"/"FT" for the kickoff reminder + full-time.
+export const pushNotified = sqliteTable(
+  "push_notified",
+  {
+    matchId: integer("match_id").notNull(),
+    key: text("key").notNull(),
+    at: integer("at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.matchId, t.key] }), index("push_notified_at_idx").on(t.at)],
+);
+
 export type Broadcaster = typeof broadcasters.$inferSelect;
 export type Competition = typeof competitions.$inferSelect;
 export type Team = typeof teams.$inferSelect;
@@ -223,3 +252,4 @@ export type MatchLineup = typeof matchLineups.$inferSelect;
 export type Standing = typeof standings.$inferSelect;
 export type BroadcastRule = typeof broadcastRules.$inferSelect;
 export type RunLog = typeof runLog.$inferSelect;
+export type PushSubscription = typeof pushSubscription.$inferSelect;

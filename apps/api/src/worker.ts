@@ -13,6 +13,7 @@ import {
   runLiveEnrich,
   runLivePollTick,
 } from "@/lib/poller";
+import { runPushNotify } from "@/lib/pushTrigger";
 import { pickCache } from "@/lib/scheduleCache";
 
 // Minimal Workers types (D1Database is imported for the driver; the rest stay
@@ -66,13 +67,16 @@ export default {
       // stats, grab confirmed lineups for imminent games, and eagerly drain details
       // of freshly-finished ones. Each is gated to log/record only when it actually
       // did something.
+      // Sequential (not parallel) so they don't race on the shared budget
+      // counter, and so `push` sees the events `live-enrich` just wrote.
       ctx.waitUntil(
-        Promise.all([
-          runJob("live", () => runLivePollTick(new Date(), cache), (r) => r.polled),
-          runJob("live-enrich", () => runLiveEnrich(), (r) => r.matches > 0),
-          runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0),
-          runJob("eager", () => runEagerDrain(), (r) => r.matches > 0),
-        ]).then(() => {}),
+        (async () => {
+          await runJob("live", () => runLivePollTick(new Date(), cache), (r) => r.polled);
+          await runJob("live-enrich", () => runLiveEnrich(), (r) => r.matches > 0);
+          await runJob("push", () => runPushNotify(), (r) => r.fired > 0);
+          await runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0);
+          await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
+        })(),
       );
     }
   },

@@ -50,6 +50,13 @@
       "when": 1784336125571,
       "tag": "0006_blushing_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784399229079,
+      "tag": "0007_bored_rhino",
+      "breakpoints": true
     }
   ]
 }

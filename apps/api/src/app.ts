@@ -15,6 +15,13 @@ import {
   runLivePollTick,
 } from "@/lib/poller";
 import { recentRuns } from "@/lib/runlog";
+import {
+  ALL_TRIGGERS,
+  removeSubscription,
+  saveSubscription,
+  vapidPublicKey,
+  type PushTrigger,
+} from "@/lib/push";
 import { pickCache } from "@/lib/scheduleCache";
 import { getMatchDetail, getSchedule, toWire, toWireMatchDetail } from "@/lib/schedule";
 import { startOfParisDay } from "@/lib/time";
@@ -138,6 +145,53 @@ app.get("/api/teams", async (c) => {
   } catch (err) {
     console.error("[/api/teams]", err);
     return c.json({ teams: [] } satisfies TeamsResponse, 500);
+  }
+});
+
+// --- Web Push: the client fetches the VAPID public key, then registers /
+//     deregisters its browser subscription (with the teams it wants alerts for). ---
+app.get("/api/push/key", (c) => {
+  const key = vapidPublicKey();
+  return key ? c.json({ key }) : c.json({ key: null }, 503);
+});
+
+app.post("/api/push/subscribe", async (c) => {
+  try {
+    const body = (await c.req.json()) as {
+      subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+      teams?: unknown;
+      triggers?: unknown;
+    };
+    const sub = body.subscription;
+    if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
+      return c.json({ ok: false, error: "bad subscription" }, 400);
+    }
+    const teams = Array.isArray(body.teams)
+      ? body.teams.filter((t): t is string => typeof t === "string")
+      : [];
+    const triggers = Array.isArray(body.triggers)
+      ? body.triggers.filter((t): t is PushTrigger => (ALL_TRIGGERS as string[]).includes(t as string))
+      : ALL_TRIGGERS;
+    await saveSubscription(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
+      teams,
+      triggers,
+    );
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/push/subscribe]", err);
+    return c.json({ ok: false }, 500);
+  }
+});
+
+app.post("/api/push/unsubscribe", async (c) => {
+  try {
+    const body = (await c.req.json()) as { endpoint?: string };
+    if (body.endpoint) await removeSubscription(body.endpoint);
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/push/unsubscribe]", err);
+    return c.json({ ok: false }, 500);
   }
 });
 
