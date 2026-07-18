@@ -21,6 +21,10 @@ Statut : `[ ]` à faire · `[~]` en cours · `[x]` fait.
 - [ ] **Export calendrier (.ics)**
   Bouton « Ajouter au calendrier » (un match, ou tous les matchs d'une équipe
   favorite) → iCal généré par le Worker, fuseau Paris + diffuseur en note.
+- [x] **Adaptation mobile 100 %** *(prérequis PWA)*
+  Audit à 375px : pitch des compos **vertical en mobile** (plus de joueurs coupés),
+  indice clavier masqué au tactile, labels FastText resserrés, section stats vide
+  masquée. Zéro débordement horizontal sur toutes les pages.
 - [ ] **PWA installable**
   Manifest + service worker minimal → installable plein écran sur mobile (le look
   CRT en standalone), cache **hors-ligne** du dernier planning.
