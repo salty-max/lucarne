@@ -7,6 +7,22 @@ function lastName(name: string): string {
   return parts[parts.length - 1] || name;
 }
 
+/** Rating badge colour — green (good) / yellow (ok) / red (poor). The red badge
+ *  (a pill) reads distinctly from the away team's red number disc. */
+function ratingClass(r: number): string {
+  if (r >= 7) return "bg-[hsl(var(--tt-green))] text-black";
+  if (r >= 6) return "bg-[hsl(var(--tt-yellow))] text-black";
+  return "bg-[hsl(var(--tt-red))] text-white";
+}
+
+function Rating({ value }: { value: number }) {
+  return (
+    <span className={cn("rounded px-1 text-[9px] font-bold leading-tight tabular-nums", ratingClass(value))}>
+      {value.toFixed(1)}
+    </span>
+  );
+}
+
 /** Group a starting XI into formation lines, back (GK) to front, by the API grid
  *  "row:col" (col 1 = the team's left). `mirror` reverses each line for the away
  *  team, which attacks downward on the shared pitch. */
@@ -46,6 +62,7 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       <span className="max-w-full truncate text-center text-[9px] leading-tight text-foreground/90">
         {lastName(p.name)}
       </span>
+      {p.rating != null && <Rating value={p.rating} />}
     </div>
   );
 }
@@ -98,7 +115,8 @@ function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
           )}
         >
           <span className="min-w-[1.6ch] tabular-nums text-muted-foreground">{p.number ?? ""}</span>
-          <span className="truncate">{p.name}</span>
+          <span className="min-w-0 flex-1 truncate">{p.name}</span>
+          {p.rating != null && <Rating value={p.rating} />}
         </li>
       ))}
     </ul>
