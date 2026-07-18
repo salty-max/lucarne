@@ -26,8 +26,18 @@ function FollowedRow({ name }: { name: string }) {
   );
 }
 
-/** A search result: the whole row follows the team on click. */
-function ResultRow({ name, onAdd }: { name: string; onAdd: () => void }) {
+/** A search result — the row toggles follow on click. Already-followed teams are
+ *  shown (not hidden) with a ✕ so a search never comes back empty for a team you
+ *  already follow. */
+function ResultRow({
+  name,
+  followed,
+  onToggle,
+}: {
+  name: string;
+  followed: boolean;
+  onToggle: () => void;
+}) {
   const { lang } = useSettings();
   const t = useT();
   return (
@@ -35,12 +45,16 @@ function ResultRow({ name, onAdd }: { name: string; onAdd: () => void }) {
       <button
         type="button"
         data-nav
-        onClick={onAdd}
-        aria-label={`${t.favorites.add} — ${name}`}
+        onClick={onToggle}
+        aria-label={`${followed ? t.favorites.remove : t.favorites.add} — ${name}`}
         className="tt-dotted flex w-full items-center gap-2 py-1.5 text-left text-sm hover:bg-accent"
       >
         <span className="min-w-0 flex-1 truncate uppercase">{teamName(name, lang)}</span>
-        <span className="shrink-0 px-1 leading-none text-[hsl(var(--tt-green))]">+</span>
+        {followed ? (
+          <span className="shrink-0 px-1 leading-none text-muted-foreground/60">✕</span>
+        ) : (
+          <span className="shrink-0 px-1 leading-none text-[hsl(var(--tt-green))]">+</span>
+        )}
       </button>
     </li>
   );
@@ -55,14 +69,13 @@ export default function Favorites() {
   const { teams, error } = useTeams();
   const [q, setQ] = useState("");
 
+  const favSet = useMemo(() => new Set(favs), [favs]);
   const followed = useMemo(() => [...favs].sort((a, b) => a.localeCompare(b)), [favs]);
 
   const results = useMemo(() => {
     const query = q.trim().toLowerCase();
     if (!query || !teams) return [];
-    const favSet = new Set(favs);
     return teams
-      .filter((tm) => !favSet.has(tm.name))
       .filter(
         (tm) =>
           tm.name.toLowerCase().includes(query) ||
@@ -70,11 +83,12 @@ export default function Favorites() {
           teamName(tm.name, lang).toLowerCase().includes(query),
       )
       .slice(0, 40);
-  }, [q, teams, favs, lang]);
+  }, [q, teams, lang]);
 
-  const add = (name: string) => {
+  const toggle = (name: string) => {
+    const wasFollowed = favSet.has(name);
     toggleFavorite(name);
-    setQ(""); // clear the search after adding
+    if (!wasFollowed) setQ(""); // clear the search after adding (not after removing)
   };
 
   return (
@@ -109,7 +123,12 @@ export default function Favorites() {
         ) : (
           <ul className="mt-1 flex flex-col">
             {results.map((tm) => (
-              <ResultRow key={tm.name} name={tm.name} onAdd={() => add(tm.name)} />
+              <ResultRow
+                key={tm.name}
+                name={tm.name}
+                followed={favSet.has(tm.name)}
+                onToggle={() => toggle(tm.name)}
+              />
             ))}
           </ul>
         )}
