@@ -8,6 +8,7 @@ const STATIC: Record<string, string> = {
   "/competitions": "400",
   "/broadcasters": "600",
   "/settings": "700",
+  "/logs": "800",
 };
 const NO_TO_PATH: Record<string, string> = Object.fromEntries(
   Object.entries(STATIC).map(([path, no]) => [no, path]),
@@ -25,7 +26,7 @@ export const FASTTEXT = [
 ] as const;
 
 /** Ordered sections for ◄ ► paging. */
-export const PAGE_ORDER = ["/", "/calendar", "/competitions", "/broadcasters", "/settings"];
+export const PAGE_ORDER = ["/", "/calendar", "/competitions", "/broadcasters", "/settings", "/logs"];
 
 /** Which ordered section a path belongs to (match/competition fold into their base). */
 export function sectionOf(path: string): string {
@@ -33,6 +34,7 @@ export function sectionOf(path: string): string {
   if (path.startsWith("/competitions")) return "/competitions";
   if (path.startsWith("/broadcasters")) return "/broadcasters";
   if (path.startsWith("/settings")) return "/settings";
+  if (path.startsWith("/logs")) return "/logs";
   return "/";
 }
 

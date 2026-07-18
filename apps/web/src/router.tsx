@@ -7,6 +7,7 @@ import Competition from "@/routes/Competition";
 import MatchDetail from "@/routes/MatchDetail";
 import Broadcasters from "@/routes/Broadcasters";
 import Settings from "@/routes/Settings";
+import Logs from "@/routes/Logs";
 
 const rootRoute = createRootRoute({ component: Layout });
 
@@ -33,6 +34,11 @@ const settingsRoute = createRoute({
   path: "/settings",
   component: Settings,
 });
+const logsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/logs",
+  component: Logs,
+});
 
 const routeTree = rootRoute.addChildren([
   todayRoute,
@@ -42,6 +48,7 @@ const routeTree = rootRoute.addChildren([
   matchRoute,
   broadcastersRoute,
   settingsRoute,
+  logsRoute,
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: "intent" });

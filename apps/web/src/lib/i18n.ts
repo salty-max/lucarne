@@ -135,6 +135,13 @@ const en = {
     on: "On",
     off: "Off",
   },
+  logs: {
+    title: "Logs",
+    subtitle: "Scheduled jobs",
+    empty: "No runs recorded yet.",
+    ok: "OK",
+    failed: "FAIL",
+  },
   kbd: {
     goToPage: "go to page",
     navigate: "navigate",
@@ -280,6 +287,13 @@ const fr: Messages = {
     crtHelp: "Scanlines, lueur phosphore et cadre TV. Désactiver pour un écran plat.",
     on: "On",
     off: "Off",
+  },
+  logs: {
+    title: "Logs",
+    subtitle: "Tâches planifiées",
+    empty: "Aucune exécution enregistrée.",
+    ok: "OK",
+    failed: "ÉCHEC",
   },
   kbd: {
     goToPage: "aller à la page",

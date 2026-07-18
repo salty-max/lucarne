@@ -4,6 +4,7 @@ import type {
   Day,
   LiveMatch,
   MatchDetail,
+  RunLogEntry,
 } from "@lucarne/shared";
 
 export type ScheduleParams = { from?: string; days?: number; competition?: string };
@@ -45,4 +46,11 @@ export async function fetchCompetition(slug: string): Promise<CompetitionDetail 
   if (!res.ok) return null;
   const data = (await res.json()) as { competition?: CompetitionDetail | null };
   return data.competition ?? null;
+}
+
+export async function fetchLogs(limit = 100): Promise<RunLogEntry[]> {
+  const res = await fetch(`/api/logs?limit=${limit}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`logs ${res.status}`);
+  const data = (await res.json()) as { runs?: RunLogEntry[] };
+  return data.runs ?? [];
 }
