@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { log, setLogLevel } from "./log";
+import { log, setLogFormat, setLogLevel } from "./log";
 
 /** Capture whatever the logger writes to the console during `fn`. */
 function capture(fn: () => void): string[] {
@@ -15,7 +15,11 @@ function capture(fn: () => void): string[] {
 }
 
 describe("log", () => {
-  afterEach(() => setLogLevel("info")); // restore the module default between tests
+  afterEach(() => {
+    // restore the module defaults between tests
+    setLogLevel("info");
+    setLogFormat("json");
+  });
 
   it("emits one JSON line with a timestamp, level, tag and context", () => {
     const [line] = capture(() => log.info("live.polled", { live: 2 }));
@@ -41,5 +45,13 @@ describe("log", () => {
     setLogLevel("info");
     setLogLevel("bogus");
     expect(capture(() => log.info("kept"))).toHaveLength(1);
+  });
+
+  it("renders a human line (not JSON) in pretty mode", () => {
+    setLogFormat("pretty");
+    const [line] = capture(() => log.info("details.eager", { matches: 3 }));
+    expect(line).toContain("details.eager");
+    expect(line).toContain("matches=");
+    expect(() => JSON.parse(line)).toThrow(); // not structured JSON
   });
 });

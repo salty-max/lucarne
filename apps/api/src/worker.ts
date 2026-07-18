@@ -3,7 +3,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { app } from "@/app";
 import { schema, setDb } from "@/db";
 import { runJob } from "@/lib/jobs";
-import { setLogLevel } from "@/lib/log";
+import { setLogFormat, setLogLevel } from "@/lib/log";
 import {
   runDetailsDrain,
   runEagerDrain,
@@ -18,7 +18,13 @@ import { pickCache } from "@/lib/scheduleCache";
 // local to avoid pulling @cloudflare/workers-types into the global scope).
 type CronEvent = { cron: string; scheduledTime: number };
 type ExecCtx = { waitUntil(p: Promise<unknown>): void; passThroughOnException(): void };
-type Env = { DB: D1Database; SCHEDULE_KV?: unknown; CURRENT_SEASON?: string; LOG_LEVEL?: string };
+type Env = {
+  DB: D1Database;
+  SCHEDULE_KV?: unknown;
+  CURRENT_SEASON?: string;
+  LOG_LEVEL?: string;
+  LOG_FORMAT?: string;
+};
 
 // Must match wrangler.jsonc `triggers.crons` exactly.
 const DAILY_SYNC_CRON = "0 5 * * *";
@@ -36,6 +42,7 @@ export default {
   fetch(req: Request, env: Env): Response | Promise<Response> {
     setDb(drizzle(env.DB, { schema }));
     setLogLevel(env.LOG_LEVEL);
+    setLogFormat(env.LOG_FORMAT);
     // ctx not forwarded — no route uses executionCtx, so avoid the type dance.
     return app.fetch(req, env);
   },
@@ -43,6 +50,7 @@ export default {
   async scheduled(event: CronEvent, env: Env, ctx: ExecCtx): Promise<void> {
     setDb(drizzle(env.DB, { schema }));
     setLogLevel(env.LOG_LEVEL);
+    setLogFormat(env.LOG_FORMAT);
     const cache = pickCache(env);
     if (event.cron === DAILY_SYNC_CRON) {
       ctx.waitUntil(runJob("sync", () => runFixtureSync(cache)));

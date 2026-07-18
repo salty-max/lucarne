@@ -168,9 +168,21 @@ export type MatchDetail = Match & {
   statistics: MatchStatistics | null;
 };
 
+/** One scheduled-job outcome, as surfaced by the logs page. `at` is an ISO
+ *  string; `detail` is the job's result object (or `{ err }` on failure). */
+export type RunLogEntry = {
+  id: number;
+  at: string;
+  job: string;
+  ok: boolean;
+  detail: Record<string, unknown> | null;
+  ms: number | null;
+};
+
 /** Response bodies. */
 export type ScheduleResponse = { days: Day[] };
 export type MatchDetailResponse = { match: MatchDetail | null };
 export type LiveResponse = { matches: LiveMatch[] };
 export type CompetitionsResponse = { competitions: CompetitionInfo[] };
 export type CompetitionDetailResponse = { competition: CompetitionDetail | null };
+export type LogsResponse = { ok: boolean; runs: RunLogEntry[] };

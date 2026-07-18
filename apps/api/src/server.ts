@@ -1,7 +1,7 @@
 import { serveStatic } from "hono/bun";
 import { app } from "@/app";
 import { initLocalDb } from "@/db/local";
-import { setLogLevel } from "@/lib/log";
+import { setLogFormat, setLogLevel } from "@/lib/log";
 import { startScheduler } from "@/scheduler";
 
 // Bun runtime entry. Bun auto-loads .env/.env.local and serves the default
@@ -10,6 +10,7 @@ import { startScheduler } from "@/scheduler";
 // Use a local bun:sqlite database (SQLITE_PATH, default ./local.db).
 initLocalDb();
 setLogLevel(process.env.LOG_LEVEL);
+setLogFormat(process.env.LOG_FORMAT ?? "pretty"); // terminal-friendly locally; set LOG_FORMAT=json to pipe
 
 // Serves the built SPA (../web/dist) for a Bun/VM deploy. In local dev, Vite
 // serves the SPA and proxies /api here; on Workers, Static Assets serve it.

@@ -21,7 +21,9 @@ import { startOfParisDay } from "@/lib/time";
 import type {
   CompetitionDetailResponse,
   CompetitionsResponse,
+  LogsResponse,
   MatchDetailResponse,
+  RunLogEntry,
   ScheduleResponse,
 } from "@lucarne/shared";
 
@@ -167,15 +169,24 @@ app.get("/api/cron/details", async (c) => {
 });
 
 // Recent scheduled-job history (newest first) from run_log — the queryable cron
-// audit trail. `?limit=N` (default 50, capped at 200).
-app.get("/api/cron/log", async (c) => {
-  if (!authorizeCron(c.req.raw)) return c.text("Unauthorized", 401);
+// audit trail behind the P800 logs page. Read-only, so public like the other
+// read endpoints (no side effects, no secrets — detail is job counts + errors).
+// `?limit=N` (default 100, capped at 200).
+app.get("/api/logs", async (c) => {
   try {
-    const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 50));
-    return c.json({ ok: true, runs: await recentRuns(limit) });
+    const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 100));
+    const runs: RunLogEntry[] = (await recentRuns(limit)).map((r) => ({
+      id: r.id,
+      at: r.at.toISOString(),
+      job: r.job,
+      ok: r.ok,
+      detail: r.detail,
+      ms: r.ms,
+    }));
+    return c.json({ ok: true, runs } satisfies LogsResponse);
   } catch (err) {
-    console.error("[cron/log]", err);
-    return c.json({ ok: false, error: String(err) }, 500);
+    console.error("[logs]", err);
+    return c.json({ ok: false, runs: [] } satisfies LogsResponse, 500);
   }
 });
 
