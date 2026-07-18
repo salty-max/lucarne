@@ -91,7 +91,53 @@ const NATIONAL_TEAM_FR: Record<string, string> = {
   Wales: "Pays de Galles",
 };
 
-/** Localise a team name — national teams to French, clubs unchanged. */
+/** Real club names — API-Football gives short/city forms for many French clubs
+ *  ("Lyon", "Lens", "Lille"). These override the display in BOTH languages (club
+ *  names aren't translated), and also make the full name searchable. Keyed by the
+ *  exact API name. Scope: Ligue 1 + Ligue 2. */
+const CLUB_NAMES: Record<string, string> = {
+  // Ligue 1
+  Angers: "Angers SCO",
+  Auxerre: "AJ Auxerre",
+  "Estac Troyes": "ESTAC Troyes",
+  "Le Havre": "Le Havre AC",
+  "Le Mans": "Le Mans FC",
+  Lens: "RC Lens",
+  Lille: "LOSC Lille",
+  Lorient: "FC Lorient",
+  Lyon: "Olympique Lyonnais",
+  Marseille: "Olympique de Marseille",
+  Monaco: "AS Monaco",
+  Nice: "OGC Nice",
+  "Paris Saint Germain": "Paris Saint-Germain",
+  Rennes: "Stade Rennais",
+  Strasbourg: "RC Strasbourg",
+  Toulouse: "Toulouse FC",
+  // Ligue 2
+  Annecy: "FC Annecy",
+  Boulogne: "US Boulogne",
+  "Clermont Foot": "Clermont Foot 63",
+  Dijon: "Dijon FCO",
+  Dunkerque: "USL Dunkerque",
+  Grenoble: "Grenoble Foot 38",
+  Guingamp: "EA Guingamp",
+  Laval: "Stade Lavallois",
+  Metz: "FC Metz",
+  Montpellier: "Montpellier HSC",
+  Nancy: "AS Nancy Lorraine",
+  Nantes: "FC Nantes",
+  PAU: "Pau FC",
+  "RED Star FC 93": "Red Star FC",
+  Reims: "Stade de Reims",
+  Rodez: "Rodez AF",
+  "Saint Etienne": "AS Saint-Étienne",
+  Sochaux: "FC Sochaux-Montbéliard",
+};
+
+/** Localise a team name — real club name if known (both languages), else national
+ *  teams to French, else the API name unchanged. */
 export function teamName(name: string, lang: Lang): string {
+  const club = CLUB_NAMES[name];
+  if (club) return club;
   return lang === "fr" ? (NATIONAL_TEAM_FR[name] ?? name) : name;
 }
