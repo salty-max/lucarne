@@ -69,10 +69,10 @@ export function MatchCard({
         m.status === "live" && "bg-live/5",
       )}
     >
-      <td className="whitespace-nowrap py-1 pr-3 align-middle text-[0.78rem]">
+      <td className="whitespace-nowrap py-2.5 pr-3 align-middle text-[0.78rem] sm:py-1.5">
         <StatusCell m={m} />
       </td>
-      <td className="py-1 align-middle">
+      <td className="py-2.5 align-middle sm:py-1.5">
         <span className="flex items-center gap-2">
           <span className={nameCls(homeResult)}>{teamName(m.home.name, lang)}</span>
           <span className="shrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
@@ -93,7 +93,7 @@ export function MatchCard({
         </span>
       </td>
       <td className="w-full" />
-      <td className="whitespace-nowrap py-1 pl-3 text-right align-middle">
+      <td className="whitespace-nowrap py-2.5 pl-3 text-right align-middle sm:py-1.5">
         {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
           <span className="inline-flex items-center justify-end gap-1">
             {m.broadcasters.map((b) => (

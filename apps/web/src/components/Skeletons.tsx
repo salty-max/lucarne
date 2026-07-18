@@ -24,10 +24,10 @@ function Wrap({ children, className }: { children: ReactNode; className?: string
 function MatchRowSkel() {
   return (
     <tr className="border-b border-dotted border-border">
-      <td className="py-1 pr-3 align-middle">
+      <td className="py-2.5 pr-3 align-middle sm:py-1.5">
         <Skel className="h-4 w-8" />
       </td>
-      <td className="py-1 align-middle">
+      <td className="py-2.5 align-middle sm:py-1.5">
         <span className="flex items-center gap-2">
           <Skel className="h-4 w-24 sm:w-40" />
           <Skel className="h-4 w-6" />
@@ -35,7 +35,7 @@ function MatchRowSkel() {
         </span>
       </td>
       <td className="w-full" />
-      <td className="py-1 pl-3 align-middle">
+      <td className="py-2.5 pl-3 align-middle sm:py-1.5">
         <Skel className="ml-auto h-4 w-12" />
       </td>
     </tr>

@@ -159,7 +159,7 @@ export function Layout() {
           </div>
 
           {/* Routed page — scrolls inside the screen so the footer stays put */}
-          <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
+          <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div key={pathname} className="animate-enter w-full px-3 py-3">
               <Outlet />
             </div>

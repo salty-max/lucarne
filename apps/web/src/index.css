@@ -61,9 +61,16 @@
   html {
     color-scheme: dark;
     font-size: 15px; /* a touch smaller → denser, teletext-like grid */
+    overflow: hidden; /* app shell: the page never scrolls as a whole */
   }
   body {
     margin: 0;
+    /* Pin the shell to the viewport so it feels like a native app — no
+       whole-page scroll or rubber-band bounce; only <main> scrolls. */
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono", Menlo, Consolas,
@@ -454,16 +461,45 @@
   font-weight: 800;
 }
 
-/* Phones / narrow screens: no physical keyboard, so the shortcut legend is noise
-   (the FastText buttons + ◄► are the touch nav). Also tighten the FastText labels
-   so "300 Calendrier" etc. stop truncating. */
+/* Phones / narrow screens. */
 @media (max-width: 640px) {
+  /* Edge-to-edge: drop the TV bezel so the screen fills the whole display; keep
+     only the safe-area insets so content clears the notch + home indicator. */
+  .tt-stage {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+  .tt-tv {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .tt-screen {
+    border-radius: 0;
+  }
+
+  /* No physical keyboard on phones, so the shortcut legend is noise (the
+     FastText buttons + back arrow are the touch nav). */
   .tt-kbd {
     display: none;
   }
+
+  /* Bigger touch targets for the FastText nav + service-line controls. */
+  .tt-service {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  .tt-navbtn {
+    padding: 0.25rem 0.9ch;
+  }
+  .tt-fast {
+    gap: 3px;
+    padding: 0.4rem 0.5rem 0;
+  }
   .tt-fast a {
-    font-size: 0.62rem;
-    padding: 0.32em 0.2ch;
+    font-size: 0.66rem;
+    padding: 0.7em 0.2ch;
     letter-spacing: 0;
   }
 }
