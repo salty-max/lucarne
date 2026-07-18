@@ -156,6 +156,12 @@ const en = {
     fontRetroTag: "CRT · VT323",
     fontModern: "Modern",
     fontModernTag: "Clean monospace",
+    notifications: "Notifications",
+    notificationsHelp:
+      "Push alerts for your teams — goals, cards, kickoff, full-time. On iPhone, install the app first (iOS 16.4+).",
+    notificationsUnsupported: "Not supported on this device.",
+    notificationsDenied: "Blocked — allow notifications in your browser settings.",
+    notificationsNoTeams: "Follow a team first (My teams) to get alerts.",
   },
   logs: {
     title: "Logs",
@@ -340,6 +346,12 @@ const fr: Messages = {
     fontRetroTag: "CRT · VT323",
     fontModern: "Moderne",
     fontModernTag: "Monospace nette",
+    notifications: "Notifications",
+    notificationsHelp:
+      "Alertes push pour tes équipes — buts, cartons, coup d'envoi, score final. Sur iPhone, installe d'abord l'app (iOS 16.4+).",
+    notificationsUnsupported: "Non supporté sur cet appareil.",
+    notificationsDenied: "Bloqué — autorise les notifications dans les réglages du navigateur.",
+    notificationsNoTeams: "Suis d'abord une équipe (Mes équipes) pour recevoir des alertes.",
   },
   logs: {
     title: "Logs",

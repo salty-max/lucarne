@@ -15,6 +15,7 @@ export type Prefs = {
   lang: Lang;
   theme: Theme; // colour palette (see lib/themes.ts + index.css)
   font: FontChoice; // "retro" = the old-school CRT face (VT323), "modern" = mono stack
+  notifications: boolean; // push notifications enabled (subscription lives in the browser)
   favorites: string[]; // followed team names
   channels: string[]; // selected broadcaster slugs (empty = all shown)
   hiddenCompetitions: string[]; // competition slugs to hide (empty = all shown)
@@ -29,6 +30,7 @@ const DEFAULTS: Prefs = {
   lang: "fr",
   theme: "cept1", // authentic teletext by default
   font: "retro", // old-school CRT face by default (fits the teletext identity)
+  notifications: false,
   favorites: [],
   channels: [],
   hiddenCompetitions: [],

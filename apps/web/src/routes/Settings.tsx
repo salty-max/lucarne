@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
+import { disablePush, enablePush, pushPermission, pushSupported } from "@/lib/notifications";
+import { setPrefs, usePrefs } from "@/lib/prefs";
 import {
   setSettings,
   useSettings,
@@ -72,11 +74,30 @@ function Radio({
 
 export default function Settings() {
   const { dateFormat, crt, lang, theme, font } = useSettings();
+  const prefs = usePrefs();
   const comps = useCompetitions();
   const hidden = useHiddenCompetitions();
   const t = useT();
   const sample = new Date();
   const s = t.settings as Record<string, string>;
+
+  const [notifBusy, setNotifBusy] = useState(false);
+  const notifSupported = pushSupported();
+
+  async function toggleNotifs() {
+    if (notifBusy) return;
+    setNotifBusy(true);
+    try {
+      if (prefs.notifications) {
+        await disablePush();
+        setPrefs({ notifications: false });
+      } else {
+        setPrefs({ notifications: await enablePush(prefs.favorites) });
+      }
+    } finally {
+      setNotifBusy(false);
+    }
+  }
 
   return (
     <>
@@ -170,6 +191,39 @@ export default function Settings() {
           </span>
         </button>
         <p className="mt-2 text-xs text-muted-foreground">{t.settings.crtHelp}</p>
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.settings.notifications}</SectionLabel>
+        <p className="mb-1 text-xs text-muted-foreground">{t.settings.notificationsHelp}</p>
+        <button
+          data-nav
+          disabled={!notifSupported || notifBusy}
+          onClick={toggleNotifs}
+          aria-pressed={prefs.notifications}
+          className="tt-dotted flex w-full items-center gap-3 py-2 text-left transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          <span className="min-w-0 flex-1 uppercase">{t.settings.notifications}</span>
+          <span
+            className={cn(
+              "tt-tag py-0.5",
+              prefs.notifications
+                ? "bg-[hsl(var(--tt-green))] text-black"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {prefs.notifications ? t.settings.on : t.settings.off}
+          </span>
+        </button>
+        {!notifSupported ? (
+          <p className="mt-2 text-xs text-[hsl(var(--tt-yellow))]">
+            {t.settings.notificationsUnsupported}
+          </p>
+        ) : pushPermission() === "denied" ? (
+          <p className="mt-2 text-xs text-[hsl(var(--tt-yellow))]">{t.settings.notificationsDenied}</p>
+        ) : prefs.favorites.length === 0 ? (
+          <p className="mt-2 text-xs text-muted-foreground">{t.settings.notificationsNoTeams}</p>
+        ) : null}
       </div>
 
       <div className="mt-5">

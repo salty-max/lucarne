@@ -12,6 +12,7 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/.wrangler/**",
       "**/.turbo/**",
+      "**/public/push-sw.js", // service-worker file (SW globals), served as-is
     ],
   },
   js.configs.recommended,

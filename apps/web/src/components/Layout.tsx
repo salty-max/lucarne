@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { useLiveCount } from "@/hooks/useLiveCount";
+import { syncPushTeams } from "@/lib/notifications";
+import { usePrefs } from "@/lib/prefs";
 import { LiveDot } from "@/components/common";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -22,7 +24,13 @@ export function Layout() {
   const comps = useCompetitions();
   const live = useLiveCount();
   const { dateFormat, lang } = useSettings();
+  const { notifications, favorites } = usePrefs();
   const t = useT();
+
+  // Keep the push targeting in sync when the followed teams change.
+  useEffect(() => {
+    if (notifications) void syncPushTeams(favorites);
+  }, [notifications, favorites]);
 
   const [now, setNow] = useState(() => new Date());
   const [entry, setEntry] = useState("");
