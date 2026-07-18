@@ -22,6 +22,7 @@ import {
   loadBudget,
   saveBudget,
 } from "@/lib/live";
+import { log } from "@/lib/log";
 import type { ScheduleCache } from "@/lib/scheduleCache";
 
 export type LiveTickResult = {
@@ -130,7 +131,7 @@ export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> 
     try {
       fixtures += await backfillFixtures(comp.apiFootballId, comp.season ?? season, from, to);
     } catch (err) {
-      console.error("[resync]", comp.slug, err);
+      log.warn("resync.competition.fail", { slug: comp.slug, err: String(err) });
     }
     requestsUsed += 1; // one request per competition, success or not
   }
@@ -246,7 +247,7 @@ export async function runDetailsDrain(
         requests += 1;
         touched = true;
       } catch (err) {
-        console.error("[details] events", m.id, err);
+        log.warn("details.events.fail", { matchId: m.id, err: String(err) });
       }
     }
     if (m.hasLineups == null && remaining > 0) {
@@ -256,7 +257,7 @@ export async function runDetailsDrain(
         requests += 1;
         touched = true;
       } catch (err) {
-        console.error("[details] lineups", m.id, err);
+        log.warn("details.lineups.fail", { matchId: m.id, err: String(err) });
       }
     }
     if (m.hasStats == null && remaining > 0) {
@@ -266,7 +267,7 @@ export async function runDetailsDrain(
         requests += 1;
         touched = true;
       } catch (err) {
-        console.error("[details] stats", m.id, err);
+        log.warn("details.stats.fail", { matchId: m.id, err: String(err) });
       }
     }
     if (m.hasRatings == null && remaining > 0) {
@@ -276,7 +277,7 @@ export async function runDetailsDrain(
         requests += 1;
         touched = true;
       } catch (err) {
-        console.error("[details] ratings", m.id, err);
+        log.warn("details.ratings.fail", { matchId: m.id, err: String(err) });
       }
     }
     if (touched) count += 1;
@@ -357,7 +358,7 @@ export async function runLineupPoll(maxMatches = 12): Promise<LineupPollResult> 
         count += 1;
       }
     } catch (err) {
-      console.error("[lineups] match", m.id, err);
+      log.warn("lineups.match.fail", { matchId: m.id, err: String(err) });
     }
   }
 

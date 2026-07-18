@@ -1,4 +1,6 @@
 import cron from "node-cron";
+import { runJob } from "@/lib/jobs";
+import { log } from "@/lib/log";
 import {
   runDetailsDrain,
   runEagerDrain,
@@ -19,56 +21,29 @@ import { memoryCache } from "@/lib/scheduleCache";
  *     tick grabs imminent lineups and eagerly drains freshly-finished games.
  */
 export function startScheduler(): void {
-  cron.schedule("0 5 * * *", async () => {
-    try {
-      console.log("[sync]", await runFixtureSync(memoryCache));
-    } catch (err) {
-      console.error("[sync] failed", err);
-    }
-  });
+  cron.schedule("0 5 * * *", () => runJob("sync", () => runFixtureSync(memoryCache)));
 
   // Weekly full-season re-sync (~10 requests) — catches fixtures scheduled after
   // a draw across the whole calendar, not just the daily rolling window.
-  cron.schedule("0 6 * * 1", async () => {
-    try {
-      console.log("[resync]", await runFullResync(memoryCache));
-    } catch (err) {
-      console.error("[resync] failed", err);
-    }
-  });
+  cron.schedule("0 6 * * 1", () => runJob("resync", () => runFullResync(memoryCache)));
 
+  // Live cadence, every minute: scores, imminent lineups, eager post-match drain.
+  // Sequential (not parallel) so the three don't race on the shared budget
+  // counter; each is gated to log/record only when it actually did something.
   cron.schedule("* * * * *", async () => {
-    try {
-      const r = await runLivePollTick(new Date(), memoryCache);
-      if (r.polled) console.log("[live] polled", r);
-    } catch (err) {
-      console.error("[live] failed", err);
-    }
-    try {
-      const l = await runLineupPoll();
-      if (l.matches) console.log("[lineups] fetched", l);
-    } catch (err) {
-      console.error("[lineups] failed", err);
-    }
-    try {
-      const d = await runEagerDrain();
-      if (d.matches) console.log("[details] eager", d);
-    } catch (err) {
-      console.error("[details] eager failed", err);
-    }
+    await runJob("live", () => runLivePollTick(new Date(), memoryCache), (r) => r.polled);
+    await runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0);
+    await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
   });
 
   // Nightly deep drain — backstop that also stamps matches the API never enriches
   // (so the eager drain stops chasing them), on a fresh budget bucket.
-  cron.schedule("0 2,4 * * *", async () => {
-    try {
-      console.log("[details]", await runDetailsDrain(40));
-    } catch (err) {
-      console.error("[details] failed", err);
-    }
-  });
+  cron.schedule("0 2,4 * * *", () => runJob("details", () => runDetailsDrain(40)));
 
-  console.log(
-    "Scheduler started — fixtures 05:00, full re-sync Mon 06:00, nightly drain 02:00/04:00, live every minute (scores + lineups + eager drain).",
-  );
+  log.info("scheduler.started", {
+    fixtures: "05:00",
+    resync: "Mon 06:00",
+    nightlyDrain: "02:00/04:00",
+    live: "every minute (scores + lineups + eager drain)",
+  });
 }

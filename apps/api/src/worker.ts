@@ -2,6 +2,8 @@ import { drizzle } from "drizzle-orm/d1";
 import type { D1Database } from "@cloudflare/workers-types";
 import { app } from "@/app";
 import { schema, setDb } from "@/db";
+import { runJob } from "@/lib/jobs";
+import { setLogLevel } from "@/lib/log";
 import {
   runDetailsDrain,
   runEagerDrain,
@@ -16,7 +18,7 @@ import { pickCache } from "@/lib/scheduleCache";
 // local to avoid pulling @cloudflare/workers-types into the global scope).
 type CronEvent = { cron: string; scheduledTime: number };
 type ExecCtx = { waitUntil(p: Promise<unknown>): void; passThroughOnException(): void };
-type Env = { DB: D1Database; SCHEDULE_KV?: unknown; CURRENT_SEASON?: string };
+type Env = { DB: D1Database; SCHEDULE_KV?: unknown; CURRENT_SEASON?: string; LOG_LEVEL?: string };
 
 // Must match wrangler.jsonc `triggers.crons` exactly.
 const DAILY_SYNC_CRON = "0 5 * * *";
@@ -33,47 +35,32 @@ const DETAILS_CRON = "0 2,4 * * *";
 export default {
   fetch(req: Request, env: Env): Response | Promise<Response> {
     setDb(drizzle(env.DB, { schema }));
+    setLogLevel(env.LOG_LEVEL);
     // ctx not forwarded — no route uses executionCtx, so avoid the type dance.
     return app.fetch(req, env);
   },
 
   async scheduled(event: CronEvent, env: Env, ctx: ExecCtx): Promise<void> {
     setDb(drizzle(env.DB, { schema }));
+    setLogLevel(env.LOG_LEVEL);
     const cache = pickCache(env);
     if (event.cron === DAILY_SYNC_CRON) {
-      ctx.waitUntil(
-        runFixtureSync(cache)
-          .then((r) => console.log("[sync]", r))
-          .catch((err) => console.error("[sync] failed", err)),
-      );
+      ctx.waitUntil(runJob("sync", () => runFixtureSync(cache)));
     } else if (event.cron === WEEKLY_RESYNC_CRON) {
-      ctx.waitUntil(
-        runFullResync(cache)
-          .then((r) => console.log("[resync]", r))
-          .catch((err) => console.error("[resync] failed", err)),
-      );
+      ctx.waitUntil(runJob("resync", () => runFullResync(cache)));
     } else if (event.cron === DETAILS_CRON) {
       // Nightly deep drain — backstop that also stamps matches the API never
       // enriches, so the eager drain stops chasing them.
-      ctx.waitUntil(
-        runDetailsDrain(40)
-          .then((r) => console.log("[details]", r))
-          .catch((err) => console.error("[details] failed", err)),
-      );
+      ctx.waitUntil(runJob("details", () => runDetailsDrain(40)));
     } else {
       // Live cadence (every minute): poll live scores, grab confirmed lineups for
-      // imminent games, and eagerly drain details of freshly-finished ones.
+      // imminent games, and eagerly drain details of freshly-finished ones. Each
+      // is gated to log/record only when it actually did something.
       ctx.waitUntil(
-        Promise.allSettled([
-          runLivePollTick(new Date(), cache).then((r) => {
-            if (r.polled) console.log("[live] polled", r);
-          }),
-          runLineupPoll().then((r) => {
-            if (r.matches) console.log("[lineups] fetched", r);
-          }),
-          runEagerDrain().then((r) => {
-            if (r.matches) console.log("[details] eager", r);
-          }),
+        Promise.all([
+          runJob("live", () => runLivePollTick(new Date(), cache), (r) => r.polled),
+          runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0),
+          runJob("eager", () => runEagerDrain(), (r) => r.matches > 0),
         ]).then(() => {}),
       );
     }

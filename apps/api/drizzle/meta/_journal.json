@@ -43,6 +43,13 @@
       "when": 1784332266141,
       "tag": "0005_blue_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784336125571,
+      "tag": "0006_blushing_vision",
+      "breakpoints": true
     }
   ]
 }

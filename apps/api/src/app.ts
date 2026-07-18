@@ -14,6 +14,7 @@ import {
   runLineupPoll,
   runLivePollTick,
 } from "@/lib/poller";
+import { recentRuns } from "@/lib/runlog";
 import { pickCache } from "@/lib/scheduleCache";
 import { getMatchDetail, getSchedule, toWire, toWireMatchDetail } from "@/lib/schedule";
 import { startOfParisDay } from "@/lib/time";
@@ -161,6 +162,19 @@ app.get("/api/cron/details", async (c) => {
     return c.json({ ok: true, ...(await runDetailsDrain()) });
   } catch (err) {
     console.error("[cron/details]", err);
+    return c.json({ ok: false, error: String(err) }, 500);
+  }
+});
+
+// Recent scheduled-job history (newest first) from run_log — the queryable cron
+// audit trail. `?limit=N` (default 50, capped at 200).
+app.get("/api/cron/log", async (c) => {
+  if (!authorizeCron(c.req.raw)) return c.text("Unauthorized", 401);
+  try {
+    const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 50));
+    return c.json({ ok: true, runs: await recentRuns(limit) });
+  } catch (err) {
+    console.error("[cron/log]", err);
     return c.json({ ok: false, error: String(err) }, 500);
   }
 });

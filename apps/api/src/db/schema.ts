@@ -198,6 +198,22 @@ export const syncState = sqliteTable("sync_state", {
     .$defaultFn(() => new Date()),
 });
 
+// Rolling history of scheduled-job outcomes (sync, live, lineups, eager/nightly
+// drain) so the cron behaviour is queryable from the app, not just `wrangler
+// tail`. Pruned to ~a week by `recordRun`; `detail` holds the job's result JSON.
+export const runLog = sqliteTable(
+  "run_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    at: integer("at", { mode: "timestamp_ms" }).notNull(),
+    job: text("job").notNull(),
+    ok: integer("ok", { mode: "boolean" }).notNull(),
+    detail: text("detail", { mode: "json" }).$type<Record<string, unknown>>(),
+    ms: integer("ms"),
+  },
+  (t) => [index("run_log_at_idx").on(t.at)],
+);
+
 export type Broadcaster = typeof broadcasters.$inferSelect;
 export type Competition = typeof competitions.$inferSelect;
 export type Team = typeof teams.$inferSelect;
@@ -206,3 +222,4 @@ export type MatchEvent = typeof matchEvents.$inferSelect;
 export type MatchLineup = typeof matchLineups.$inferSelect;
 export type Standing = typeof standings.$inferSelect;
 export type BroadcastRule = typeof broadcastRules.$inferSelect;
+export type RunLog = typeof runLog.$inferSelect;
