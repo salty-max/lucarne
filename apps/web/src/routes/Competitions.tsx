@@ -28,7 +28,7 @@ export default function Competitions() {
           <Link
             key={s.to}
             to={s.to}
-            className="tt-dotted flex items-center gap-2 py-2 text-sm uppercase text-muted-foreground transition-colors hover:text-foreground"
+            className="tt-dotted flex items-center gap-2 py-2 uppercase text-muted-foreground transition-colors hover:text-foreground"
           >
             <span className="text-[hsl(var(--tt-cyan))]">▸</span>
             <span className="flex-1">{t.index[s.labelKey]}</span>
@@ -54,7 +54,7 @@ export default function Competitions() {
                   <span className="block truncate uppercase group-hover:text-[hsl(var(--tt-cyan))]">
                     {competitionLabel(c.name, lang)}
                   </span>
-                  <span className="block text-xs text-muted-foreground">
+                  <span className="block text-muted-foreground">
                     {countryLabel(c.country, lang)} · {c.type === "cup" ? t.index.cup : t.index.league}
                   </span>
                 </span>

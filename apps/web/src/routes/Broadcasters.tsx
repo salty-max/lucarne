@@ -25,10 +25,10 @@ const GUIDE = [
 function GuideRow({ name, color, covers }: { name: string; color: string; covers: string }) {
   return (
     <div className="tt-dotted flex items-center gap-3 py-2">
-      <Tag ttColor={channelTt(color)} className="shrink-0 py-0.5">
+      <Tag ttColor={channelTt(color)} className="hrink-0 py-0.5">
         {name}
       </Tag>
-      <span className="text-sm text-muted-foreground">{covers}</span>
+      <span className="text-muted-foreground">{covers}</span>
     </div>
   );
 }
@@ -72,7 +72,7 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex shrink-0 items-center gap-1.5 border px-2 py-0.5 text-[0.72rem] uppercase transition-colors",
+        "flex shrink-0 items-center gap-1.5 border px-2 py-0.5 uppercase transition-colors",
         active
           ? "border-[hsl(var(--tt-cyan))] bg-[hsl(var(--tt-cyan))] font-bold text-black"
           : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -87,7 +87,7 @@ function FilterChip({
 }
 
 /** "Tonight on TV" (P600): today's matches grouped by channel, with a persistent
- *  "my channels" filter. Falls back to the static coverage guide on an off-day. */
+ * "my channels" filter. Falls back to the static coverage guide on an off-day. */
 export default function Broadcasters() {
   const t = useT();
   const { days, error } = useSchedule({ days: 1 }, { live: true });
@@ -132,7 +132,7 @@ export default function Broadcasters() {
     return (
       <>
         <PageHeader title={t.broadcasters.title} subtitle={t.broadcasters.onTv} />
-        <p className="mb-4 py-2 text-sm italic text-muted-foreground">
+        <p className="mb-4 py-2 italic text-muted-foreground">
           {t.broadcasters.noMatchesToday}
         </p>
         <Guide />
@@ -169,7 +169,7 @@ export default function Broadcasters() {
               <Tag ttColor={channelTt(c.color)} className="py-0.5">
                 {c.name}
               </Tag>
-              <span className="text-xs tabular-nums text-muted-foreground">{c.matches.length}</span>
+              <span className="tabular-nums text-muted-foreground">{c.matches.length}</span>
             </div>
             <MatchTable groups={[{ key: c.slug, matches: c.matches }]} hideBroadcasters />
           </section>

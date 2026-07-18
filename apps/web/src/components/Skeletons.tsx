@@ -8,19 +8,19 @@ export function Skel({ className }: { className?: string }) {
 }
 
 /** Skeleton wrapper: one synchronised pulse for every block inside, plus a
- *  screen-reader "loading" announcement so the placeholder isn't silent. */
+ * screen-reader "loading" announcement so the placeholder isn't silent. */
 function Wrap({ children, className }: { children: ReactNode; className?: string }) {
   const t = useT();
   return (
     <div role="status" aria-busy="true" className={cn("animate-pulse", className)}>
-      <span className="sr-only">{t.loading}</span>
+      <span className="r-only">{t.loading}</span>
       {children}
     </div>
   );
 }
 
 /** One placeholder match row — mirrors MatchCard's four cells and row height so
- *  the real rows drop in without a vertical jump. */
+ * the real rows drop in without a vertical jump. */
 function MatchRowSkel() {
   return (
     <tr className="border-b border-dotted border-border">
@@ -43,11 +43,11 @@ function MatchRowSkel() {
 }
 
 /** The raw match table (no Wrap) — section bars + rows, same markup as
- *  MatchTable. `sections` gives the row count per section. */
+ * MatchTable. `sections` gives the row count per section. */
 function matchTable(sections: number[]) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse ">
         <tbody>
           {sections.map((rows, s) => (
             <Fragment key={s}>
@@ -73,7 +73,7 @@ export function MatchTableSkel({ sections = [4, 4] }: { sections?: number[] }) {
 }
 
 /** Placeholder for a dotted list (competitions index, logs). `sub` adds a second
- *  muted line; `lead` adds a leading fixed-width block (e.g. a timestamp). */
+ * muted line; `lead` adds a leading fixed-width block (e.g. a timestamp). */
 export function DottedListSkel({
   rows = 8,
   sub = false,
@@ -129,7 +129,7 @@ export function MatchDetailSkel() {
 }
 
 /** Calendar body placeholder: day strip + filter chips + match table. The month
- *  bar above it is static, so it stays put while this loads. */
+ * bar above it is static, so it stays put while this loads. */
 export function CalendarSkel() {
   return (
     <Wrap>
@@ -153,7 +153,7 @@ export function CalendarSkel() {
 }
 
 /** Broadcasters (on-TV-tonight) placeholder: channel filter chips + per-channel
- *  match groups. The page header stays static above. */
+ * match groups. The page header stays static above. */
 export function BroadcastersSkel() {
   return (
     <Wrap>

@@ -48,11 +48,11 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
     <div className="flex flex-col items-center gap-1.5 py-3">
       <div className="flex items-center justify-center gap-3 sm:gap-4">
         {m.status === "scheduled" ? (
-          <span className="text-2xl font-bold leading-none tabular-nums text-[hsl(var(--tt-yellow))]">
+          <span className="tt-2h font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
             {parisTime(m.kickoff)}
           </span>
         ) : (
-          <span className="text-3xl font-extrabold tabular-nums text-[hsl(var(--tt-yellow))] sm:text-4xl">
+          <span className="tt-2h font-extrabold tabular-nums text-[hsl(var(--tt-yellow))]">
             {m.homeGoals ?? 0}
             <span className="mx-1 text-muted-foreground/60">–</span>
             {m.awayGoals ?? 0}
@@ -60,14 +60,14 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
         )}
       </div>
 
-      <div className="flex w-full max-w-sm items-center justify-center gap-2 text-center text-sm">
+      <div className="flex w-full max-w-sm items-center justify-center gap-2 text-center ">
         <span className={cn(nameCls(homeResult), "text-right")}>{teamName(m.home.name, lang)}</span>
-        <span className="shrink-0 text-muted-foreground">—</span>
+        <span className="hrink-0 text-muted-foreground">—</span>
         <span className={cn(nameCls(awayResult), "text-left")}>{teamName(m.away.name, lang)}</span>
       </div>
 
       {pens && (
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="font-medium text-muted-foreground">
           {t.match.pens} {m.homePenalties}–{m.awayPenalties}
         </span>
       )}
@@ -78,12 +78,12 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
             {status.text}
           </Tag>
         ) : (
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="font-semibold uppercase tracking-wide text-muted-foreground">
             {status.text}
           </span>
         ))}
       {m.status === "scheduled" && (
-        <span className="text-xs uppercase text-muted-foreground">
+        <span className="uppercase text-muted-foreground">
           {formatShort(new Date(m.kickoff), dateFormat, lang)}
         </span>
       )}
@@ -98,7 +98,7 @@ function EventRow({ e }: { e: MatchEvent }) {
   const home = e.side === "home";
   const body = (
     <span className={cn("flex min-w-0 items-center gap-1.5", home ? "flex-row" : "flex-row-reverse")}>
-      <span className="shrink-0 font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
+      <span className="hrink-0 font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
         {eventMinute(e.minute, e.extraMinute)}
       </span>
       <EventMark kind={kind} />
@@ -109,7 +109,7 @@ function EventRow({ e }: { e: MatchEvent }) {
     </span>
   );
   return (
-    <div className="grid grid-cols-2 items-center gap-3 border-b border-dotted border-border py-0.5 text-sm">
+    <div className="grid grid-cols-2 items-center gap-3 border-b border-dotted border-border py-0.5 ">
       <div className="flex min-w-0 justify-start">{home && body}</div>
       <div className="flex min-w-0 justify-end">{!home && body}</div>
     </div>
@@ -123,7 +123,7 @@ function BroadcasterRow({ b }: { b: Broadcaster }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-dotted border-border py-1.5">
       <BroadcasterBadge b={b} />
-      <span className="truncate text-right text-xs text-muted-foreground">
+      <span className="truncate text-right text-muted-foreground">
         {b.coverage === "partial" ? t.match.partial : t.match.full}
         {note ? ` · ${note}` : ""}
       </span>
@@ -134,8 +134,8 @@ function BroadcasterRow({ b }: { b: Broadcaster }) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-dotted border-border py-1.5">
-      <dt className="text-sm uppercase text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 truncate text-right text-sm font-medium">{value}</dd>
+      <dt className="uppercase text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 truncate text-right font-medium">{value}</dd>
     </div>
   );
 }
@@ -185,13 +185,13 @@ export default function MatchDetail() {
       <Link
         to="/competitions/$slug"
         params={{ slug: match.competition.slug }}
-        className="mb-2 inline-flex items-center gap-1 text-sm uppercase text-muted-foreground hover:text-foreground"
+        className="mb-2 inline-flex items-center gap-1 uppercase text-muted-foreground hover:text-foreground"
       >
         ‹ {competition}
       </Link>
 
       {/* Scoreboard — flat, no card/border/gradient */}
-      <div className="tt-bar tt-bar-magenta text-xs">
+      <div className="tt-bar tt-bar-magenta ">
         <span className="truncate">{competition}</span>
         {round && <span className="tt-bar-r font-semibold normal-case">{round}</span>}
       </div>
@@ -220,7 +220,7 @@ export default function MatchDetail() {
       )}
 
       {match.status === "finished" && goals.length === 0 && cards.length === 0 && (
-        <p className="mt-3 py-2 text-sm italic text-muted-foreground">{t.match.noGoalsCards}</p>
+        <p className="mt-3 py-2 italic text-muted-foreground">{t.match.noGoalsCards}</p>
       )}
 
       {stats && hasStats && (
@@ -237,7 +237,7 @@ export default function MatchDetail() {
         </section>
       ) : (
         match.status === "scheduled" && (
-          <p className="mt-3 py-2 text-sm text-muted-foreground">{t.match.lineupsSoon}</p>
+          <p className="mt-3 py-2 text-muted-foreground">{t.match.lineupsSoon}</p>
         )
       )}
 
@@ -247,7 +247,7 @@ export default function MatchDetail() {
           {match.broadcasters.length > 0 ? (
             match.broadcasters.map((b) => <BroadcasterRow key={b.id} b={b} />)
           ) : (
-            <p className="py-2 text-sm italic text-muted-foreground">{t.match.broadcasterTBC}</p>
+            <p className="py-2 italic text-muted-foreground">{t.match.broadcasterTBC}</p>
           )}
         </div>
       </section>

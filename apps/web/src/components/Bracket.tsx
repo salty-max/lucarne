@@ -32,9 +32,9 @@ function Side({
         {team ? teamName(team.shortName ?? team.name, lang) : t.match.tbd}
       </span>
       {goals != null && (
-        <span className={cn("shrink-0 tabular-nums", isWinner ? "font-bold" : "font-medium")}>
+        <span className={cn("hrink-0 tabular-nums", isWinner ? "font-bold" : "font-medium")}>
           {goals}
-          {pens != null && <span className="ml-0.5 text-[10px] text-muted-foreground">({pens})</span>}
+          {pens != null && <span className="ml-0.5 text-muted-foreground">({pens})</span>}
         </span>
       )}
     </div>
@@ -47,7 +47,7 @@ function Tie({ m }: { m: BracketMatch }) {
     <Link
       to="/match/$id"
       params={{ id: String(m.id) }}
-      className="block rounded-lg bg-card p-2 text-[13px] leading-tight transition-colors hover:bg-accent"
+      className="block rounded-lg bg-card p-2 leading-tight transition-colors hover:bg-accent"
     >
       <Side
         team={m.home}
@@ -69,8 +69,8 @@ function Tie({ m }: { m: BracketMatch }) {
 }
 
 /** Knockout bracket. Desktop: one column per round, ties spread to feel like a
- *  tree, scrolling horizontally if needed. Mobile: rounds stack vertically as
- *  full-width sections (no horizontal scroll). */
+ * tree, scrolling horizontally if needed. Mobile: rounds stack vertically as
+ * full-width sections (no horizontal scroll). */
 export function Bracket({ rounds }: { rounds: BracketRound[] }) {
   const { lang } = useSettings();
   return (
@@ -78,7 +78,7 @@ export function Bracket({ rounds }: { rounds: BracketRound[] }) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-stretch sm:gap-3">
         {rounds.map((round) => (
           <div key={round.name} className="flex w-full flex-col sm:w-44 sm:shrink-0">
-            <h3 className="mb-2 truncate text-center text-xs font-semibold uppercase tracking-wide text-[hsl(var(--tt-magenta))]">
+            <h3 className="mb-2 truncate text-center font-semibold uppercase tracking-wide text-[hsl(var(--tt-magenta))]">
               {roundLabel(round.name, lang)}
             </h3>
             <div className="flex flex-col gap-2 sm:flex-1 sm:justify-around sm:gap-3">

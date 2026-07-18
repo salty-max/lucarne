@@ -37,8 +37,8 @@ type ZoneLabel =
 type Zone = { key: string; color: string; labelKey: ZoneLabel };
 
 /** Map a qualification/relegation note to a teletext zone. Order matters:
- *  play-offs must win over the promotion/relegation keywords they contain, and
- *  "Round of N"/knockout descriptions mean *advanced* (green), not a play-off. */
+ * play-offs must win over the promotion/relegation keywords they contain, and
+ * "Round of N"/knockout descriptions mean *advanced* (green), not a play-off. */
 function zoneOf(desc: string | null): Zone | null {
   if (!desc) return null;
   const d = desc.toLowerCase();
@@ -65,14 +65,14 @@ function Th({ children, className }: { children: ReactNode; className?: string }
 }
 
 /** One table with a deterministic (table-fixed) column layout so every group's
- *  columns line up, on their own and side by side. `zones` off before kickoff. */
+ * columns line up, on their own and side by side. `zones` off before kickoff. */
 function GroupTable({ group, zones }: { group: StandingGroup; zones: boolean }) {
   const { lang } = useSettings();
   const t = useT();
   return (
     <section>
-      {group.label !== "Overall" && <h3 className="tt-bar mb-1 text-xs">{group.label}</h3>}
-      <table className="w-full table-fixed border-collapse text-sm tabular-nums">
+      {group.label !== "Overall" && <h3 className="tt-bar mb-1 ">{group.label}</h3>}
+      <table className="w-full table-fixed border-collapse tabular-nums">
         <colgroup>
           <col className="w-7" />
           <col />
@@ -145,14 +145,14 @@ function legendZones(groups: StandingGroup[]): Zone[] {
 }
 
 /** The legend, portaled into the shell slot so it sits glued above the footer
- *  (never scrolls, never jumps). */
+ * (never scrolls, never jumps). */
 function Legend({ zones }: { zones: Zone[] }) {
   const t = useT();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setSlot(document.getElementById("tt-legend-slot")), []);
   if (!slot) return null;
   return createPortal(
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-3 py-1.5 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-3 py-1.5 uppercase tracking-wide text-muted-foreground">
       {zones.map((z) => (
         <span key={z.key} className="inline-flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5" style={{ background: `hsl(var(${z.color}))` }} />
@@ -165,7 +165,7 @@ function Legend({ zones }: { zones: Zone[] }) {
 }
 
 /** League table(s): one for a plain league, several for a group cup. Zone
- *  accents + legend only show once the competition has kicked off. */
+ * accents + legend only show once the competition has kicked off. */
 export function Standings({ groups }: { groups: StandingGroup[] }) {
   const started = groups.some((g) => g.rows.some((r) => r.played > 0));
   const zones = started ? legendZones(groups) : [];

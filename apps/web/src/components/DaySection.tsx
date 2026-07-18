@@ -14,8 +14,8 @@ export type MatchGroup = {
 const COLS = 6;
 
 /** All groups in ONE table so every column lines up across sections. When the
- *  page already groups by channel (broadcasters), pass `hideBroadcasters` to drop
- *  the now-redundant per-row broadcaster badges. */
+ * page already groups by channel (broadcasters), pass `hideBroadcasters` to drop
+ * the now-redundant per-row broadcaster badges. */
 export function MatchTable({
   groups,
   hideBroadcasters,
@@ -29,7 +29,7 @@ export function MatchTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm tabular-nums">
+      <table className="w-full border-collapse tabular-nums">
         <tbody>
           {shown.map((g) => (
             <Fragment key={g.key}>
@@ -38,7 +38,7 @@ export function MatchTable({
                   <td colSpan={COLS} className="pt-4 first:pt-0">
                     <div
                       className={cn(
-                        "tt-bar text-xs",
+                        "tt-bar ",
                         g.tone === "live" ? "tt-bar-live" : g.tone === "yellow" ? "tt-bar-yellow" : "",
                       )}
                     >

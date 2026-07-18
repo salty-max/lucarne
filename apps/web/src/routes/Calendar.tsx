@@ -22,7 +22,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 text-[0.72rem] uppercase transition-colors",
+        "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 uppercase transition-colors",
         active
           ? "border-[hsl(var(--tt-cyan))] bg-[hsl(var(--tt-cyan))] font-bold text-black"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -126,7 +126,7 @@ export default function Calendar() {
         >
           ‹
         </button>
-        <div className="tt-bar tt-bar-yellow flex-1 justify-center text-xs">
+        <div className="tt-bar tt-bar-yellow flex-1 justify-center ">
           {t.calendar.months[view.m]} {view.y}
         </div>
         <button
@@ -178,9 +178,9 @@ export default function Calendar() {
                           : "border-border text-muted-foreground hover:bg-accent",
                     )}
                   >
-                    <span className="text-[0.6rem] uppercase opacity-80">{wd}</span>
-                    <span className="text-sm font-bold tabular-nums">{d.key.slice(8)}</span>
-                    <span className={cn("text-[0.55rem] tabular-nums", active ? "opacity-70" : "text-primary")}>
+                    <span className="uppercase opacity-80">{wd}</span>
+                    <span className="font-bold tabular-nums">{d.key.slice(8)}</span>
+                    <span className={cn(" tabular-nums", active ? "opacity-70" : "text-primary")}>
                       {d.matches.length}
                     </span>
                   </button>

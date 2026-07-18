@@ -22,16 +22,16 @@ function StatusCell({ m }: { m: Match }) {
   }
   if (m.status === "finished") {
     const label = m.statusShort === "PEN" ? t.card.pens : m.statusShort === "AET" ? t.card.aet : t.card.ft;
-    return <span className="text-xs font-semibold text-muted-foreground">{label}</span>;
+    return <span className="font-semibold text-muted-foreground">{label}</span>;
   }
   if (m.status === "postponed") {
-    return <span className="text-xs font-semibold text-[hsl(var(--tt-yellow))]">{t.card.pp}</span>;
+    return <span className="font-semibold text-[hsl(var(--tt-yellow))]">{t.card.pp}</span>;
   }
   return <span className="font-bold tabular-nums text-[hsl(var(--tt-yellow))]">{parisTime(m.kickoff)}</span>;
 }
 
 /** One match as a table row. A trailing spacer column absorbs the slack so the
- *  fixture packs left after the time and the broadcasters pin to the right. */
+ * fixture packs left after the time and the broadcasters pin to the right. */
 export function MatchCard({
   m,
   onOpen,
@@ -70,13 +70,13 @@ export function MatchCard({
         m.status === "live" && "bg-live/5",
       )}
     >
-      <td className="whitespace-nowrap py-2.5 pr-3 align-middle text-[0.78rem] sm:py-1.5">
+      <td className="whitespace-nowrap py-2.5 pr-3 align-middle sm:py-1.5">
         <StatusCell m={m} />
       </td>
       <td className="py-2.5 align-middle sm:py-1.5">
         <span className="flex items-center gap-2">
           <span className={nameCls(homeResult)}>{teamName(m.home.name, lang)}</span>
-          <span className="shrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
+          <span className="hrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
             {hasScore ? (
               <span className="block leading-none text-[hsl(var(--tt-yellow))]">
                 {m.homeGoals}–{m.awayGoals}
@@ -85,7 +85,7 @@ export function MatchCard({
               <span className="block leading-none text-muted-foreground">—</span>
             )}
             {pens && (
-              <span className="mt-0.5 block text-[0.55rem] font-medium leading-none text-muted-foreground">
+              <span className="mt-0.5 block font-medium leading-none text-muted-foreground">
                 ({m.homePenalties}-{m.awayPenalties})
               </span>
             )}
@@ -104,7 +104,7 @@ export function MatchCard({
             ))}
           </span>
         ) : (
-          <span className="text-[0.65rem] italic text-muted-foreground">{t.card.tbc}</span>
+          <span className="italic text-muted-foreground">{t.card.tbc}</span>
         )}
       </td>
     </tr>

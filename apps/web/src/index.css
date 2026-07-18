@@ -371,11 +371,18 @@
   display: inline-flex;
   align-items: center;
   padding: 0 0.5ch;
-  font-size: 0.78em;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* Teletext "double height" — the ONE size step the real medium had (a control
+   code that doubled a row's height). Reserved for the masthead + page titles;
+   everything else renders at the single body size, as on a 40×25 grid. */
+.tt-2h {
+  font-size: 2em;
+  line-height: 1.05;
 }
 
 /* Dotted leader rule, the teletext table look. */
@@ -480,7 +487,6 @@
   border-bottom: 1px solid hsl(var(--border));
   font-weight: 700;
   letter-spacing: 0.04em;
-  font-size: 0.82rem;
 }
 .tt-service .pnum {
   background: hsl(var(--tt-yellow));
@@ -526,7 +532,6 @@
   letter-spacing: 0.02em;
   padding: 0.32em 0.5ch;
   text-align: center;
-  font-size: 0.72rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -562,7 +567,6 @@
 .tt-kbd {
   padding: 0.4rem 0.8rem 0.7rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.68rem;
   letter-spacing: 0.03em;
   line-height: 1.6;
 }
@@ -605,7 +609,6 @@
   /* Bigger touch targets for the FastText nav + service-line controls. */
   .tt-service {
     padding: 0.5rem 0.7rem;
-    font-size: 0.8rem;
   }
   .tt-navbtn {
     padding: 0.25rem 0.9ch;
@@ -615,7 +618,6 @@
     padding: 0.4rem 0.5rem 0;
   }
   .tt-fast a {
-    font-size: 0.66rem;
     padding: 0.7em 0.2ch;
     letter-spacing: 0;
   }

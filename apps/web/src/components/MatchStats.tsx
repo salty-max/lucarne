@@ -17,7 +17,7 @@ const fmt = (v: number | null, pct?: boolean, dp?: number) =>
   v == null ? "—" : `${dp != null ? v.toFixed(dp) : v}${pct ? "%" : ""}`;
 
 /** Teletext match statistics: a possession bar (home green / away cyan) plus a
- *  centred label column with each team's value on its side. */
+ * centred label column with each team's value on its side. */
 export function MatchStats({ stats }: { stats: MatchStatistics }) {
   const t = useT();
   const { home, away } = stats;
@@ -30,9 +30,9 @@ export function MatchStats({ stats }: { stats: MatchStatistics }) {
     <div className="flex flex-col">
       {possession && (
         <div className="border-b border-dotted border-border py-1.5">
-          <div className="flex items-center justify-between text-sm font-bold tabular-nums">
+          <div className="flex items-center justify-between font-bold tabular-nums">
             <span className="text-[hsl(var(--tt-blue))]">{home.possession}%</span>
-            <span className="text-xs uppercase text-muted-foreground">{t.stats.possession}</span>
+            <span className="uppercase text-muted-foreground">{t.stats.possession}</span>
             <span className="text-[hsl(var(--tt-red))]">{away.possession}%</span>
           </div>
           <div className="mt-1 flex h-2 overflow-hidden">
@@ -47,12 +47,12 @@ export function MatchStats({ stats }: { stats: MatchStatistics }) {
       {rows.map((r) => (
         <div
           key={r.key}
-          className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-dotted border-border py-1 text-sm"
+          className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-dotted border-border py-1 "
         >
           <span className="text-left font-bold tabular-nums text-[hsl(var(--tt-blue))]">
             {fmt(home[r.key], r.pct, r.dp)}
           </span>
-          <span className="text-center text-xs uppercase text-muted-foreground">{t.stats[r.key]}</span>
+          <span className="text-center uppercase text-muted-foreground">{t.stats[r.key]}</span>
           <span className="text-right font-bold tabular-nums text-[hsl(var(--tt-red))]">
             {fmt(away[r.key], r.pct, r.dp)}
           </span>

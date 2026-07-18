@@ -18,9 +18,9 @@ export function Rainbow() {
 }
 
 /** A solid teletext colour tag (broadcaster pill, status flag, …). Pass a
- *  `ttColor` (a palette name) to tint it from the active theme — dark text,
- *  adapts per theme; a hex `color` to tint with an arbitrary colour (text
- *  auto-picks black/white); else style via className. */
+ * `ttColor` (a palette name) to tint it from the active theme — dark text,
+ * adapts per theme; a hex `color` to tint with an arbitrary colour (text
+ * auto-picks black/white); else style via className. */
 export function Tag({
   color,
   ttColor,
@@ -67,11 +67,11 @@ export function PageHeader({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold uppercase tracking-tight text-[hsl(var(--tt-cyan))]">
+            <h1 className="tt-2h truncate font-bold uppercase tracking-tight text-[hsl(var(--tt-cyan))]">
               {title}
             </h1>
             {subtitle && (
-              <p className="truncate text-xs uppercase tracking-wider text-muted-foreground">
+              <p className="truncate uppercase tracking-wider text-muted-foreground">
                 {subtitle}
               </p>
             )}
@@ -88,11 +88,11 @@ export function PageHeader({
 export function TeletextHero({ subtitle }: { subtitle?: string }) {
   return (
     <div className="mb-5">
-      <div className="text-4xl font-bold uppercase leading-none tracking-tight text-[hsl(var(--tt-cyan))]">
+      <div className="tt-2h font-bold uppercase tracking-tight text-[hsl(var(--tt-cyan))]">
         Lucarne<span className="text-primary">.</span>
       </div>
       {subtitle && (
-        <div className="mt-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">{subtitle}</div>
+        <div className="mt-1.5 uppercase tracking-[0.2em] text-muted-foreground">{subtitle}</div>
       )}
       <Rainbow />
     </div>
@@ -102,7 +102,7 @@ export function TeletextHero({ subtitle }: { subtitle?: string }) {
 /** A full-width teletext colour bar for section headers. */
 export function SectionLabel({ children, live }: { children: ReactNode; live?: boolean }) {
   return (
-    <h2 className={cn("tt-bar mb-2 text-xs", live && "tt-bar-live")}>
+    <h2 className={cn("tt-bar mb-2 ", live && "tt-bar-live")}>
       {live && <LiveDot className="h-2 w-2" />}
       {children}
     </h2>
@@ -114,7 +114,7 @@ export function Loading({ error }: { error?: boolean }) {
   return (
     <p
       className={cn(
-        "py-10 text-center text-sm uppercase tracking-widest",
+        "py-10 text-center uppercase tracking-widest",
         error ? "text-live" : "animate-pulse text-muted-foreground",
       )}
     >
@@ -134,9 +134,9 @@ export function EmptyState({
 }) {
   return (
     <div className="py-10 text-center">
-      <div className="text-3xl text-muted-foreground/50">{icon}</div>
+      <div className="text-muted-foreground/50">{icon}</div>
       <p className="mt-2 font-bold uppercase tracking-wide">{title}</p>
-      {children && <p className="mt-1 text-sm text-muted-foreground">{children}</p>}
+      {children && <p className="mt-1 text-muted-foreground">{children}</p>}
     </div>
   );
 }

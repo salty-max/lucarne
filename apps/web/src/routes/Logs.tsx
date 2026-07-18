@@ -15,7 +15,7 @@ const stampFmt = new Intl.DateTimeFormat("en-GB", {
 });
 
 /** Render a job's result object as compact "key value" pairs — drop the error
- *  (shown separately) and bare booleans like `polled: true` (just noise). */
+ * (shown separately) and bare booleans like `polled: true` (just noise). */
 function summarize(detail: Record<string, unknown> | null): { pairs: string; err: string | null } {
   if (!detail) return { pairs: "", err: null };
   const err = typeof detail.err === "string" ? detail.err : null;
@@ -29,8 +29,8 @@ function summarize(detail: Record<string, unknown> | null): { pairs: string; err
 function Row({ r }: { r: RunLogEntry }) {
   const { pairs, err } = summarize(r.detail);
   return (
-    <div data-nav className="tt-dotted flex items-baseline gap-2 py-1 text-xs">
-      <span className="shrink-0 tabular-nums text-muted-foreground">
+    <div data-nav className="tt-dotted flex items-baseline gap-2 py-1 ">
+      <span className="hrink-0 tabular-nums text-muted-foreground">
         {stampFmt.format(new Date(r.at)).toUpperCase()}
       </span>
       <span className="min-w-0 flex-1">
@@ -45,7 +45,7 @@ function Row({ r }: { r: RunLogEntry }) {
         {pairs && <span className="text-muted-foreground"> · {pairs}</span>}
         {err && <span className="text-[hsl(var(--tt-red))]"> · {err}</span>}
       </span>
-      <span className="shrink-0 tabular-nums text-muted-foreground">
+      <span className="hrink-0 tabular-nums text-muted-foreground">
         {r.ms != null ? `${r.ms}ms` : ""}
       </span>
     </div>

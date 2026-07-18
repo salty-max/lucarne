@@ -104,7 +104,7 @@ export default function Settings() {
       <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
 
       <SectionLabel>{t.settings.theme}</SectionLabel>
-      <p className="mb-1 text-xs text-muted-foreground">{t.settings.themeHelp}</p>
+      <p className="mb-1 text-muted-foreground">{t.settings.themeHelp}</p>
       <div className="flex flex-col">
         {THEMES.map((th) => {
           const meta = THEME_META[th.id];
@@ -112,7 +112,7 @@ export default function Settings() {
             <Radio key={th.id} active={theme === th.id} onClick={() => setSettings({ theme: th.id })}>
               <span className="min-w-0 flex-1">
                 <span className="block uppercase">{s[meta.name]}</span>
-                <span className="block text-xs text-muted-foreground">{s[meta.tag]}</span>
+                <span className="block text-muted-foreground">{s[meta.tag]}</span>
               </span>
               <span className="flex shrink-0 items-center gap-px" aria-hidden>
                 {th.swatch.map((c, i) => (
@@ -126,13 +126,13 @@ export default function Settings() {
 
       <div className="mt-5">
         <SectionLabel>{t.settings.font}</SectionLabel>
-        <p className="mb-1 text-xs text-muted-foreground">{t.settings.fontHelp}</p>
+        <p className="mb-1 text-muted-foreground">{t.settings.fontHelp}</p>
         <div className="flex flex-col">
           {FONT_OPTIONS.map((f) => (
             <Radio key={f.id} active={font === f.id} onClick={() => setSettings({ font: f.id })}>
               <span className="min-w-0 flex-1">
                 <span className="block uppercase">{s[f.name]}</span>
-                <span className="block text-xs text-muted-foreground">{s[f.tag]}</span>
+                <span className="block text-muted-foreground">{s[f.tag]}</span>
               </span>
             </Radio>
           ))}
@@ -164,7 +164,7 @@ export default function Settings() {
               onClick={() => setSettings({ dateFormat: o.value })}
             >
               <span className="min-w-0 flex-1 truncate uppercase">{t.settings[o.labelKey]}</span>
-              <span className="shrink-0 text-xs uppercase text-muted-foreground">
+              <span className="hrink-0 uppercase text-muted-foreground">
                 {formatLong(sample, o.value, lang)}
               </span>
             </Radio>
@@ -190,12 +190,12 @@ export default function Settings() {
             {crt ? t.settings.on : t.settings.off}
           </span>
         </button>
-        <p className="mt-2 text-xs text-muted-foreground">{t.settings.crtHelp}</p>
+        <p className="mt-2 text-muted-foreground">{t.settings.crtHelp}</p>
       </div>
 
       <div className="mt-5">
         <SectionLabel>{t.settings.notifications}</SectionLabel>
-        <p className="mb-1 text-xs text-muted-foreground">{t.settings.notificationsHelp}</p>
+        <p className="mb-1 text-muted-foreground">{t.settings.notificationsHelp}</p>
         <button
           data-nav
           disabled={!notifSupported || notifBusy}
@@ -216,19 +216,19 @@ export default function Settings() {
           </span>
         </button>
         {!notifSupported ? (
-          <p className="mt-2 text-xs text-[hsl(var(--tt-yellow))]">
+          <p className="mt-2 text-[hsl(var(--tt-yellow))]">
             {t.settings.notificationsUnsupported}
           </p>
         ) : pushPermission() === "denied" ? (
-          <p className="mt-2 text-xs text-[hsl(var(--tt-yellow))]">{t.settings.notificationsDenied}</p>
+          <p className="mt-2 text-[hsl(var(--tt-yellow))]">{t.settings.notificationsDenied}</p>
         ) : prefs.favorites.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">{t.settings.notificationsNoTeams}</p>
+          <p className="mt-2 text-muted-foreground">{t.settings.notificationsNoTeams}</p>
         ) : null}
       </div>
 
       <div className="mt-5">
         <SectionLabel>{t.settings.competitions}</SectionLabel>
-        <p className="mb-1 text-xs text-muted-foreground">{t.settings.competitionsHelp}</p>
+        <p className="mb-1 text-muted-foreground">{t.settings.competitionsHelp}</p>
         <div className="flex flex-col">
           {(comps ?? []).map((c) => {
             const shown = !hidden.includes(c.slug);

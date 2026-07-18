@@ -12,14 +12,14 @@ function FollowedRow({ name }: { name: string }) {
   const { lang } = useSettings();
   const t = useT();
   return (
-    <li className="tt-dotted flex items-center gap-2 py-1.5 text-sm">
+    <li className="tt-dotted flex items-center gap-2 py-1.5 ">
       <span className="min-w-0 flex-1 truncate uppercase">{teamName(name, lang)}</span>
       <button
         type="button"
         onClick={() => toggleFavorite(name)}
         aria-label={`${t.favorites.remove} — ${name}`}
         title={t.favorites.remove}
-        className="shrink-0 px-1 leading-none text-muted-foreground/60 hover:text-[hsl(var(--tt-red))]"
+        className="hrink-0 px-1 leading-none text-muted-foreground/60 hover:text-[hsl(var(--tt-red))]"
       >
         ✕
       </button>
@@ -28,8 +28,8 @@ function FollowedRow({ name }: { name: string }) {
 }
 
 /** A search result — the row toggles follow on click. Already-followed teams are
- *  shown (not hidden) with a ✕ so a search never comes back empty for a team you
- *  already follow. */
+ * shown (not hidden) with a ✕ so a search never comes back empty for a team you
+ * already follow. */
 function ResultRow({
   name,
   followed,
@@ -48,13 +48,13 @@ function ResultRow({
         data-nav
         onClick={onToggle}
         aria-label={`${followed ? t.favorites.remove : t.favorites.add} — ${name}`}
-        className="tt-dotted flex w-full items-center gap-2 py-1.5 text-left text-sm hover:bg-accent"
+        className="tt-dotted flex w-full items-center gap-2 py-1.5 text-left hover:bg-accent"
       >
         <span className="min-w-0 flex-1 truncate uppercase">{teamName(name, lang)}</span>
         {followed ? (
-          <span className="shrink-0 px-1 leading-none text-muted-foreground/60">✕</span>
+          <span className="hrink-0 px-1 leading-none text-muted-foreground/60">✕</span>
         ) : (
-          <span className="shrink-0 px-1 leading-none text-[hsl(var(--tt-green))]">+</span>
+          <span className="hrink-0 px-1 leading-none text-[hsl(var(--tt-green))]">+</span>
         )}
       </button>
     </li>
@@ -62,7 +62,7 @@ function ResultRow({
 }
 
 /** "My teams" (P200): the one place to follow/unfollow. Search the full team
- *  list to add, ✕ to remove. No matches here — those live on Today/Calendar. */
+ * list to add, ✕ to remove. No matches here — those live on Today/Calendar. */
 export default function Favorites() {
   const { lang } = useSettings();
   const t = useT();
@@ -98,7 +98,7 @@ export default function Favorites() {
 
       <SectionLabel>{t.favorites.yours}</SectionLabel>
       {followed.length === 0 ? (
-        <p className="py-2 text-sm italic text-muted-foreground">{t.favorites.none}</p>
+        <p className="py-2 italic text-muted-foreground">{t.favorites.none}</p>
       ) : (
         <ul className="flex flex-col">
           {followed.map((name) => (
@@ -115,7 +115,7 @@ export default function Favorites() {
           onChange={(e) => setQ(e.target.value)}
           placeholder={t.favorites.search}
           aria-label={t.favorites.search}
-          className="mt-1 w-full border border-border bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-[hsl(var(--tt-cyan))]"
+          className="mt-1 w-full border border-border bg-transparent px-2 py-1.5 outline-none placeholder:text-muted-foreground focus:border-[hsl(var(--tt-cyan))]"
         />
         {!teams ? (
           error ? (
@@ -124,7 +124,7 @@ export default function Favorites() {
             <DottedListSkel rows={4} />
           )
         ) : q.trim() === "" ? null : results.length === 0 ? (
-          <p className="py-2 text-sm italic text-muted-foreground">{t.favorites.noResults}</p>
+          <p className="py-2 italic text-muted-foreground">{t.favorites.noResults}</p>
         ) : (
           <ul className="mt-1 flex flex-col">
             {results.map((tm) => (

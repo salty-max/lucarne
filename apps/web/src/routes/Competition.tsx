@@ -15,7 +15,7 @@ import { dayKeyToDate, formatLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 /** Upcoming matches for the competition (its own fetch, mounted only when the
- *  Matches tab is active). */
+ * Matches tab is active). */
 function MatchesTab({ slug }: { slug: string }) {
   const { days, error } = useSchedule({ competition: slug, days: 45 });
   const { dateFormat, lang } = useSettings();
@@ -63,7 +63,7 @@ export default function Competition() {
         right={
           <Link
             to="/competitions"
-            className="shrink-0 text-sm uppercase text-muted-foreground hover:text-foreground"
+            className="hrink-0 uppercase text-muted-foreground hover:text-foreground"
           >
             ‹ {t.competition.backIndex}
           </Link>
@@ -82,7 +82,7 @@ export default function Competition() {
                 key={tab.key}
                 value={tab.key}
                 className={cn(
-                  "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 text-[0.72rem] uppercase transition-colors",
+                  "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 uppercase transition-colors",
                   "text-muted-foreground hover:bg-accent hover:text-foreground",
                   "data-[state=active]:border-[hsl(var(--tt-cyan))] data-[state=active]:bg-[hsl(var(--tt-cyan))] data-[state=active]:font-bold data-[state=active]:text-black",
                 )}

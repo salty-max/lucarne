@@ -8,7 +8,7 @@ function lastName(name: string): string {
 }
 
 /** Rating badge colour — green (good) / yellow (ok) / red (poor). The red badge
- *  (a pill) reads distinctly from the away team's red number disc. */
+ * (a pill) reads distinctly from the away team's red number disc. */
 function ratingClass(r: number): string {
   if (r >= 7) return "bg-[hsl(var(--tt-green))]";
   if (r >= 6) return "bg-[hsl(var(--tt-yellow))]";
@@ -17,7 +17,7 @@ function ratingClass(r: number): string {
 
 function Rating({ value }: { value: number }) {
   return (
-    <span className={cn("px-1 text-[9px] font-bold leading-tight tabular-nums text-black", ratingClass(value))}>
+    <span className={cn("px-1 font-bold leading-tight tabular-nums text-black", ratingClass(value))}>
       {value.toFixed(1)}
     </span>
   );
@@ -31,7 +31,7 @@ function parseFormation(f: string | null | undefined): number[] | null {
 }
 
 /** Split a group into balanced sub-lines of at most `cap` each, so a coarse
- *  fallback never renders a wall of players. */
+ * fallback never renders a wall of players. */
 function splitLine(players: LineupPlayer[], cap = 4): LineupPlayer[][] {
   if (players.length <= cap) return [players];
   const lines = Math.ceil(players.length / cap);
@@ -42,10 +42,10 @@ function splitLine(players: LineupPlayer[], cap = 4): LineupPlayer[][] {
 }
 
 /** Arrange a starting XI into formation lines, back (GK) to front. Three sources,
- *  best first: the API `grid` ("row:col", col 1 = team's left — the real position);
- *  else the formation string (canonical lines, ordered by listed position); else a
- *  coarse position grouping with oversized lines split. `mirror` flips each line
- *  for the away team, which attacks downward on the shared pitch. */
+ * best first: the API `grid` ("row:col", col 1 = team's left — the real position);
+ * else the formation string (canonical lines, ordered by listed position); else a
+ * coarse position grouping with oversized lines split. `mirror` flips each line
+ * for the away team, which attacks downward on the shared pitch. */
 function pitchLines(
   xi: LineupPlayer[],
   formation: string | null | undefined,
@@ -74,7 +74,7 @@ function pitchLines(
   const outfield = xi.filter((p) => p !== gk);
 
   // 2. Canonical: slice by the formation string (GK + its numbers), ordering the
-  //    outfielders defence → midfield → attack.
+  // outfielders defence → midfield → attack.
   const sizes = parseFormation(formation);
   if (sizes && sizes.reduce((a, b) => a + b, 0) === outfield.length) {
     const rank: Record<string, number> = { D: 0, M: 1, F: 2 };
@@ -99,7 +99,7 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
     <div className="flex w-full min-w-0 flex-col items-center gap-0.5 px-0.5">
       <span
         className={cn(
-          "grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold",
+          "grid h-6 w-6 place-items-center rounded-full font-bold",
           side === "home"
             ? "bg-[hsl(var(--tt-blue))] text-[hsl(var(--tt-blue-on))]"
             : "bg-[hsl(var(--tt-red))] text-[hsl(var(--tt-red-on))]",
@@ -107,7 +107,7 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       >
         {p.number ?? ""}
       </span>
-      <span className="max-w-full truncate text-center text-[9px] leading-tight text-foreground/90">
+      <span className="max-w-full truncate text-center leading-tight text-foreground/90">
         {lastName(p.name)}
       </span>
       {p.rating != null && <Rating value={p.rating} />}
@@ -116,9 +116,9 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
 }
 
 /** One team's half. Vertical pitch (mobile): lines stack, each line a row of
- *  players across the full width — home GK at the bottom, away GK at the top.
- *  Horizontal pitch (sm+): home fills left→right (GK leftmost), away right→left,
- *  each line a vertical column. */
+ * players across the full width — home GK at the bottom, away GK at the top.
+ * Horizontal pitch (sm+): home fills left→right (GK leftmost), away right→left,
+ * each line a vertical column. */
 function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "away" }) {
   return (
     <div
@@ -147,9 +147,9 @@ function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "a
 }
 
 /** Full pitch markings as SVG (outline, halfway line, centre circle + spot,
- *  penalty + goal areas, penalty spots and arcs). Two orientations — vertical for
- *  mobile, horizontal for desktop; `preserveAspectRatio="none"` + a matching
- *  container aspect keep the circles round. Real proportions (68 × 105 m). */
+ * penalty + goal areas, penalty spots and arcs). Two orientations — vertical for
+ * mobile, horizontal for desktop; `preserveAspectRatio="none"` + a matching
+ * container aspect keep the circles round. Real proportions (68 × 105 m). */
 function PitchMarkings() {
   const line = { fill: "none", stroke: "rgb(255 255 255 / 0.35)", strokeWidth: 0.4 };
   const spot = { fill: "rgb(255 255 255 / 0.35)" };
@@ -230,7 +230,7 @@ function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
         <li
           key={i}
           className={cn(
-            "flex items-center gap-1.5 text-xs",
+            "flex items-center gap-1.5 ",
             align === "right" && "flex-row-reverse text-right",
           )}
         >
@@ -243,7 +243,7 @@ function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
   );
   return (
     <div className="mt-3">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 font-semibold uppercase tracking-wide text-muted-foreground">
         {t.match.substitutes}
       </p>
       <div className="grid grid-cols-2 gap-x-4">
@@ -259,7 +259,7 @@ export function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) 
   const t = useT();
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-xs font-bold">
+      <div className="mb-2 flex items-center justify-between font-bold">
         <span className="flex items-center gap-1.5 text-[hsl(var(--tt-blue))]">
           <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--tt-blue))]" />
           {home.formation ?? "—"}
@@ -272,7 +272,7 @@ export function Lineups({ home, away }: { home: TeamLineup; away: TeamLineup }) 
       <Pitch home={home} away={away} />
       <Bench home={home} away={away} />
       {(home.coach || away.coach) && (
-        <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="mt-2 flex items-center justify-between gap-2 text-muted-foreground">
           <span className="truncate">{home.coach ? `${t.match.coach} · ${home.coach}` : ""}</span>
           <span className="truncate text-right">{away.coach ? `${away.coach} · ${t.match.coach}` : ""}</span>
         </div>
