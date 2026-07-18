@@ -19,6 +19,7 @@ import {
   ALL_TRIGGERS,
   removeSubscription,
   saveSubscription,
+  sendWelcome,
   vapidPublicKey,
   type PushTrigger,
 } from "@/lib/push";
@@ -161,6 +162,7 @@ app.post("/api/push/subscribe", async (c) => {
       subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
       teams?: unknown;
       triggers?: unknown;
+      welcome?: boolean;
     };
     const sub = body.subscription;
     if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
@@ -172,11 +174,9 @@ app.post("/api/push/subscribe", async (c) => {
     const triggers = Array.isArray(body.triggers)
       ? body.triggers.filter((t): t is PushTrigger => (ALL_TRIGGERS as string[]).includes(t as string))
       : ALL_TRIGGERS;
-    await saveSubscription(
-      { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
-      teams,
-      triggers,
-    );
+    const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
+    await saveSubscription(pushSub, teams, triggers);
+    if (body.welcome) await sendWelcome(pushSub);
     return c.json({ ok: true });
   } catch (err) {
     console.error("[/api/push/subscribe]", err);

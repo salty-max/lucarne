@@ -45,6 +45,18 @@ export async function removeSubscription(endpoint: string): Promise<void> {
   await db.delete(pushSubscription).where(inArray(pushSubscription.endpoint, [endpoint]));
 }
 
+/** One-off confirmation push, so enabling notifications proves the whole chain
+ *  (encryption → push service → SW) end-to-end straight away. Best-effort. */
+export async function sendWelcome(sub: PushSub): Promise<void> {
+  const vapid = getVapid();
+  if (!vapid) return;
+  try {
+    await sendPush(sub, { title: "Lucarne", body: "Notifications activées ✓", tag: "welcome" }, vapid, 60);
+  } catch {
+    /* best effort */
+  }
+}
+
 export type PushPayload = {
   title: string;
   body: string;

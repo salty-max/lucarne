@@ -24,11 +24,11 @@ function urlB64ToU8(base64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-async function postSubscribe(sub: PushSubscription, teams: string[]): Promise<void> {
+async function postSubscribe(sub: PushSubscription, teams: string[], welcome = false): Promise<void> {
   await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscription: sub.toJSON(), teams, triggers: TRIGGERS }),
+    body: JSON.stringify({ subscription: sub.toJSON(), teams, triggers: TRIGGERS, welcome }),
   });
 }
 
@@ -49,7 +49,7 @@ export async function enablePush(teams: string[]): Promise<boolean> {
       applicationServerKey: urlB64ToU8(key),
     });
   }
-  await postSubscribe(sub, teams);
+  await postSubscribe(sub, teams, true);
   return true;
 }
 
