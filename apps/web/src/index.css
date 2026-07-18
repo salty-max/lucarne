@@ -439,6 +439,20 @@
   font-weight: 800;
 }
 
+/* Phones / narrow screens: no physical keyboard, so the shortcut legend is noise
+   (the FastText buttons + ◄► are the touch nav). Also tighten the FastText labels
+   so "300 Calendrier" etc. stop truncating. */
+@media (max-width: 640px) {
+  .tt-kbd {
+    display: none;
+  }
+  .tt-fast a {
+    font-size: 0.62rem;
+    padding: 0.32em 0.2ch;
+    letter-spacing: 0;
+  }
+}
+
 /* ============================================================
    CRT filter OFF — flat teletext screen (Settings toggle).
    Drops scanlines, phosphor bloom, screen vignette and the TV

@@ -67,13 +67,25 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
   );
 }
 
-/** One team's half. Horizontal pitch: home fills left→right (GK leftmost),
- *  away fills right→left. Each formation line is a vertical column of players. */
+/** One team's half. Vertical pitch (mobile): lines stack, each line a row of
+ *  players across the full width — home GK at the bottom, away GK at the top.
+ *  Horizontal pitch (sm+): home fills left→right (GK leftmost), away right→left,
+ *  each line a vertical column. */
 function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "away" }) {
   return (
-    <div className={cn("flex flex-1", side === "home" ? "flex-row" : "flex-row-reverse")}>
+    <div
+      className={cn(
+        "flex min-w-0 flex-1",
+        side === "home"
+          ? "flex-col-reverse sm:flex-row" // GK at bottom (mobile) / left (desktop)
+          : "flex-col sm:flex-row-reverse", // GK at top (mobile) / right (desktop)
+      )}
+    >
       {lines.map((line, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center justify-around py-1">
+        <div
+          key={i}
+          className="flex min-w-0 flex-1 flex-row items-center justify-around py-0.5 sm:flex-col sm:py-1"
+        >
           {line.map((p, j) => (
             <PitchPlayer key={j} p={p} side={side} />
           ))}
@@ -86,15 +98,20 @@ function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "a
 function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
   return (
     <div
-      className="relative aspect-16/11 overflow-hidden"
+      className="relative aspect-[3/4] overflow-hidden sm:aspect-16/11"
       style={{ background: "linear-gradient(hsl(146 48% 15%), hsl(146 52% 11%))" }}
     >
-      <div aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-white/30" />
+      {/* Halfway line: horizontal on mobile (vertical pitch), vertical on desktop. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/30 sm:inset-x-auto sm:inset-y-0 sm:left-1/2 sm:h-auto sm:w-px"
+      />
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30"
       />
-      <div className="relative flex h-full flex-row">
+      {/* Mobile: away on top, home on bottom. Desktop: home left, away right. */}
+      <div className="relative flex h-full flex-col-reverse sm:flex-row">
         <PitchHalf lines={pitchLines(home.startXI)} side="home" />
         <PitchHalf lines={pitchLines(away.startXI, true)} side="away" />
       </div>
