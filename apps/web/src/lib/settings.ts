@@ -1,58 +1,20 @@
-import { useSyncExternalStore } from "react";
+import { getPrefs, setPrefs, usePrefs, type Prefs } from "./prefs";
 
-export type DateFormat = "dmy" | "mdy" | "numeric";
-export type Lang = "en" | "fr";
-export type Settings = { dateFormat: DateFormat; crt: boolean; lang: Lang };
-
-const KEY = "lucarne:settings";
-const DEFAULTS: Settings = { dateFormat: "dmy", crt: true, lang: "fr" };
-
-function load(): Settings {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
-  } catch {
-    /* ignore malformed storage */
-  }
-  return DEFAULTS;
-}
-
-let current: Settings = load();
-const listeners = new Set<() => void>();
-
-/** Reflect the CRT toggle as a class on <html> (index.html sets it pre-paint). */
-export function applyCrt(on: boolean): void {
-  if (typeof document !== "undefined") document.documentElement.classList.toggle("crt-off", !on);
-}
-/** Keep <html lang> in sync for a11y. */
-export function applyLang(lang: Lang): void {
-  if (typeof document !== "undefined") document.documentElement.lang = lang;
-}
-applyCrt(current.crt);
-applyLang(current.lang);
+// Facade over the consolidated prefs store (see prefs.ts). Public API unchanged.
+export type { DateFormat, Lang } from "./prefs";
+export type Settings = Pick<Prefs, "dateFormat" | "crt" | "lang">;
 
 export function getSettings(): Settings {
-  return current;
+  const p = getPrefs();
+  return { dateFormat: p.dateFormat, crt: p.crt, lang: p.lang };
 }
 
 export function setSettings(patch: Partial<Settings>): void {
-  current = { ...current, ...patch };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(current));
-  } catch {
-    /* ignore */
-  }
-  applyCrt(current.crt);
-  applyLang(current.lang);
-  for (const l of listeners) l();
+  setPrefs(patch);
 }
 
-function subscribe(cb: () => void): () => void {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-
-/** Reactive settings snapshot — components re-render when settings change. */
+/** Reactive display settings (date format, CRT filter, language). */
 export function useSettings(): Settings {
-  return useSyncExternalStore(subscribe, getSettings, getSettings);
+  const p = usePrefs();
+  return { dateFormat: p.dateFormat, crt: p.crt, lang: p.lang };
 }
