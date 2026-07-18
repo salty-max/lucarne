@@ -5,6 +5,7 @@ import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { teamName } from "@/lib/teamNames";
 import { Loading, PageHeader, SectionLabel } from "@/components/common";
+import { DottedListSkel } from "@/components/Skeletons";
 
 /** A followed team: name + a ✕ to unfollow. */
 function FollowedRow({ name }: { name: string }) {
@@ -117,7 +118,11 @@ export default function Favorites() {
           className="mt-1 w-full border border-border bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-[hsl(var(--tt-cyan))]"
         />
         {!teams ? (
-          <Loading error={error} />
+          error ? (
+            <Loading error />
+          ) : q.trim() === "" ? null : (
+            <DottedListSkel rows={4} />
+          )
         ) : q.trim() === "" ? null : results.length === 0 ? (
           <p className="py-2 text-sm italic text-muted-foreground">{t.favorites.noResults}</p>
         ) : (

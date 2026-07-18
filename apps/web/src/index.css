@@ -302,6 +302,15 @@
 }
 
 /* ============================================================
+   Skeletons — flat teletext placeholder blocks (loading state).
+   Sharp corners (radius 0); the pulse lives on an `.animate-pulse`
+   wrapper so every block in a skeleton breathes in sync.
+   ============================================================ */
+.tt-skel {
+  background-color: hsl(var(--muted-foreground) / 0.18);
+}
+
+/* ============================================================
    CRT shell — the whole app lives inside one teletext "screen"
    ============================================================ */
 .tt-stage {

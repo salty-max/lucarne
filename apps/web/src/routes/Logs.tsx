@@ -1,4 +1,5 @@
 import { EmptyState, Loading, PageHeader } from "@/components/common";
+import { DottedListSkel } from "@/components/Skeletons";
 import { useLogs } from "@/hooks/useLogs";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,14 @@ export default function Logs() {
   const { runs, error } = useLogs(100);
   const t = useT();
 
-  if (!runs) return <Loading error={error} />;
+  if (!runs) {
+    return (
+      <>
+        <PageHeader title={t.logs.title} subtitle={t.logs.subtitle} />
+        {error ? <Loading error /> : <DottedListSkel rows={14} lead />}
+      </>
+    );
+  }
 
   return (
     <>

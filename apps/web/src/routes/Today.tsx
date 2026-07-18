@@ -6,6 +6,7 @@ import { useT } from "@/lib/i18n";
 import { dayKeyToDate, formatLong } from "@/lib/dates";
 import { MatchTable, type MatchGroup } from "@/components/DaySection";
 import { EmptyState, Loading, TeletextHero } from "@/components/common";
+import { MatchTableSkel } from "@/components/Skeletons";
 
 export default function Today() {
   const { days, error } = useSchedule({ days: 8 }, { live: true });
@@ -18,7 +19,7 @@ export default function Today() {
     return (
       <>
         <TeletextHero />
-        <Loading error={error} />
+        {error ? <Loading error /> : <MatchTableSkel sections={[5, 3]} />}
       </>
     );
   }

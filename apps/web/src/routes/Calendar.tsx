@@ -10,6 +10,7 @@ import { competitionLabel } from "@/lib/labels";
 import { dayKeyToDate, weekdayShort } from "@/lib/dates";
 import { MatchTable } from "@/components/DaySection";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
+import { CalendarSkel } from "@/components/Skeletons";
 import { cn } from "@/lib/utils";
 
 const WINDOW = 7; // day cells shown at once (fixed, never scrolls)
@@ -131,7 +132,11 @@ export default function Calendar() {
       </div>
 
       {!days ? (
-        <Loading error={error} />
+        error ? (
+          <Loading error />
+        ) : (
+          <CalendarSkel />
+        )
       ) : dayList.length === 0 ? (
         <EmptyState title={t.calendar.noMonth} />
       ) : (

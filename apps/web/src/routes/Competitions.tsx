@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
-import { Loading, PageHeader, SectionLabel } from "@/components/common";
+import { PageHeader, SectionLabel } from "@/components/common";
+import { DottedListSkel } from "@/components/Skeletons";
 import { compPageNo } from "@/lib/teletext";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -39,7 +40,7 @@ export default function Competitions() {
       <div className="mt-5">
         <SectionLabel>{t.index.competitions}</SectionLabel>
         {!comps ? (
-          <Loading />
+          <DottedListSkel rows={10} sub />
         ) : (
           <div className="flex flex-col">
             {comps.map((c, i) => (

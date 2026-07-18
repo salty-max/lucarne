@@ -6,6 +6,7 @@ import { keepCompetitions, useHiddenCompetitions } from "@/lib/competitionFilter
 import { useT } from "@/lib/i18n";
 import { parisDayKey } from "@/lib/time";
 import { EmptyState, Loading, PageHeader, SectionLabel, Tag } from "@/components/common";
+import { BroadcastersSkel } from "@/components/Skeletons";
 import { MatchTable } from "@/components/DaySection";
 import { cn } from "@/lib/utils";
 
@@ -119,7 +120,7 @@ export default function Broadcasters() {
     return (
       <>
         <PageHeader title={t.broadcasters.title} subtitle={t.broadcasters.onTv} />
-        <Loading error={error} />
+        {error ? <Loading error /> : <BroadcastersSkel />}
       </>
     );
   }

@@ -7,6 +7,7 @@ import { MatchTable } from "@/components/DaySection";
 import { Standings } from "@/components/Standings";
 import { Bracket } from "@/components/Bracket";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
+import { MatchTableSkel } from "@/components/Skeletons";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { competitionLabel, countryLabel } from "@/lib/labels";
@@ -19,7 +20,7 @@ function MatchesTab({ slug }: { slug: string }) {
   const { days, error } = useSchedule({ competition: slug, days: 45 });
   const { dateFormat, lang } = useSettings();
   const t = useT();
-  if (!days) return <Loading error={error} />;
+  if (!days) return error ? <Loading error /> : <MatchTableSkel />;
   if (days.length === 0) {
     return <EmptyState title={t.competition.noUpcoming}>{t.competition.offSeason}</EmptyState>;
   }
@@ -70,7 +71,7 @@ export default function Competition() {
       />
 
       {loading ? (
-        <Loading />
+        <MatchTableSkel />
       ) : tabs.length === 1 ? (
         <MatchesTab slug={slug} />
       ) : (

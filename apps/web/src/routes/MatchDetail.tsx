@@ -5,7 +5,8 @@ import { EventMark } from "@/components/EventMark";
 import { BroadcasterBadge } from "@/components/BroadcasterBadge";
 import { Lineups } from "@/components/Lineups";
 import { MatchStats } from "@/components/MatchStats";
-import { EmptyState, Loading, LiveDot, SectionLabel, Tag } from "@/components/common";
+import { EmptyState, LiveDot, SectionLabel, Tag } from "@/components/common";
+import { MatchDetailSkel } from "@/components/Skeletons";
 import { eventMark, eventName } from "@/lib/matchEvents";
 import { competitionLabel, countryLabel, noteLabel, roundLabel } from "@/lib/labels";
 import { teamName } from "@/lib/teamNames";
@@ -146,7 +147,7 @@ export default function MatchDetail() {
   const { dateFormat, lang } = useSettings();
   const t = useT();
 
-  if (loading) return <Loading />;
+  if (loading) return <MatchDetailSkel />;
   if (error || !match) {
     return (
       <EmptyState title={t.match.notFound}>
