@@ -106,12 +106,24 @@ function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/30 sm:inset-x-auto sm:inset-y-0 sm:left-1/2 sm:h-auto sm:w-px"
       />
+      {/* Centre circle */}
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30"
       />
-      {/* Mobile: away on top, home on bottom. Desktop: home left, away right. */}
-      <div className="relative flex h-full flex-col-reverse sm:flex-row">
+      {/* Penalty areas — top/bottom on mobile (vertical), left/right on desktop. The
+          open side is the goal line (the pitch edge), so its border is dropped. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-0 h-[16%] w-3/5 -translate-x-1/2 border border-t-0 border-white/30 sm:left-0 sm:top-1/2 sm:h-3/5 sm:w-[16%] sm:translate-x-0 sm:-translate-y-1/2 sm:border-t sm:border-l-0"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-1/2 h-[16%] w-3/5 -translate-x-1/2 border border-b-0 border-white/30 sm:bottom-auto sm:left-auto sm:right-0 sm:top-1/2 sm:h-3/5 sm:w-[16%] sm:translate-x-0 sm:-translate-y-1/2 sm:border-b sm:border-r-0"
+      />
+      {/* Players — away on top, home on bottom (mobile); home left, away right
+          (desktop). Padding keeps the goalkeepers off the touchlines. */}
+      <div className="relative flex h-full flex-col-reverse px-1 py-3 sm:flex-row sm:px-3 sm:py-2">
         <PitchHalf lines={pitchLines(home.startXI)} side="home" />
         <PitchHalf lines={pitchLines(away.startXI, true)} side="away" />
       </div>
