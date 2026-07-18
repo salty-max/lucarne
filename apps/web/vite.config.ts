@@ -1,10 +1,58 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "node:path";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    VitePWA({
+      registerType: "autoUpdate", // new version reloads itself after a deploy
+      includeAssets: ["icon.svg", "favicon-32.png", "apple-touch-icon.png"],
+      manifest: {
+        name: "Lucarne",
+        short_name: "Lucarne",
+        description: "Football fixtures & the French broadcaster for every match.",
+        lang: "fr",
+        theme_color: "#05080f",
+        background_color: "#05080f",
+        display: "standalone",
+        start_url: "/",
+        categories: ["sports"],
+        icons: [
+          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+      workbox: {
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2,ico}"],
+        // Don't precache the (currently unused) crest/logo assets — ~9.5 MB that
+        // would otherwise land in every install's precache.
+        globIgnores: ["**/logos/**"],
+        runtimeCaching: [
+          {
+            // Read data: fresh when online, last-seen copy offline.
+            urlPattern: ({ url }: { url: URL }) =>
+              /^\/api\/(schedule|competitions|competition\/|teams|match\/)/.test(url.pathname),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "lucarne-data",
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+        // live scores + logs aren't matched above → always straight to network.
+      },
+      devOptions: { enabled: true, type: "module" }, // so the SW works over the https tunnel
+    }),
+  ],
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname, "./src") },
   },
@@ -13,6 +61,9 @@ export default defineConfig({
     // dev app at http://<mac-ip>:5173. Vite still proxies /api to the local Hono
     // server, so the API works from the phone with no extra config.
     host: true,
+    // Allow the temporary Cloudflare quick-tunnel host (trycloudflare.com) so the
+    // app can be opened over https on a phone to test the installable PWA.
+    allowedHosts: [".trycloudflare.com"],
     // Local dev: proxy API calls to the Hono server (`bun run dev` in the root).
     proxy: { "/api": "http://localhost:3000" },
   },

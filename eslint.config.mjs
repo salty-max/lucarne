@@ -6,7 +6,13 @@ import reactRefresh from "eslint-plugin-react-refresh";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/.wrangler/**", "**/.turbo/**"],
+    ignores: [
+      "**/dist/**",
+      "**/dev-dist/**",
+      "**/node_modules/**",
+      "**/.wrangler/**",
+      "**/.turbo/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

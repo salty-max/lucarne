@@ -7,6 +7,9 @@ node_modules
 dist
 /build
 
+# vite-plugin-pwa dev service-worker output
+dev-dist
+
 # turborepo
 .turbo
 

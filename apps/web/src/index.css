@@ -310,7 +310,13 @@
   display: flex;
   justify-content: center;
   align-items: stretch;
+  /* Keep the TV clear of the notch / home indicator when installed (standalone,
+     viewport-fit=cover). Falls back to the base clamp on browsers/desktop. */
   padding: clamp(0px, 1.4vw, 14px);
+  padding-top: max(clamp(0px, 1.4vw, 14px), env(safe-area-inset-top));
+  padding-right: max(clamp(0px, 1.4vw, 14px), env(safe-area-inset-right));
+  padding-bottom: max(clamp(0px, 1.4vw, 14px), env(safe-area-inset-bottom));
+  padding-left: max(clamp(0px, 1.4vw, 14px), env(safe-area-inset-left));
 }
 .tt-tv {
   display: flex;
