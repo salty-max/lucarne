@@ -165,7 +165,7 @@ export default function Broadcasters() {
               </Tag>
               <span className="text-xs tabular-nums text-muted-foreground">{c.matches.length}</span>
             </div>
-            <MatchTable groups={[{ key: c.slug, matches: c.matches }]} />
+            <MatchTable groups={[{ key: c.slug, matches: c.matches }]} hideBroadcasters />
           </section>
         ))
       )}

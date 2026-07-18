@@ -31,7 +31,15 @@ function StatusCell({ m }: { m: Match }) {
 
 /** One match as a table row. A trailing spacer column absorbs the slack so the
  *  fixture packs left after the time and the broadcasters pin to the right. */
-export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
+export function MatchCard({
+  m,
+  onOpen,
+  hideBroadcasters,
+}: {
+  m: Match;
+  onOpen?: () => void;
+  hideBroadcasters?: boolean;
+}) {
   const { lang } = useSettings();
   const t = useT();
   const pens = m.homePenalties != null && m.awayPenalties != null;
@@ -86,7 +94,7 @@ export function MatchCard({ m, onOpen }: { m: Match; onOpen?: () => void }) {
       </td>
       <td className="w-full" />
       <td className="whitespace-nowrap py-1 pl-3 text-right align-middle">
-        {m.broadcasters.length > 0 ? (
+        {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
           <span className="inline-flex items-center justify-end gap-1">
             {m.broadcasters.map((b) => (
               <Tag key={b.id} color={b.color}>

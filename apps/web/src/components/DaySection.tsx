@@ -13,8 +13,16 @@ export type MatchGroup = {
 
 const COLS = 6;
 
-/** All groups in ONE table so every column lines up across sections. */
-export function MatchTable({ groups }: { groups: MatchGroup[] }) {
+/** All groups in ONE table so every column lines up across sections. When the
+ *  page already groups by channel (broadcasters), pass `hideBroadcasters` to drop
+ *  the now-redundant per-row broadcaster badges. */
+export function MatchTable({
+  groups,
+  hideBroadcasters,
+}: {
+  groups: MatchGroup[];
+  hideBroadcasters?: boolean;
+}) {
   const navigate = useNavigate();
   const shown = groups.filter((g) => g.matches.length > 0);
   if (shown.length === 0) return null;
@@ -44,6 +52,7 @@ export function MatchTable({ groups }: { groups: MatchGroup[] }) {
                 <MatchCard
                   key={m.id}
                   m={m}
+                  hideBroadcasters={hideBroadcasters}
                   onOpen={() => navigate({ to: "/match/$id", params: { id: String(m.id) } })}
                 />
               ))}
