@@ -1,25 +1,53 @@
 import { useMemo, useState } from "react";
 import { useTeams } from "@/hooks/useTeams";
-import { useFavorites } from "@/lib/favorites";
+import { toggleFavorite, useFavorites } from "@/lib/favorites";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { teamName } from "@/lib/teamNames";
-import { FavoriteStar } from "@/components/FavoriteStar";
 import { Loading, PageHeader, SectionLabel } from "@/components/common";
 
-/** One clickable team row: a ★/☆ toggle + the (localised) team name. */
-function TeamRow({ name }: { name: string }) {
+/** A followed team: name + a ✕ to unfollow. */
+function FollowedRow({ name }: { name: string }) {
   const { lang } = useSettings();
+  const t = useT();
   return (
     <li className="tt-dotted flex items-center gap-2 py-1.5 text-sm">
-      <FavoriteStar team={name} />
-      <span className="min-w-0 truncate uppercase">{teamName(name, lang)}</span>
+      <span className="min-w-0 flex-1 truncate uppercase">{teamName(name, lang)}</span>
+      <button
+        type="button"
+        onClick={() => toggleFavorite(name)}
+        aria-label={`${t.favorites.remove} — ${name}`}
+        title={t.favorites.remove}
+        className="shrink-0 px-1 leading-none text-muted-foreground/60 hover:text-[hsl(var(--tt-red))]"
+      >
+        ✕
+      </button>
+    </li>
+  );
+}
+
+/** A search result: the whole row follows the team on click. */
+function ResultRow({ name, onAdd }: { name: string; onAdd: () => void }) {
+  const { lang } = useSettings();
+  const t = useT();
+  return (
+    <li>
+      <button
+        type="button"
+        data-nav
+        onClick={onAdd}
+        aria-label={`${t.favorites.add} — ${name}`}
+        className="tt-dotted flex w-full items-center gap-2 py-1.5 text-left text-sm hover:bg-accent"
+      >
+        <span className="min-w-0 flex-1 truncate uppercase">{teamName(name, lang)}</span>
+        <span className="shrink-0 px-1 leading-none text-[hsl(var(--tt-green))]">+</span>
+      </button>
     </li>
   );
 }
 
 /** "My teams" (P200): the one place to follow/unfollow. Search the full team
- *  list to add, ★ to remove. No matches here — those live on Today/Calendar. */
+ *  list to add, ✕ to remove. No matches here — those live on Today/Calendar. */
 export default function Favorites() {
   const { lang } = useSettings();
   const t = useT();
@@ -44,6 +72,11 @@ export default function Favorites() {
       .slice(0, 40);
   }, [q, teams, favs, lang]);
 
+  const add = (name: string) => {
+    toggleFavorite(name);
+    setQ(""); // clear the search after adding
+  };
+
   return (
     <>
       <PageHeader title={t.favorites.title} subtitle={t.favorites.subtitle} />
@@ -54,7 +87,7 @@ export default function Favorites() {
       ) : (
         <ul className="flex flex-col">
           {followed.map((name) => (
-            <TeamRow key={name} name={name} />
+            <FollowedRow key={name} name={name} />
           ))}
         </ul>
       )}
@@ -76,7 +109,7 @@ export default function Favorites() {
         ) : (
           <ul className="mt-1 flex flex-col">
             {results.map((tm) => (
-              <TeamRow key={tm.name} name={tm.name} />
+              <ResultRow key={tm.name} name={tm.name} onAdd={() => add(tm.name)} />
             ))}
           </ul>
         )}
