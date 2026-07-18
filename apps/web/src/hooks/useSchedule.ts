@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchLive, fetchSchedule, type ScheduleParams } from "@/api";
 import type { Day, LiveMatch } from "@lucarne/shared";
 
@@ -30,38 +31,33 @@ export function patchLive(days: Day[], live: LiveMatch[]): Day[] {
   return changed ? next : days;
 }
 
-/** Fetch a schedule window. Pass `{ live: true }` to poll live scores (Today). */
+/** Fetch a schedule window (cached + revalidated by React Query, so revisits are
+ *  instant). Pass `{ live: true }` to also poll live scores and patch them into
+ *  this window in place — Today and the broadcaster page share one `live` query. */
 export function useSchedule(params: ScheduleParams = {}, opts: { live?: boolean } = {}) {
-  const [days, setDays] = useState<Day[] | null>(null);
-  const [error, setError] = useState(false);
-  const key = JSON.stringify(params);
+  const qc = useQueryClient();
+  const keyStr = JSON.stringify(params);
 
-  const load = useCallback(async () => {
-    try {
-      setDays(await fetchSchedule(JSON.parse(key) as ScheduleParams));
-      setError(false);
-    } catch {
-      setError(true);
-    }
-  }, [key]);
+  const schedule = useQuery({
+    queryKey: ["schedule", keyStr],
+    queryFn: () => fetchSchedule(params),
+    refetchInterval: opts.live ? FULL_REFRESH_MS : false,
+  });
 
+  const live = useQuery({
+    queryKey: ["live"],
+    queryFn: fetchLive,
+    enabled: !!opts.live,
+    staleTime: 0,
+    refetchInterval: LIVE_REFRESH_MS,
+  });
+
+  // Patch each new live snapshot into this window's cached schedule in place.
+  const liveData = live.data;
   useEffect(() => {
-    setDays(null);
-    load();
-  }, [load]);
+    if (!opts.live || !liveData) return;
+    qc.setQueryData<Day[]>(["schedule", keyStr], (prev) => (prev ? patchLive(prev, liveData) : prev));
+  }, [liveData, opts.live, keyStr, qc]);
 
-  useEffect(() => {
-    if (!opts.live) return;
-    const full = setInterval(load, FULL_REFRESH_MS);
-    const live = setInterval(async () => {
-      const snapshot = await fetchLive();
-      setDays((prev) => (prev ? patchLive(prev, snapshot) : prev));
-    }, LIVE_REFRESH_MS);
-    return () => {
-      clearInterval(full);
-      clearInterval(live);
-    };
-  }, [load, opts.live]);
-
-  return { days, error, reload: load };
+  return { days: schedule.data ?? null, error: schedule.isError };
 }

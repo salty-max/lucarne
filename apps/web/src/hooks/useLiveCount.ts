@@ -1,21 +1,14 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchLive } from "@/api";
 
-/** Global count of currently-live tracked matches (polled), for the header. */
+/** Global count of currently-live tracked matches, for the header. Shares the
+ *  `live` query with Today/broadcasters, so the 30s poll runs once app-wide. */
 export function useLiveCount() {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      const matches = await fetchLive();
-      if (alive) setCount(matches.filter((m) => m.status === "live").length);
-    };
-    load();
-    const id = setInterval(load, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
-  return count;
+  const q = useQuery({
+    queryKey: ["live"],
+    queryFn: fetchLive,
+    staleTime: 0,
+    refetchInterval: 30_000,
+  });
+  return (q.data ?? []).filter((m) => m.status === "live").length;
 }

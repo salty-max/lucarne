@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchCompetitions } from "@/api";
-import type { CompetitionInfo } from "@lucarne/shared";
 
+/** The competition list — rarely changes, so cache it hard. Returns `null` while
+ *  first loading, `[]` on error (routes treat `null` as loading). */
 export function useCompetitions() {
-  const [competitions, setCompetitions] = useState<CompetitionInfo[] | null>(null);
-  useEffect(() => {
-    fetchCompetitions()
-      .then(setCompetitions)
-      .catch(() => setCompetitions([]));
-  }, []);
-  return competitions;
+  const q = useQuery({
+    queryKey: ["competitions"],
+    queryFn: fetchCompetitions,
+    staleTime: 30 * 60_000,
+  });
+  return q.isError ? [] : (q.data ?? null);
 }

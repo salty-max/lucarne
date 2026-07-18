@@ -36,13 +36,14 @@ export default defineConfig({
         globIgnores: ["**/logos/**"],
         runtimeCaching: [
           {
-            // Read data: fresh when online, last-seen copy offline.
+            // Read data: serve the last-seen copy instantly (so a PWA relaunch has
+            // no network wait), then revalidate in the background. React Query does
+            // the same on the client — together, loads rarely show a skeleton.
             urlPattern: ({ url }: { url: URL }) =>
               /^\/api\/(schedule|competitions|competition\/|teams|match\/)/.test(url.pathname),
-            handler: "NetworkFirst",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "lucarne-data",
-              networkTimeoutSeconds: 4,
               expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 },
               cacheableResponse: { statuses: [0, 200] },
             },

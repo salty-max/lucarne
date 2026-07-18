@@ -1,23 +1,13 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchCompetition } from "@/api";
-import type { CompetitionDetail } from "@lucarne/shared";
 
-type State = { detail: CompetitionDetail | null; loading: boolean; error: boolean };
-
-/** Fetch one competition's tables + knockout bracket for its page. */
+/** Fetch one competition's tables + knockout bracket for its page. Cached, so
+ *  re-opening a competition (or tab-hopping back) is instant. */
 export function useCompetition(slug: string) {
-  const [state, setState] = useState<State>({ detail: null, loading: true, error: false });
-
-  useEffect(() => {
-    let alive = true;
-    setState({ detail: null, loading: true, error: false });
-    fetchCompetition(slug)
-      .then((detail) => alive && setState({ detail, loading: false, error: false }))
-      .catch(() => alive && setState({ detail: null, loading: false, error: true }));
-    return () => {
-      alive = false;
-    };
-  }, [slug]);
-
-  return state;
+  const q = useQuery({
+    queryKey: ["competition", slug],
+    queryFn: () => fetchCompetition(slug),
+    staleTime: 60_000,
+  });
+  return { detail: q.data ?? null, loading: q.isPending, error: q.isError };
 }
