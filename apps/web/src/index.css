@@ -237,7 +237,6 @@
 }
 .tt-bar-live {
   background: hsl(var(--live));
-  color: #fff;
 }
 .tt-bar-yellow {
   background: hsl(var(--tt-yellow));
@@ -402,7 +401,6 @@
 }
 .tt-fast .f-red {
   background: hsl(var(--tt-red));
-  color: #fff;
 }
 .tt-fast .f-grn {
   background: hsl(var(--tt-green));
