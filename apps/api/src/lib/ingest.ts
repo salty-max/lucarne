@@ -6,6 +6,7 @@ import {
   getFixtures,
   getFixtureEvents,
   getFixtureLineups,
+  getFixturePlayers,
   getFixtureStatistics,
   getLiveFixtures,
   getStandings,
@@ -419,4 +420,33 @@ export async function storeMatchStatistics(m: DrainMatch): Promise<number> {
     ? [...Object.values(statistics.home), ...Object.values(statistics.away)].filter((v) => v != null)
         .length
     : 0;
+}
+
+/**
+ * Fetch + store per-player match ratings for one match as a name→rating map on
+ * `matches.playerRatings` (attached to lineups by name at read time), then stamp
+ * `ratingsFetchedAt`. Costs ONE API request. Returns the number of rated players.
+ */
+export async function storeMatchPlayerRatings(m: DrainMatch): Promise<number> {
+  const teams = await getFixturePlayers(m.apiFootballId); // 1 API request
+
+  const byNumber = { home: {} as Record<string, number>, away: {} as Record<string, number> };
+  for (const t of teams) {
+    const side = t.team.id === m.homeApiId ? "home" : t.team.id === m.awayApiId ? "away" : null;
+    if (!side) continue;
+    for (const p of t.players) {
+      const g = p.statistics[0]?.games;
+      const r = g?.rating != null ? parseFloat(g.rating) : NaN;
+      if (Number.isFinite(r) && g?.number != null) byNumber[side][String(g.number)] = r;
+    }
+  }
+  const count = Object.keys(byNumber.home).length + Object.keys(byNumber.away).length;
+  const playerRatings = count > 0 ? byNumber : null;
+
+  await db
+    .update(matches)
+    .set({ playerRatings, ratingsFetchedAt: new Date() })
+    .where(eq(matches.id, m.id));
+
+  return count;
 }

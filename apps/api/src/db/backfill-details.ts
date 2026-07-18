@@ -3,7 +3,12 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { matches, teams } from "@/db/schema";
 import { initLocalDb } from "@/db/local";
-import { storeMatchEvents, storeMatchLineups, storeMatchStatistics } from "@/lib/ingest";
+import {
+  storeMatchEvents,
+  storeMatchLineups,
+  storeMatchPlayerRatings,
+  storeMatchStatistics,
+} from "@/lib/ingest";
 
 /**
  * One-shot local backfill of post-match details for every finished match that's
@@ -29,6 +34,7 @@ const candidates = await db
     hasDetails: matches.detailsFetchedAt,
     hasLineups: matches.lineupsFetchedAt,
     hasStats: matches.statsFetchedAt,
+    hasRatings: matches.ratingsFetchedAt,
   })
   .from(matches)
   .innerJoin(home, eq(matches.homeTeamId, home.id))
@@ -40,6 +46,7 @@ const candidates = await db
         isNull(matches.detailsFetchedAt),
         isNull(matches.lineupsFetchedAt),
         isNull(matches.statsFetchedAt),
+        isNull(matches.ratingsFetchedAt),
       ),
     ),
   )
@@ -50,6 +57,7 @@ console.log(`Backfilling ${candidates.length} matches...`);
 let events = 0;
 let lineups = 0;
 let stats = 0;
+let ratings = 0;
 let done = 0;
 for (const m of candidates) {
   try {
@@ -59,14 +67,22 @@ for (const m of candidates) {
       await storeMatchStatistics(m); // 1 request
       stats += 1;
     }
+    if (m.hasRatings == null) {
+      await storeMatchPlayerRatings(m); // 1 request
+      ratings += 1;
+    }
     done += 1;
     if (done % 10 === 0 || done === candidates.length) {
-      console.log(`  ${done}/${candidates.length} — ${events} events, ${lineups} lineups, ${stats} stats`);
+      console.log(
+        `  ${done}/${candidates.length} — ${events} events, ${lineups} lineups, ${stats} stats, ${ratings} ratings`,
+      );
     }
   } catch (err) {
     console.error(`  match ${m.id} (api ${m.apiFootballId}) failed:`, err);
   }
 }
 
-console.log(`Done: ${done}/${candidates.length} matches, ${events} events, ${lineups} lineups, ${stats} stats.`);
+console.log(
+  `Done: ${done}/${candidates.length} matches, ${events} events, ${lineups} lineups, ${stats} stats, ${ratings} ratings.`,
+);
 process.exit(0);

@@ -66,9 +66,16 @@ export const matches = sqliteTable(
     homeCoach: text("home_coach"),
     awayCoach: text("away_coach"),
     statistics: text("statistics", { mode: "json" }).$type<MatchStatistics>(),
+    // Player match ratings keyed by side then jersey number (lineups store
+    // abbreviated names, so number is the reliable join to the lineup rows).
+    playerRatings: text("player_ratings", { mode: "json" }).$type<{
+      home: Record<string, number>;
+      away: Record<string, number>;
+    }>(),
     detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
     lineupsFetchedAt: integer("lineups_fetched_at", { mode: "timestamp_ms" }),
     statsFetchedAt: integer("stats_fetched_at", { mode: "timestamp_ms" }),
+    ratingsFetchedAt: integer("ratings_fetched_at", { mode: "timestamp_ms" }),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),

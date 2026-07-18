@@ -199,6 +199,7 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
       round: matches.round,
       referee: matches.referee,
       statistics: matches.statistics,
+      playerRatings: matches.playerRatings,
       homeFormation: matches.homeFormation,
       awayFormation: matches.awayFormation,
       homeCoach: matches.homeCoach,
@@ -275,13 +276,20 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
 
   let lineups: MatchLineups | null = null;
   if (lineupRows.length > 0) {
-    const build = (teamId: number, formation: string | null, coach: string | null): TeamLineup => {
+    const build = (
+      teamId: number,
+      formation: string | null,
+      coach: string | null,
+      side: "home" | "away",
+    ): TeamLineup => {
       const forTeam = lineupRows.filter((l) => l.teamId === teamId);
+      const ratings = r.playerRatings?.[side];
       const toP = (l: (typeof lineupRows)[number]) => ({
         name: l.player,
         number: l.number,
         pos: l.pos,
         grid: l.grid,
+        rating: l.number != null ? (ratings?.[String(l.number)] ?? null) : null,
       });
       return {
         formation,
@@ -291,8 +299,8 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
       };
     };
     lineups = {
-      home: build(r.homeTeamId, r.homeFormation, r.homeCoach),
-      away: build(r.awayTeamId, r.awayFormation, r.awayCoach),
+      home: build(r.homeTeamId, r.homeFormation, r.homeCoach, "home"),
+      away: build(r.awayTeamId, r.awayFormation, r.awayCoach, "away"),
     };
   }
 

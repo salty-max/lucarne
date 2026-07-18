@@ -144,6 +144,21 @@ export function getFixtureStatistics(fixtureId: number) {
   return call<ApiTeamStatistics[]>("/fixtures/statistics", { fixture: fixtureId });
 }
 
+export type ApiFixturePlayers = {
+  team: { id: number; name: string };
+  players: {
+    player: { id: number; name: string };
+    // One entry per fixture; `games.rating` is a string like "7.2" (often null).
+    statistics: { games: { number: number | null; minutes: number | null; rating: string | null } }[];
+  }[];
+};
+
+/** Per-player match stats (incl. rating) for ONE fixture. One request per match —
+ *  fetched lazily after full-time via the drain, alongside events. */
+export function getFixturePlayers(fixtureId: number) {
+  return call<ApiFixturePlayers[]>("/fixtures/players", { fixture: fixtureId });
+}
+
 export type ApiStandingRow = {
   rank: number;
   team: { id: number; name: string; logo: string | null };

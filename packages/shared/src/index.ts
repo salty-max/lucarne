@@ -132,6 +132,7 @@ export type LineupPlayer = {
   number: number | null;
   pos: string | null; // "G" | "D" | "M" | "F"
   grid: string | null; // "row:col" for the starting XI, null for the bench
+  rating: number | null; // match rating (e.g. 7.2), null if unrated
 };
 
 export type TeamLineup = {
