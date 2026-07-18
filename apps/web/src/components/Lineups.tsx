@@ -23,28 +23,74 @@ function Rating({ value }: { value: number }) {
   );
 }
 
-/** Group a starting XI into formation lines, back (GK) to front, by the API grid
- *  "row:col" (col 1 = the team's left). `mirror` reverses each line for the away
- *  team, which attacks downward on the shared pitch. */
-function pitchLines(xi: LineupPlayer[], mirror = false): LineupPlayer[][] {
+/** "4-2-3-1" → [4, 2, 3, 1] (the outfield lines), or null if it doesn't parse. */
+function parseFormation(f: string | null | undefined): number[] | null {
+  if (!f) return null;
+  const nums = f.split(/[-–]/).map((n) => Number.parseInt(n.trim(), 10));
+  return nums.length >= 2 && nums.every((n) => n > 0) ? nums : null;
+}
+
+/** Split a group into balanced sub-lines of at most `cap` each, so a coarse
+ *  fallback never renders a wall of players. */
+function splitLine(players: LineupPlayer[], cap = 4): LineupPlayer[][] {
+  if (players.length <= cap) return [players];
+  const lines = Math.ceil(players.length / cap);
+  const per = Math.ceil(players.length / lines);
+  const out: LineupPlayer[][] = [];
+  for (let i = 0; i < players.length; i += per) out.push(players.slice(i, i + per));
+  return out;
+}
+
+/** Arrange a starting XI into formation lines, back (GK) to front. Three sources,
+ *  best first: the API `grid` ("row:col", col 1 = team's left — the real position);
+ *  else the formation string (canonical lines, ordered by listed position); else a
+ *  coarse position grouping with oversized lines split. `mirror` flips each line
+ *  for the away team, which attacks downward on the shared pitch. */
+function pitchLines(
+  xi: LineupPlayer[],
+  formation: string | null | undefined,
+  mirror = false,
+): LineupPlayer[][] {
   const orient = (lines: LineupPlayer[][]) => (mirror ? lines.map((l) => [...l].reverse()) : lines);
 
-  if (!xi.some((p) => p.grid)) {
-    const byPos = ["G", "D", "M", "F"].map((o) => xi.filter((p) => p.pos === o)).filter((l) => l.length);
-    return orient(byPos.length ? byPos : [xi]);
+  // 1. Precise: the API grid gives each player's real row + column.
+  if (xi.some((p) => p.grid)) {
+    const rows = new Map<number, LineupPlayer[]>();
+    for (const p of xi) {
+      const row = Number((p.grid ?? "0:0").split(":")[0]);
+      (rows.get(row) ?? rows.set(row, []).get(row)!).push(p);
+    }
+    const lines = [...rows.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([, ps]) =>
+        ps.sort(
+          (a, b) => Number((a.grid ?? "0:0").split(":")[1]) - Number((b.grid ?? "0:0").split(":")[1]),
+        ),
+      );
+    return orient(lines);
   }
-  const rows = new Map<number, LineupPlayer[]>();
-  for (const p of xi) {
-    const row = Number((p.grid ?? "0:0").split(":")[0]);
-    (rows.get(row) ?? rows.set(row, []).get(row)!).push(p);
+
+  const gk = xi.find((p) => p.pos === "G") ?? xi[0];
+  const outfield = xi.filter((p) => p !== gk);
+
+  // 2. Canonical: slice by the formation string (GK + its numbers), ordering the
+  //    outfielders defence → midfield → attack.
+  const sizes = parseFormation(formation);
+  if (sizes && sizes.reduce((a, b) => a + b, 0) === outfield.length) {
+    const rank: Record<string, number> = { D: 0, M: 1, F: 2 };
+    const ordered = [...outfield].sort((a, b) => (rank[a.pos ?? "M"] ?? 1) - (rank[b.pos ?? "M"] ?? 1));
+    const lines: LineupPlayer[][] = [[gk]];
+    let i = 0;
+    for (const n of sizes) {
+      lines.push(ordered.slice(i, i + n));
+      i += n;
+    }
+    return orient(lines);
   }
-  const lines = [...rows.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, ps]) =>
-      ps.sort(
-        (a, b) => Number((a.grid ?? "0:0").split(":")[1]) - Number((b.grid ?? "0:0").split(":")[1]),
-      ),
-    );
+
+  // 3. Fallback: group by coarse position, splitting any oversized line.
+  const groups = ["G", "D", "M", "F"].map((o) => xi.filter((p) => p.pos === o)).filter((l) => l.length);
+  const lines = (groups.length ? groups : [xi]).flatMap((g) => splitLine(g));
   return orient(lines);
 }
 
@@ -114,11 +160,11 @@ function PitchMarkings() {
           <rect x="0.6" y="0.6" width="66.8" height="103.8" />
           <line x1="0.6" y1="52.5" x2="67.4" y2="52.5" />
           <circle cx="34" cy="52.5" r="9.15" />
-          <rect x="13.84" y="0.6" width="40.32" height="16.5" />
-          <rect x="24.84" y="0.6" width="18.32" height="5.5" />
+          <path d="M13.84 0.6 V17.1 H54.16 V0.6" />
+          <path d="M24.84 0.6 V6.1 H43.16 V0.6" />
           <path d="M27.2 17.1 A9.15 9.15 0 0 0 40.8 17.1" />
-          <rect x="13.84" y="87.9" width="40.32" height="16.5" />
-          <rect x="24.84" y="98.9" width="18.32" height="5.5" />
+          <path d="M13.84 104.4 V87.9 H54.16 V104.4" />
+          <path d="M24.84 104.4 V98.9 H43.16 V104.4" />
           <path d="M27.2 87.9 A9.15 9.15 0 0 1 40.8 87.9" />
         </g>
         <g {...spot}>
@@ -137,11 +183,11 @@ function PitchMarkings() {
           <rect x="0.6" y="0.6" width="103.8" height="66.8" />
           <line x1="52.5" y1="0.6" x2="52.5" y2="67.4" />
           <circle cx="52.5" cy="34" r="9.15" />
-          <rect x="0.6" y="13.84" width="16.5" height="40.32" />
-          <rect x="0.6" y="24.84" width="5.5" height="18.32" />
+          <path d="M0.6 13.84 H17.1 V54.16 H0.6" />
+          <path d="M0.6 24.84 H6.1 V43.16 H0.6" />
           <path d="M17.1 27.2 A9.15 9.15 0 0 1 17.1 40.8" />
-          <rect x="87.9" y="13.84" width="16.5" height="40.32" />
-          <rect x="98.9" y="24.84" width="5.5" height="18.32" />
+          <path d="M104.4 13.84 H87.9 V54.16 H104.4" />
+          <path d="M104.4 24.84 H98.9 V43.16 H104.4" />
           <path d="M87.9 27.2 A9.15 9.15 0 0 0 87.9 40.8" />
         </g>
         <g {...spot}>
@@ -164,8 +210,8 @@ function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
       {/* Players — away on top, home on bottom (mobile); home left, away right
           (desktop). Padding keeps the goalkeepers off the goal lines. */}
       <div className="relative flex h-full flex-col-reverse px-1 py-3 sm:flex-row sm:px-3 sm:py-2">
-        <PitchHalf lines={pitchLines(home.startXI)} side="home" />
-        <PitchHalf lines={pitchLines(away.startXI, true)} side="away" />
+        <PitchHalf lines={pitchLines(home.startXI, home.formation)} side="home" />
+        <PitchHalf lines={pitchLines(away.startXI, away.formation, true)} side="away" />
       </div>
     </div>
   );
