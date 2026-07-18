@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import type { Match } from "@lucarne/shared";
 import { useSchedule } from "@/hooks/useSchedule";
 import { clearChannels, toggleChannel, useChannels } from "@/lib/channels";
+import { keepCompetitions, useHiddenCompetitions } from "@/lib/competitionFilter";
 import { useT } from "@/lib/i18n";
 import { parisDayKey } from "@/lib/time";
 import { EmptyState, Loading, PageHeader, SectionLabel, Tag } from "@/components/common";
@@ -88,11 +89,12 @@ export default function Broadcasters() {
   const { days, error } = useSchedule({ days: 1 }, { live: true });
   const selected = useChannels();
   const selSet = useMemo(() => new Set(selected), [selected]);
+  const hidden = useHiddenCompetitions();
   const todayKey = parisDayKey();
 
   const matches = useMemo(
-    () => (days ? (days.find((d) => d.key === todayKey)?.matches ?? []) : null),
-    [days, todayKey],
+    () => (days ? keepCompetitions(days.find((d) => d.key === todayKey)?.matches ?? [], hidden) : null),
+    [days, todayKey, hidden],
   );
 
   // Group by channel — a match on two channels appears under both. Busiest first.

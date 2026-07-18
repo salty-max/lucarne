@@ -1,4 +1,5 @@
 import { useSchedule } from "@/hooks/useSchedule";
+import { keepCompetitions, useHiddenCompetitions } from "@/lib/competitionFilter";
 import { parisDayKey } from "@/lib/time";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -9,6 +10,7 @@ import { EmptyState, Loading, TeletextHero } from "@/components/common";
 export default function Today() {
   const { days, error } = useSchedule({ days: 8 }, { live: true });
   const { dateFormat, lang } = useSettings();
+  const hidden = useHiddenCompetitions();
   const t = useT();
   const todayKey = parisDayKey();
 
@@ -21,8 +23,11 @@ export default function Today() {
     );
   }
 
-  const todayMatches = days.find((d) => d.key === todayKey)?.matches ?? [];
-  const upcoming = days.filter((d) => d.key > todayKey);
+  const todayMatches = keepCompetitions(days.find((d) => d.key === todayKey)?.matches ?? [], hidden);
+  const upcoming = days
+    .filter((d) => d.key > todayKey)
+    .map((d) => ({ ...d, matches: keepCompetitions(d.matches, hidden) }))
+    .filter((d) => d.matches.length > 0);
   const live = todayMatches.filter((m) => m.status === "live");
   const up = todayMatches.filter((m) => m.status === "scheduled");
   const done = todayMatches.filter((m) => m.status === "finished" || m.status === "postponed");

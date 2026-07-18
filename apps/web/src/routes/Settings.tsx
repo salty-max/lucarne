@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
 import { setSettings, useSettings, type DateFormat, type Lang } from "@/lib/settings";
+import { toggleCompetition, useHiddenCompetitions } from "@/lib/competitionFilter";
+import { useCompetitions } from "@/hooks/useCompetitions";
+import { competitionLabel } from "@/lib/labels";
 import { useT } from "@/lib/i18n";
 import { formatLong } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -45,6 +48,8 @@ function Radio({
 
 export default function Settings() {
   const { dateFormat, crt, lang } = useSettings();
+  const comps = useCompetitions();
+  const hidden = useHiddenCompetitions();
   const t = useT();
   const sample = new Date();
 
@@ -98,6 +103,42 @@ export default function Settings() {
           </span>
         </button>
         <p className="mt-2 text-xs text-muted-foreground">{t.settings.crtHelp}</p>
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.settings.competitions}</SectionLabel>
+        <p className="mb-1 text-xs text-muted-foreground">{t.settings.competitionsHelp}</p>
+        <div className="flex flex-col">
+          {(comps ?? []).map((c) => {
+            const shown = !hidden.includes(c.slug);
+            return (
+              <button
+                key={c.slug}
+                data-nav
+                onClick={() => toggleCompetition(c.slug)}
+                aria-pressed={shown}
+                className="tt-dotted flex w-full items-center gap-3 py-2 text-left transition-colors hover:text-foreground"
+              >
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 uppercase",
+                    shown ? "text-foreground" : "text-muted-foreground line-through",
+                  )}
+                >
+                  {competitionLabel(c.name, lang)}
+                </span>
+                <span
+                  className={cn(
+                    "tt-tag py-0.5",
+                    shown ? "bg-[hsl(var(--tt-green))] text-black" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {shown ? t.settings.on : t.settings.off}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </>
   );

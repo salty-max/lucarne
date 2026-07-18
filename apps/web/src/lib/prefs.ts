@@ -12,8 +12,8 @@ export type Prefs = {
   crt: boolean;
   lang: Lang;
   favorites: string[]; // followed team names
-  channels: string[]; // selected broadcaster slugs (empty = all)
-  competitions: string[]; // selected competition slugs (empty = all)
+  channels: string[]; // selected broadcaster slugs (empty = all shown)
+  hiddenCompetitions: string[]; // competition slugs to hide (empty = all shown)
 };
 
 const KEY = "lucarne:prefs";
@@ -25,7 +25,7 @@ const DEFAULTS: Prefs = {
   lang: "fr",
   favorites: [],
   channels: [],
-  competitions: [],
+  hiddenCompetitions: [],
 };
 
 /** Fold the pre-consolidation per-domain keys into one Prefs patch (one-time). */

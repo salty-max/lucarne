@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Match } from "@lucarne/shared";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useCompetitions } from "@/hooks/useCompetitions";
+import { keepCompetitions, useHiddenCompetitions } from "@/lib/competitionFilter";
 import { parisDayKey } from "@/lib/time";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -44,8 +45,12 @@ export default function Calendar() {
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
   const { days, error } = useSchedule({ from: first, days: daysInMonth });
   const allComps = useCompetitions();
+  const hidden = useHiddenCompetitions();
 
-  const dayList = useMemo(() => days ?? [], [days]);
+  const dayList = useMemo(
+    () => (days ?? []).map((d) => ({ ...d, matches: keepCompetitions(d.matches, hidden) })),
+    [days, hidden],
+  );
   const [sel, setSel] = useState(0);
   const [start, setStart] = useState(0);
   const [filter, setFilter] = useState<string | null>(null);

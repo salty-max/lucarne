@@ -138,6 +138,8 @@ const en = {
     crtHelp: "Scanlines, phosphor glow and the TV bezel. Turn off for a flat screen.",
     on: "On",
     off: "Off",
+    competitions: "Competitions",
+    competitionsHelp: "Hide the ones you don't follow — they drop off the match lists and the TV guide.",
   },
   logs: {
     title: "Logs",
@@ -304,6 +306,8 @@ const fr: Messages = {
     crtHelp: "Scanlines, lueur phosphore et cadre TV. Désactiver pour un écran plat.",
     on: "On",
     off: "Off",
+    competitions: "Compétitions",
+    competitionsHelp: "Masquez celles que vous ne suivez pas — elles disparaissent des listes de matchs et de la page diffuseurs.",
   },
   logs: {
     title: "Logs",
