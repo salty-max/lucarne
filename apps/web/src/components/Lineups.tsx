@@ -128,9 +128,12 @@ function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "a
       )}
     >
       {lines.map((line, i) => (
+        // Depth weighting: the GK (back line) hugs the goal; outfield lines share
+        // the rest evenly. Just enough to feel natural, no per-formation template.
         <div
           key={i}
-          className="flex min-w-0 flex-1 flex-row items-center justify-around py-0.5 sm:flex-col sm:py-1"
+          style={{ flexGrow: i === 0 ? 0.6 : 1 }}
+          className="flex min-w-0 basis-0 flex-row items-center justify-around py-0.5 sm:flex-col sm:py-1"
         >
           {line.map((p, j) => (
             <PitchPlayer key={j} p={p} side={side} />
