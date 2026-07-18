@@ -90,6 +90,7 @@
           if (s.crt === false) document.documentElement.classList.add("crt-off");
           document.documentElement.lang = s.lang === "en" ? "en" : "fr";
           document.documentElement.setAttribute("data-theme", s.theme || "cept1");
+          if (s.font !== "modern") document.documentElement.classList.add("font-retro");
         } catch (e) {}
       })();
     </script>

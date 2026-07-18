@@ -17,25 +17,30 @@ export function Rainbow() {
   );
 }
 
-/** A solid teletext colour tag (broadcaster pill, status flag, …). Pass a hex
- *  `color` to tint it (text auto-picks black/white); else style via className. */
+/** A solid teletext colour tag (broadcaster pill, status flag, …). Pass a
+ *  `ttColor` (a palette name) to tint it from the active theme — dark text,
+ *  adapts per theme; a hex `color` to tint with an arbitrary colour (text
+ *  auto-picks black/white); else style via className. */
 export function Tag({
   color,
+  ttColor,
   title,
   className,
   children,
 }: {
   color?: string;
+  ttColor?: string;
   title?: string;
   className?: string;
   children: ReactNode;
 }) {
+  const style = ttColor
+    ? { background: `hsl(var(--tt-${ttColor}))`, color: "hsl(var(--primary-foreground))" }
+    : color
+      ? { backgroundColor: color, color: textOn(color) }
+      : undefined;
   return (
-    <span
-      title={title}
-      className={cn("tt-tag py-px", className)}
-      style={color ? { backgroundColor: color, color: textOn(color) } : undefined}
-    >
+    <span title={title} className={cn("tt-tag py-px", className)} style={style}>
       {children}
     </span>
   );

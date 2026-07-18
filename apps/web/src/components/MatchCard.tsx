@@ -4,6 +4,7 @@ import type { Match } from "@lucarne/shared";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { teamName } from "@/lib/teamNames";
+import { channelTt } from "@/lib/channelColor";
 import { LiveDot, Tag } from "./common";
 
 type Result = "win" | "loss" | "none";
@@ -97,7 +98,7 @@ export function MatchCard({
         {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
           <span className="inline-flex items-center justify-end gap-1">
             {m.broadcasters.map((b) => (
-              <Tag key={b.id} color={b.color} className="tt-chan">
+              <Tag key={b.id} ttColor={channelTt(b.color)}>
                 {b.name}
               </Tag>
             ))}

@@ -7,12 +7,14 @@ import { useSyncExternalStore } from "react";
 export type DateFormat = "dmy" | "mdy" | "numeric";
 export type Lang = "en" | "fr";
 export type Theme = "cept1" | "neon" | "gray" | "dmg";
+export type FontChoice = "modern" | "retro";
 
 export type Prefs = {
   dateFormat: DateFormat;
   crt: boolean;
   lang: Lang;
   theme: Theme; // colour palette (see lib/themes.ts + index.css)
+  font: FontChoice; // "retro" = the old-school CRT face (VT323), "modern" = mono stack
   favorites: string[]; // followed team names
   channels: string[]; // selected broadcaster slugs (empty = all shown)
   hiddenCompetitions: string[]; // competition slugs to hide (empty = all shown)
@@ -26,6 +28,7 @@ const DEFAULTS: Prefs = {
   crt: true,
   lang: "fr",
   theme: "cept1", // authentic teletext by default
+  font: "retro", // old-school CRT face by default (fits the teletext identity)
   favorites: [],
   channels: [],
   hiddenCompetitions: [],
@@ -71,6 +74,10 @@ export function applyLang(lang: Lang): void {
 export function applyTheme(theme: Theme): void {
   if (typeof document !== "undefined") document.documentElement.setAttribute("data-theme", theme);
 }
+export function applyFont(font: FontChoice): void {
+  if (typeof document !== "undefined")
+    document.documentElement.classList.toggle("font-retro", font !== "modern");
+}
 
 let current: Prefs = load();
 const listeners = new Set<() => void>();
@@ -78,6 +85,7 @@ const listeners = new Set<() => void>();
 applyCrt(current.crt);
 applyLang(current.lang);
 applyTheme(current.theme);
+applyFont(current.font);
 
 // First run under the new key: persist the (possibly migrated) prefs and drop the
 // legacy per-domain keys.
@@ -104,6 +112,7 @@ export function setPrefs(patch: Partial<Prefs>): void {
   applyCrt(current.crt);
   applyLang(current.lang);
   applyTheme(current.theme);
+  applyFont(current.font);
   for (const l of listeners) l();
 }
 

@@ -117,14 +117,13 @@
   --tt-white: 74 78% 72%;
 }
 
-/* Broadcaster chips carry each channel's brand colour (that's data, not theme).
-   In the monochrome themes the brand colours clash, so neutralise them to a
-   palette chip — the channel name still tells them apart. */
-:root[data-theme="gray"] .tt-chan,
-:root[data-theme="dmg"] .tt-chan {
-  background-color: hsl(var(--muted)) !important;
-  color: hsl(var(--foreground)) !important;
-  border: 1px solid hsl(var(--border)) !important;
+/* Retro CRT face (opt-in via the font pref). VT323 sits small on the em, so
+   nudge the base size up a touch so the dense teletext text stays legible. */
+.font-retro {
+  font-size: 16px;
+}
+.font-retro body {
+  font-family: "VT323", "Cascadia Mono", "DejaVu Sans Mono", monospace;
 }
 
 @theme inline {

@@ -83,13 +83,20 @@ export default function Calendar() {
     setView({ y: d.getFullYear(), m: d.getMonth() });
   };
 
+  const selDay = dayList[Math.min(sel, Math.max(0, dayList.length - 1))];
+
+  // Only the competitions that actually have a match on the selected day.
   const presentComps = useMemo(() => {
     const slugs = new Set<string>();
-    for (const d of dayList) for (const m of d.matches) slugs.add(m.competition.slug);
+    for (const m of selDay?.matches ?? []) slugs.add(m.competition.slug);
     return (allComps ?? []).filter((c) => slugs.has(c.slug));
-  }, [dayList, allComps]);
+  }, [selDay, allComps]);
 
-  const selDay = dayList[Math.min(sel, Math.max(0, dayList.length - 1))];
+  // Drop the filter when its competition doesn't play on the newly-selected day.
+  useEffect(() => {
+    if (filter && !presentComps.some((c) => c.slug === filter)) setFilter(null);
+  }, [presentComps, filter]);
+
   const matches = (selDay?.matches ?? []).filter((m) => !filter || m.competition.slug === filter);
 
   const rank = useMemo(() => new Map((allComps ?? []).map((c, i) => [c.slug, i])), [allComps]);

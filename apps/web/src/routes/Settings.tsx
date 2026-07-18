@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
-import { setSettings, useSettings, type DateFormat, type Lang, type Theme } from "@/lib/settings";
+import {
+  setSettings,
+  useSettings,
+  type DateFormat,
+  type FontChoice,
+  type Lang,
+  type Theme,
+} from "@/lib/settings";
 import { THEMES } from "@/lib/themes";
 import { toggleCompetition, useHiddenCompetitions } from "@/lib/competitionFilter";
 import { useCompetitions } from "@/hooks/useCompetitions";
@@ -20,6 +27,11 @@ const THEME_META: Record<Theme, { name: string; tag: string }> = {
   gray: { name: "themeGray", tag: "themeGrayTag" },
   dmg: { name: "themeDmg", tag: "themeDmgTag" },
 };
+
+const FONT_OPTIONS: { id: FontChoice; name: string; tag: string }[] = [
+  { id: "retro", name: "fontRetro", tag: "fontRetroTag" },
+  { id: "modern", name: "fontModern", tag: "fontModernTag" },
+];
 
 const DATE_OPTIONS: { value: DateFormat; labelKey: "dmy" | "mdy" | "numeric" }[] = [
   { value: "dmy", labelKey: "dmy" },
@@ -46,16 +58,20 @@ function Radio({
         active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <span className={cn(active ? "text-[hsl(var(--tt-cyan))]" : "opacity-40")}>
-        {active ? "◉" : "○"}
-      </span>
+      <span
+        aria-hidden
+        className={cn(
+          "inline-block h-3.5 w-3.5 shrink-0 border",
+          active ? "border-[hsl(var(--tt-cyan))] bg-[hsl(var(--tt-cyan))]" : "border-muted-foreground/50",
+        )}
+      />
       {children}
     </button>
   );
 }
 
 export default function Settings() {
-  const { dateFormat, crt, lang, theme } = useSettings();
+  const { dateFormat, crt, lang, theme, font } = useSettings();
   const comps = useCompetitions();
   const hidden = useHiddenCompetitions();
   const t = useT();
@@ -85,6 +101,21 @@ export default function Settings() {
             </Radio>
           );
         })}
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.settings.font}</SectionLabel>
+        <p className="mb-1 text-xs text-muted-foreground">{t.settings.fontHelp}</p>
+        <div className="flex flex-col">
+          {FONT_OPTIONS.map((f) => (
+            <Radio key={f.id} active={font === f.id} onClick={() => setSettings({ font: f.id })}>
+              <span className="min-w-0 flex-1">
+                <span className="block uppercase">{s[f.name]}</span>
+                <span className="block text-xs text-muted-foreground">{s[f.tag]}</span>
+              </span>
+            </Radio>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5">

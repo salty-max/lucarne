@@ -39,6 +39,7 @@
     "apps/web": {
       "name": "@lucarne/web",
       "dependencies": {
+        "@fontsource/vt323": "^5.2.7",
         "@lucarne/shared": "workspace:*",
         "@radix-ui/react-accordion": "^1.2.16",
         "@radix-ui/react-checkbox": "^1.3.7",
@@ -405,6 +406,8 @@
     "@floating-ui/react-dom": ["@floating-ui/react-dom@2.1.9", "", { "dependencies": { "@floating-ui/dom": "^1.8.0" }, "peerDependencies": { "react": ">=16.8.0", "react-dom": ">=16.8.0" } }, "sha512-JDjEFGCpImxDCA7JJKviA0M9+RtmJdj0m/NVU5IMgBK+AmZouAQQ7/+2GLH0GXXY0YMw9oXPB8hKdbPYg5QLYg=="],
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
+
+    "@fontsource/vt323": ["@fontsource/vt323@5.2.7", "", {}, "sha512-8JTMM23vMhQxin9Cn/ijty8cNwXW4INrln0VAJ2227Rz0CVfkzM3qr3l/CqudZJ6BXCnbCGUTdf2ym3cTNex8A=="],
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@20.10.6", "", { "dependencies": { "@types/node": ">=20.0.0", "happy-dom": "^20.10.6" } }, "sha512-Nu/IjRkkNxmeG2ywWsyJSO4d1BrWTqVzxCPL+gXj0b97klhmjd6wLzt6Bx/laNpkZ3WLW7zNCqmtMIbIlahqug=="],
 
