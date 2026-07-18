@@ -68,19 +68,20 @@ function Tie({ m }: { m: BracketMatch }) {
   );
 }
 
-/** Knockout bracket: one column per round, ties spread to feel like a tree.
- *  Scrolls horizontally on narrow screens. */
+/** Knockout bracket. Desktop: one column per round, ties spread to feel like a
+ *  tree, scrolling horizontally if needed. Mobile: rounds stack vertically as
+ *  full-width sections (no horizontal scroll). */
 export function Bracket({ rounds }: { rounds: BracketRound[] }) {
   const { lang } = useSettings();
   return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-2">
-      <div className="flex items-stretch gap-3">
+    <div className="pb-2 sm:-mx-4 sm:overflow-x-auto sm:px-4">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-stretch sm:gap-3">
         {rounds.map((round) => (
-          <div key={round.name} className="flex w-44 shrink-0 flex-col">
+          <div key={round.name} className="flex w-full flex-col sm:w-44 sm:shrink-0">
             <h3 className="mb-2 truncate text-center text-xs font-semibold uppercase tracking-wide text-[hsl(var(--tt-magenta))]">
               {roundLabel(round.name, lang)}
             </h3>
-            <div className="flex flex-1 flex-col justify-around gap-3">
+            <div className="flex flex-col gap-2 sm:flex-1 sm:justify-around sm:gap-3">
               {round.matches.map((m) => (
                 <Tie key={m.id} m={m} />
               ))}
