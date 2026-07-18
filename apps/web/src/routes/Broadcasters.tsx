@@ -24,7 +24,7 @@ const GUIDE = [
 function GuideRow({ name, color, covers }: { name: string; color: string; covers: string }) {
   return (
     <div className="tt-dotted flex items-center gap-3 py-2">
-      <Tag color={color} className="shrink-0 py-0.5">
+      <Tag color={color} className="tt-chan shrink-0 py-0.5">
         {name}
       </Tag>
       <span className="text-sm text-muted-foreground">{covers}</span>
@@ -163,7 +163,7 @@ export default function Broadcasters() {
         visible.map((c) => (
           <section key={c.slug} className="mb-4">
             <div className="mb-1 flex items-center gap-2">
-              <Tag color={c.color} className="py-0.5">
+              <Tag color={c.color} className="tt-chan py-0.5">
                 {c.name}
               </Tag>
               <span className="text-xs tabular-nums text-muted-foreground">{c.matches.length}</span>

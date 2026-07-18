@@ -17,8 +17,8 @@ const LANG_OPTIONS: { value: Lang; labelKey: "french" | "english" }[] = [
 const THEME_META: Record<Theme, { name: string; tag: string }> = {
   cept1: { name: "themeCept1", tag: "themeCept1Tag" },
   neon: { name: "themeNeon", tag: "themeNeonTag" },
-  amber: { name: "themeAmber", tag: "themeAmberTag" },
-  green: { name: "themeGreen", tag: "themeGreenTag" },
+  gray: { name: "themeGray", tag: "themeGrayTag" },
+  dmg: { name: "themeDmg", tag: "themeDmgTag" },
 };
 
 const DATE_OPTIONS: { value: DateFormat; labelKey: "dmy" | "mdy" | "numeric" }[] = [

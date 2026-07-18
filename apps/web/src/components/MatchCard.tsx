@@ -97,7 +97,7 @@ export function MatchCard({
         {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
           <span className="inline-flex items-center justify-end gap-1">
             {m.broadcasters.map((b) => (
-              <Tag key={b.id} color={b.color}>
+              <Tag key={b.id} color={b.color} className="tt-chan">
                 {b.name}
               </Tag>
             ))}

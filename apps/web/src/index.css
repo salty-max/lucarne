@@ -65,55 +65,66 @@
   --tt-white: 180 6% 92%;
 }
 
-/* Amber — single-phosphor amber CRT. Colour coding degrades to intensity, the
-   way a monochrome terminal showed bright/normal/dim text. */
-:root[data-theme="amber"] {
-  --background: 30 25% 4%;
-  --foreground: 38 100% 60%;
-  --card: 32 30% 6%;
-  --card-foreground: 38 100% 60%;
-  --muted: 34 30% 12%;
-  --muted-foreground: 38 55% 50%;
-  --border: 36 45% 24%;
-  --input: 36 45% 24%;
-  --primary: 40 100% 55%;
-  --primary-foreground: 30 40% 6%;
-  --accent: 34 40% 12%;
-  --accent-foreground: 40 100% 62%;
-  --live: 25 100% 55%;
+/* Grayscale — a black-and-white CRT. Colour coding becomes intensity (bright =
+   important, dim = recessed), the way a monochrome monitor showed text. */
+:root[data-theme="gray"] {
+  --background: 0 0% 3%;
+  --foreground: 0 0% 92%;
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 92%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 58%;
+  --border: 0 0% 30%;
+  --input: 0 0% 30%;
+  --primary: 0 0% 82%;
+  --primary-foreground: 0 0% 6%;
+  --accent: 0 0% 16%;
+  --accent-foreground: 0 0% 92%;
+  --live: 0 0% 100%;
 
-  --tt-red: 25 100% 58%;
-  --tt-green: 45 100% 55%;
-  --tt-yellow: 50 100% 62%;
-  --tt-blue: 36 45% 42%;
-  --tt-magenta: 30 90% 55%;
-  --tt-cyan: 44 100% 58%;
-  --tt-white: 40 60% 82%;
+  --tt-red: 0 0% 100%;
+  --tt-green: 0 0% 80%;
+  --tt-yellow: 0 0% 90%;
+  --tt-blue: 0 0% 46%;
+  --tt-magenta: 0 0% 68%;
+  --tt-cyan: 0 0% 85%;
+  --tt-white: 0 0% 96%;
 }
 
-/* Green — single-phosphor P1 green CRT (the classic terminal look). */
-:root[data-theme="green"] {
-  --background: 128 30% 3%;
-  --foreground: 128 90% 66%;
-  --card: 128 30% 5%;
-  --card-foreground: 128 90% 66%;
-  --muted: 128 25% 11%;
-  --muted-foreground: 128 45% 50%;
-  --border: 128 35% 22%;
-  --input: 128 35% 22%;
-  --primary: 128 100% 58%;
-  --primary-foreground: 128 40% 6%;
-  --accent: 128 30% 12%;
-  --accent-foreground: 128 90% 70%;
-  --live: 128 100% 78%;
+/* Game Boy DMG — the original 1989 handheld's 4-tone pea-green LCD, redrawn for
+   a dark screen: shades run from deep DMG-green to bright pea. */
+:root[data-theme="dmg"] {
+  --background: 120 42% 7%;
+  --foreground: 74 70% 60%;
+  --card: 120 38% 10%;
+  --card-foreground: 74 70% 60%;
+  --muted: 110 30% 16%;
+  --muted-foreground: 84 38% 48%;
+  --border: 100 34% 26%;
+  --input: 100 34% 26%;
+  --primary: 74 80% 55%;
+  --primary-foreground: 120 50% 8%;
+  --accent: 110 34% 15%;
+  --accent-foreground: 74 72% 64%;
+  --live: 68 90% 66%;
 
-  --tt-red: 128 100% 80%;
-  --tt-green: 128 100% 55%;
-  --tt-yellow: 128 100% 72%;
-  --tt-blue: 128 45% 44%;
-  --tt-magenta: 128 70% 62%;
-  --tt-cyan: 128 100% 68%;
-  --tt-white: 128 55% 85%;
+  --tt-red: 68 90% 66%;
+  --tt-green: 100 55% 50%;
+  --tt-yellow: 74 88% 62%;
+  --tt-blue: 120 40% 36%;
+  --tt-magenta: 90 50% 54%;
+  --tt-cyan: 82 65% 58%;
+  --tt-white: 74 78% 72%;
+}
+
+/* Broadcaster chips carry each channel's brand colour (that's data, not theme).
+   In the monochrome themes the brand colours clash, so neutralise them to a
+   palette chip — the channel name still tells them apart. */
+:root[data-theme="gray"] .tt-chan,
+:root[data-theme="dmg"] .tt-chan {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
 }
 
 @theme inline {
