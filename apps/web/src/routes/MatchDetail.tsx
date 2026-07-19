@@ -357,7 +357,7 @@ export default function MatchDetail() {
         </>
       )}
 
-      {match.motm && (
+      {match.motm && match.motm.rating > 0 && (
         <section className="mt-3">
           <SectionLabel>{t.match.motm}</SectionLabel>
           <div className="flex items-center gap-2 py-1.5">

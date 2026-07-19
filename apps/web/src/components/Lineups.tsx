@@ -115,7 +115,7 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       <span className="max-w-full truncate text-center text-[0.72rem] text-foreground/90">
         {lastName(p.name)}
       </span>
-      {p.rating != null && <Rating value={p.rating} className="text-[0.62rem]" />}
+      {p.rating != null && p.rating > 0 && <Rating value={p.rating} className="text-[0.62rem]" />}
     </div>
   );
 }
@@ -241,7 +241,7 @@ function Bench({ home, away }: { home: TeamLineup; away: TeamLineup }) {
         >
           <span className="min-w-[1.6ch] tabular-nums text-muted-foreground">{p.number ?? ""}</span>
           <span className="min-w-0 flex-1 truncate">{p.name}</span>
-          {p.rating != null && <Rating value={p.rating} />}
+          {p.rating != null && p.rating > 0 && <Rating value={p.rating} />}
         </li>
       ))}
     </ul>

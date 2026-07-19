@@ -589,7 +589,9 @@ export async function storeMatchPlayerRatings(
     for (const p of t.players) {
       const g = p.statistics[0]?.games;
       const r = g?.rating != null ? parseFloat(g.rating) : NaN;
-      if (!Number.isFinite(r)) continue;
+      // 0 (or negative) means "no real rating" — unused subs, or ratings not yet
+      // computed — so treat it as absent: don't store it, don't pick it as MOTM.
+      if (!Number.isFinite(r) || r <= 0) continue;
       if (g?.number != null) byNumber[side][String(g.number)] = r;
       if (!motm || r > motm.rating) motm = { name: p.player.name, side, rating: r };
     }
