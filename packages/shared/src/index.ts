@@ -154,11 +154,16 @@ export type TeamStats = {
   possession: number | null; // %
   shots: number | null; // total shots
   shotsOnTarget: number | null;
+  shotsOffTarget: number | null;
+  blockedShots: number | null;
+  shotsInsideBox: number | null;
+  shotsOutsideBox: number | null;
   xg: number | null; // expected goals
   corners: number | null;
   fouls: number | null;
   offsides: number | null;
   saves: number | null;
+  goalsPrevented: number | null; // post-shot goals prevented (goalkeeping)
   passAccuracy: number | null; // %
   yellowCards: number | null;
   redCards: number | null;

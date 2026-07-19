@@ -5,6 +5,10 @@ import { useT } from "@/lib/i18n";
 const ROWS: { key: Exclude<keyof TeamStats, "possession">; pct?: boolean; dp?: number }[] = [
   { key: "shots" },
   { key: "shotsOnTarget" },
+  { key: "shotsOffTarget" },
+  { key: "blockedShots" },
+  { key: "shotsInsideBox" },
+  { key: "shotsOutsideBox" },
   { key: "xg", dp: 2 },
   { key: "corners" },
   { key: "fouls" },
@@ -12,6 +16,7 @@ const ROWS: { key: Exclude<keyof TeamStats, "possession">; pct?: boolean; dp?: n
   { key: "redCards" },
   { key: "offsides" },
   { key: "saves" },
+  { key: "goalsPrevented", dp: 2 },
   { key: "passAccuracy", pct: true },
 ];
 
