@@ -127,7 +127,7 @@ function EventRow({ e }: { e: MatchEvent }) {
   const home = e.side === "home";
   const body = (
     <span className={cn("flex min-w-0 items-center gap-1.5", home ? "flex-row" : "flex-row-reverse")}>
-      <span className="hrink-0 font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
+      <span className="shrink-0 font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
         {eventMinute(e.minute, e.extraMinute)}
       </span>
       <EventMark kind={kind} />
@@ -141,6 +141,24 @@ function EventRow({ e }: { e: MatchEvent }) {
     <div className="grid grid-cols-2 items-center gap-3 border-b border-dotted border-border py-0.5 ">
       <div className="flex min-w-0 justify-start">{home && body}</div>
       <div className="flex min-w-0 justify-end">{!home && body}</div>
+    </div>
+  );
+}
+
+/** One substitution, full width (two names don't fit the team-split columns).
+ *  `assist` = player IN (▲, in the team colour), `player` = player OUT (▼, muted). */
+function SubRow({ e }: { e: MatchEvent }) {
+  const inCls = e.side === "home" ? "text-[hsl(var(--tt-blue))]" : "text-[hsl(var(--tt-red))]";
+  return (
+    <div className="flex items-baseline gap-2 border-b border-dotted border-border py-0.5">
+      <span className="w-9 shrink-0 font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
+        {eventMinute(e.minute, e.extraMinute)}
+      </span>
+      <span className="min-w-0 flex-1 truncate">
+        {e.assist && <span className={inCls}>▲ {e.assist}</span>}
+        {e.assist && e.player && <span className="text-muted-foreground"> · </span>}
+        {e.player && <span className="text-muted-foreground">▼ {e.player}</span>}
+      </span>
     </div>
   );
 }
@@ -276,6 +294,7 @@ export default function MatchDetail() {
   const round = roundLabel(match.round, lang);
   const goals = match.events.filter((e) => e.type === "Goal");
   const cards = match.events.filter((e) => e.type === "Card");
+  const subs = match.events.filter((e) => e.type === "subst");
   const stats = match.statistics;
   const hasStats = stats
     ? [...Object.values(stats.home), ...Object.values(stats.away)].some((v) => v != null)
@@ -335,6 +354,17 @@ export default function MatchDetail() {
               <div className="flex flex-col">
                 {cards.map((e, i) => (
                   <EventRow key={i} e={e} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {subs.length > 0 && (
+            <section className="mt-3">
+              <SectionLabel>{t.match.subs}</SectionLabel>
+              <div className="flex flex-col">
+                {subs.map((e, i) => (
+                  <SubRow key={i} e={e} />
                 ))}
               </div>
             </section>

@@ -256,7 +256,7 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
     .where(
       and(
         eq(matchEvents.matchId, r.id),
-        inArray(matchEvents.type, ["Goal", "Card"]),
+        inArray(matchEvents.type, ["Goal", "Card", "subst"]),
         or(isNull(matchEvents.comments), ne(matchEvents.comments, "Penalty Shootout")),
       ),
     )

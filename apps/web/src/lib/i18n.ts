@@ -58,6 +58,7 @@ const en = {
   match: {
     goals: "Goals",
     cards: "Cards",
+    subs: "Substitutions",
     lineups: "Lineups",
     motm: "Man of the match",
     substitutes: "Substitutes",
@@ -282,6 +283,7 @@ const fr: Messages = {
   match: {
     goals: "Buteurs",
     cards: "Cartons",
+    subs: "Remplacements",
     lineups: "Compositions",
     motm: "Homme du match",
     substitutes: "Remplaçants",
