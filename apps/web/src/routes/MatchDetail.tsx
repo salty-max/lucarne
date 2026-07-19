@@ -22,16 +22,17 @@ type Result = "win" | "loss" | "none";
 
 function statusLine(m: Detail, t: Messages): { text: string; live: boolean } | null {
   if (m.status === "live") {
+    const min = m.elapsed != null ? `${m.elapsed}'` : "";
     const at =
       m.statusShort === "HT"
         ? t.card.ht
         : m.statusShort === "P"
           ? t.card.pens
-          : m.statusShort === "BT"
-            ? t.card.bt
-            : m.elapsed != null
-              ? `${m.elapsed}'`
-              : "";
+          : m.statusShort === "ET"
+            ? `${t.card.bt} ${min}`.trim() // extra time in play → "Prol. 92'"
+            : m.statusShort === "BT"
+              ? t.card.bt // break before/within extra time → "Prol." (clock paused)
+              : min;
     return { text: at ? `${t.match.live} ${at}` : t.match.live, live: true };
   }
   if (m.status === "postponed") return { text: t.match.postponed, live: false };
