@@ -327,44 +327,48 @@ async function main() {
 
   // ---- surveillance ("radar"): only WATCHED live matches (or followed-team
   // matches) get the per-minute enrichment — the budget guard for mega days. ----
-  await stage("SURVEILLANCE · radar", "enrich uniquement les matchs surveillés / équipes suivies", async () => {
+  await stage("SURVEILLANCE · radar", "enrich = surveillés ∪ équipes suivies, moins les mutes", async () => {
     const m = await dbMatch();
-    // Put the fake match back in-window & live, and drop the follow subscription so
-    // NOTHING is auto-surveilling it (the earlier push checks are already done).
+    // Put the fake match back in-window & live. The seeded sub follows HOME, so
+    // the match starts AUTO-surveilled (the earlier push checks are already done).
     await db
       .update(matches)
       .set({ status: "live", statusShort: "2H", elapsed: 75, kickoff: new Date(Date.now() - 30 * 60_000) })
       .where(eq(matches.id, m.id));
     state.byId[FIX] = fixture("2H", 75, 1, 2);
     state.events[FIX] = [goal(HOME_API, 23, "K. Mbappé")];
-    await db.delete(pushSubscription).where(eq(pushSubscription.endpoint, SIM_ENDPOINT));
-
-    check("un-watched live match → enrich SKIPS it (budget saved)", (await runLiveEnrich()).matches === 0);
 
     const DEVICE = "sim-device-1";
-    const post = await app.fetch(
-      new Request("http://sim/api/watch", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceId: DEVICE, matchId: m.id }),
-      }),
-    );
-    check("POST /api/watch → 200", post.status === 200);
+    const watch = (body: Record<string, unknown>, method = "POST") =>
+      app.fetch(
+        new Request("http://sim/api/watch", {
+          method,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ deviceId: DEVICE, matchId: m.id, ...body }),
+        }),
+      );
+
+    check("followed-team match → auto-enriched", (await runLiveEnrich()).matches >= 1);
+    // mute override: an "off" row drops it even though a followed team plays
+    check("POST off → 200", (await watch({ state: "off" })).status === 200);
+    check("muted → enrich SKIPS despite the follow (OVERRIDE)", (await runLiveEnrich()).matches === 0);
+    // revert to default → auto-surveilled again
+    await watch({}, "DELETE");
+    check("un-muted → auto-enriched again", (await runLiveEnrich()).matches >= 1);
+
+    // drop the follow entirely → nothing auto-surveils it now
+    await db.delete(pushSubscription).where(eq(pushSubscription.endpoint, SIM_ENDPOINT));
+    check("no follow + no watch → enrich SKIPS (budget saved)", (await runLiveEnrich()).matches === 0);
+    // explicit radar watch → enriched
+    check("POST on → 200", (await watch({ state: "on" })).status === 200);
     check("watched → enrich picks it up", (await runLiveEnrich()).matches >= 1);
-
     const list = (await (await app.fetch(new Request(`http://sim/api/watch?deviceId=${DEVICE}`))).json()) as {
-      matchIds: number[];
+      on: number[];
+      off: number[];
     };
-    check("GET /api/watch lists the watched match", list.matchIds.includes(m.id));
-
-    await app.fetch(
-      new Request("http://sim/api/watch", {
-        method: "DELETE",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ deviceId: DEVICE, matchId: m.id }),
-      }),
-    );
-    check("un-watched again → enrich SKIPS it", (await runLiveEnrich()).matches === 0);
+    check("GET lists it as 'on'", list.on.includes(m.id));
+    await watch({}, "DELETE");
+    check("un-watched → enrich SKIPS", (await runLiveEnrich()).matches === 0);
   });
 
   console.log(`\n${failures === 0 ? "✓ ALL CHECKS PASSED" : `✗ ${failures} CHECK(S) FAILED`}`);

@@ -379,21 +379,28 @@ export async function runLiveEnrich(maxMatches = 12): Promise<LiveEnrichResult> 
   if (live.length === 0) return { matches: 0, events: 0, stats: 0, budgetRemaining: remaining };
 
   // Enrich only matches SOMEONE is monitoring, so a 56-match day stays in budget:
-  // explicitly WATCHED (the radar toggle) OR involving a followed team (auto-
-  // surveillance). Ranked by how many devices care, capped at maxMatches.
-  const watchRows = await db.select({ matchId: watchedMatch.matchId }).from(watchedMatch);
-  const watchers = new Map<number, number>();
-  for (const r of watchRows) watchers.set(r.matchId, (watchers.get(r.matchId) ?? 0) + 1);
+  // explicitly WATCHED (radar "on") OR involving a followed team (auto), UNLESS a
+  // "off" row mutes it (the override that drops one of your club's matches).
+  // Ranked by how many devices care, capped at maxMatches.
+  const watchRows = await db
+    .select({ matchId: watchedMatch.matchId, state: watchedMatch.state })
+    .from(watchedMatch);
+  const onCount = new Map<number, number>();
+  const muted = new Set<number>();
+  for (const r of watchRows) {
+    if (r.state === "off") muted.add(r.matchId);
+    else onCount.set(r.matchId, (onCount.get(r.matchId) ?? 0) + 1);
+  }
   const followed = new Set<string>();
   for (const s of await db.select({ teams: pushSubscription.teams }).from(pushSubscription)) {
     for (const t of s.teams ?? []) followed.add(t);
   }
 
   const candidates = live
-    .map((m) => ({
-      m,
-      score: (watchers.get(m.id) ?? 0) + (followed.has(m.homeName) || followed.has(m.awayName) ? 1 : 0),
-    }))
+    .map((m) => {
+      const auto = (followed.has(m.homeName) || followed.has(m.awayName)) && !muted.has(m.id);
+      return { m, score: (onCount.get(m.id) ?? 0) + (auto ? 1 : 0) };
+    })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, maxMatches)

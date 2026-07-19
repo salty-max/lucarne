@@ -190,5 +190,9 @@ export type LiveResponse = { matches: LiveMatch[] };
 export type CompetitionsResponse = { competitions: CompetitionInfo[] };
 export type CompetitionDetailResponse = { competition: CompetitionDetail | null };
 export type LogsResponse = { ok: boolean; runs: RunLogEntry[] };
-/** The match ids this device has under active surveillance ("radar"). */
-export type WatchListResponse = { matchIds: number[] };
+/**
+ * This device's explicit surveillance ("radar") decisions: `on` = watch, `off` =
+ * mute (overrides a followed team). A match in neither is at its default (auto-
+ * surveilled iff a followed team plays — the client resolves that from its follows).
+ */
+export type WatchListResponse = { on: number[]; off: number[] };

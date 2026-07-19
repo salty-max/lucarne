@@ -199,18 +199,29 @@ app.post("/api/push/unsubscribe", async (c) => {
 // --- active surveillance ("radar"): a device marks which matches it wants live-
 //     enriched (+ later, notified). Keyed by an anonymous client deviceId, so it
 //     works without push permission. The per-minute enrichment reads these. ---
-function watchKey(body: { deviceId?: unknown; matchId?: unknown }): { deviceId: string; matchId: number } | null {
+function watchKey(
+  body: { deviceId?: unknown; matchId?: unknown; state?: unknown },
+): { deviceId: string; matchId: number; state: "on" | "off" } | null {
   const deviceId = typeof body.deviceId === "string" ? body.deviceId.trim() : "";
   const matchId = typeof body.matchId === "number" ? body.matchId : Number(body.matchId);
+  const state = body.state === "off" ? "off" : "on"; // default "on"
   if (!deviceId || deviceId.length > 100 || !Number.isInteger(matchId) || matchId <= 0) return null;
-  return { deviceId, matchId };
+  return { deviceId, matchId, state };
 }
 
+// Set this device's decision for a match: state "on" = watch, "off" = mute (which
+// overrides the followed-team auto-surveillance). Upserts, so re-toggling flips it.
 app.post("/api/watch", async (c) => {
   try {
     const v = watchKey(await c.req.json());
     if (!v) return c.json({ ok: false }, 400);
-    await db.insert(watchedMatch).values(v).onConflictDoNothing();
+    await db
+      .insert(watchedMatch)
+      .values(v)
+      .onConflictDoUpdate({
+        target: [watchedMatch.deviceId, watchedMatch.matchId],
+        set: { state: v.state },
+      });
     return c.json({ ok: true });
   } catch (err) {
     console.error("[/api/watch POST]", err);
@@ -218,6 +229,8 @@ app.post("/api/watch", async (c) => {
   }
 });
 
+// Clear this device's decision (revert to default: auto-surveilled iff a followed
+// team plays). The UI uses this to un-mute or un-watch back to neutral.
 app.delete("/api/watch", async (c) => {
   try {
     const v = watchKey(await c.req.json());
@@ -232,19 +245,24 @@ app.delete("/api/watch", async (c) => {
   }
 });
 
-// This device's watched match ids, so the UI can render each toggle's state.
+// This device's explicit on/off decisions, so the UI can resolve each toggle
+// (combined with the client's followed teams for the auto default).
 app.get("/api/watch", async (c) => {
+  const empty: WatchListResponse = { on: [], off: [] };
   try {
     const deviceId = (c.req.query("deviceId") ?? "").trim();
-    if (!deviceId) return c.json({ matchIds: [] } satisfies WatchListResponse);
+    if (!deviceId) return c.json(empty);
     const rows = await db
-      .select({ matchId: watchedMatch.matchId })
+      .select({ matchId: watchedMatch.matchId, state: watchedMatch.state })
       .from(watchedMatch)
       .where(eq(watchedMatch.deviceId, deviceId));
-    return c.json({ matchIds: rows.map((r) => r.matchId) } satisfies WatchListResponse);
+    return c.json({
+      on: rows.filter((r) => r.state === "on").map((r) => r.matchId),
+      off: rows.filter((r) => r.state === "off").map((r) => r.matchId),
+    } satisfies WatchListResponse);
   } catch (err) {
     console.error("[/api/watch GET]", err);
-    return c.json({ matchIds: [] } satisfies WatchListResponse, 500);
+    return c.json(empty, 500);
   }
 });
 

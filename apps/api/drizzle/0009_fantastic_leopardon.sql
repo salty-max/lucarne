@@ -1,0 +1,1 @@
+ALTER TABLE `watched_match` ADD `state` text DEFAULT 'on' NOT NULL;

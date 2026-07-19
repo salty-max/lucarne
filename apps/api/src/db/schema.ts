@@ -254,6 +254,10 @@ export const watchedMatch = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     deviceId: text("device_id").notNull(),
     matchId: integer("match_id").notNull(),
+    // "on" = watch this match; "off" = mute it, which OVERRIDES the followed-team
+    // auto-surveillance (so you can drop one of your club's matches). Absent row =
+    // default (auto-surveilled iff a followed team plays).
+    state: text("state").notNull().default("on"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
