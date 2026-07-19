@@ -4,12 +4,15 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "node:path";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate", // new version reloads itself after a deploy
+      // Build: autoUpdate (a new deploy's SW reloads clients). Dev: "prompt" so
+      // the dev SW registers (installable, HMR still works) WITHOUT auto-reloading
+      // on every regeneration — that was the reload loop.
+      registerType: command === "build" ? "autoUpdate" : "prompt",
       includeAssets: ["icon.svg", "favicon-32.png", "apple-touch-icon.png"],
       manifest: {
         name: "Lucarne",
@@ -52,7 +55,9 @@ export default defineConfig({
         ],
         // live scores + logs aren't matched above → always straight to network.
       },
-      devOptions: { enabled: true, type: "module" }, // so the SW works over the https tunnel
+      // Run the service worker on the dev server too, so the PWA is testable with
+      // hot reload. `type: "module"` is required for the dev SW.
+      devOptions: { enabled: true, type: "module", suppressWarnings: true },
     }),
   ],
   resolve: {
@@ -70,4 +75,4 @@ export default defineConfig({
     proxy: { "/api": "http://localhost:3000" },
   },
   build: { outDir: "dist" },
-});
+}));

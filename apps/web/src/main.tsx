@@ -6,6 +6,22 @@ import { queryClient } from "./lib/queryClient";
 import { router } from "./router";
 import "./index.css";
 
+// In dev, evict a stale PRODUCTION service worker (`sw.js`) if one is left over
+// from a build/tunnel test: its precache points at built asset hashes that don't
+// exist on the dev server, which 404-loops the page. The dev SW (`dev-sw.js`,
+// enabled via vite-plugin-pwa devOptions) re-registers cleanly and keeps HMR.
+if (import.meta.env.DEV && "serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    for (const r of regs) {
+      const url = r.active?.scriptURL ?? r.waiting?.scriptURL ?? r.installing?.scriptURL ?? "";
+      if (url.endsWith("/sw.js")) {
+        r.unregister();
+        if (typeof caches !== "undefined") caches.keys().then((ks) => ks.forEach((k) => caches.delete(k)));
+      }
+    }
+  });
+}
+
 const rootEl = document.getElementById("root")!;
 
 createRoot(rootEl).render(
