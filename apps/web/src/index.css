@@ -242,6 +242,15 @@
     font-size: 15px; /* a touch smaller → denser, teletext-like grid */
     overflow: hidden; /* app shell: the page never scrolls as a whole */
   }
+  /* iOS auto-zooms into a focused control whose font-size is < 16px. Our base is
+     15px (denser teletext grid), so pin form controls to 16px — this stops the
+     zoom when the keyboard opens (e.g. the team search on Mes équipes) without
+     disabling pinch-zoom in the viewport (which would hurt accessibility). */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
   body {
     margin: 0;
     /* Pin the shell to the viewport so it feels like a native app — no
