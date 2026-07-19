@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Football schedule with French broadcasters (diffuseurs)",
+  "license": "MIT",
   "workspaces": ["apps/*", "packages/*"],
   "packageManager": "bun@1.3.13",
   "scripts": {

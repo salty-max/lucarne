@@ -241,4 +241,4 @@ in the repo. `local.db` is git-ignored too; only `.env.example` (placeholders) i
 
 ## License
 
-Not yet chosen — treat as all-rights-reserved until a `LICENSE` file is added.
+[MIT](LICENSE) © 2026 salty-max
