@@ -497,10 +497,12 @@ export async function runLineupPoll(maxMatches = 12): Promise<LineupPollResult> 
 export type PredictionsPollResult = { matches: number; budgetRemaining: number };
 
 /**
- * Pre-match predictions poll. For scheduled matches kicking off within ~36h that
- * don't have a prediction yet, fetch it once (win %, advice) — one request each,
- * stamped so it never re-fetches. Budget-gated with the live reserve so it never
- * starves scores; capped per tick, so it drains the backlog then idles.
+ * Predictions poll. Fetches the pre-match prediction (win %) once for matches in
+ * a [-24h, +36h] window around now that don't have one — one request each,
+ * stamped so it never re-fetches. Mostly upcoming matches; the 24h look-back also
+ * catches recently-finished games that entered the DB already over (the prediction
+ * endpoint returns the pre-match odds even after full-time). Budget-gated with the
+ * live reserve so it never starves scores; capped per tick, so it drains then idles.
  */
 export async function runPredictionsPoll(maxMatches = 20): Promise<PredictionsPollResult> {
   const nowMs = Date.now();
@@ -513,9 +515,8 @@ export async function runPredictionsPoll(maxMatches = 20): Promise<PredictionsPo
     .from(matches)
     .where(
       and(
-        eq(matches.status, "scheduled"),
         isNull(matches.predictionsFetchedAt),
-        gte(matches.kickoff, new Date(nowMs)),
+        gte(matches.kickoff, new Date(nowMs - 24 * 60 * 60_000)),
         lte(matches.kickoff, new Date(nowMs + 36 * 60 * 60_000)),
       ),
     )
