@@ -74,7 +74,7 @@ const en = {
     partial: "Partial",
     tbd: "TBD",
   },
-  card: { ft: "FT", aet: "AET", pens: "Pens", live: "LIVE", pp: "PP", tbc: "TBC" },
+  card: { ft: "FT", aet: "AET", pens: "Pens", live: "LIVE", pp: "PP", tbc: "TBC", ht: "HT", bt: "ET" },
   stats: {
     title: "Statistics",
     possession: "Possession",
@@ -264,7 +264,7 @@ const fr: Messages = {
     partial: "Partiel",
     tbd: "À déterminer",
   },
-  card: { ft: "FIN", aet: "a.p.", pens: "t.a.b", live: "DIR", pp: "Rep.", tbc: "à conf." },
+  card: { ft: "FIN", aet: "a.p.", pens: "t.a.b", live: "DIR", pp: "Rep.", tbc: "à conf.", ht: "MT", bt: "Prol." },
   stats: {
     title: "Statistiques",
     possession: "Possession",

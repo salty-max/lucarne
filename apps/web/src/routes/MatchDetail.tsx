@@ -20,8 +20,19 @@ import type { Broadcaster, MatchDetail as Detail, MatchEvent } from "@lucarne/sh
 type Result = "win" | "loss" | "none";
 
 function statusLine(m: Detail, t: Messages): { text: string; live: boolean } | null {
-  if (m.status === "live")
-    return { text: m.elapsed != null ? `${t.match.live} ${m.elapsed}'` : t.match.live, live: true };
+  if (m.status === "live") {
+    const at =
+      m.statusShort === "HT"
+        ? t.card.ht
+        : m.statusShort === "P"
+          ? t.card.pens
+          : m.statusShort === "BT"
+            ? t.card.bt
+            : m.elapsed != null
+              ? `${m.elapsed}'`
+              : "";
+    return { text: at ? `${t.match.live} ${at}` : t.match.live, live: true };
+  }
   if (m.status === "postponed") return { text: t.match.postponed, live: false };
   if (m.status === "finished") {
     const text =

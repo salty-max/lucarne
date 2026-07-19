@@ -13,10 +13,22 @@ type Result = "win" | "loss" | "none";
 function StatusCell({ m }: { m: Match }) {
   const t = useT();
   if (m.status === "live") {
+    // HT / shootout / extra-time break get their own tag; otherwise the running
+    // minute (which keeps counting through stoppage 90'+ and extra time to 120').
+    const label =
+      m.statusShort === "HT"
+        ? t.card.ht
+        : m.statusShort === "P"
+          ? t.card.pens
+          : m.statusShort === "BT"
+            ? t.card.bt
+            : m.elapsed != null
+              ? `${m.elapsed}'`
+              : t.card.live;
     return (
       <span className="flex items-center gap-1 font-bold tabular-nums text-live">
         <LiveDot />
-        {m.elapsed != null ? `${m.elapsed}'` : t.card.live}
+        {label}
       </span>
     );
   }
