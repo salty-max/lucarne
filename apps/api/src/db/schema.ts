@@ -1,5 +1,5 @@
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import type { MatchStatistics } from "@lucarne/shared";
+import type { MatchStatistics, TopPlayerEntry } from "@lucarne/shared";
 
 /**
  * SQLite schema (Cloudflare D1 in prod, bun:sqlite locally/tests).
@@ -297,6 +297,24 @@ export const watchedMatch = sqliteTable(
     index("watched_match_match_idx").on(t.matchId),
     index("watched_match_device_idx").on(t.deviceId),
   ],
+);
+
+// Top scorers / assists ranking per competition+season, stored as one JSON list
+// per kind. Refreshed on the daily sync alongside standings.
+export const topPlayers = sqliteTable(
+  "top_players",
+  {
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => competitions.id),
+    season: integer("season").notNull(),
+    kind: text("kind").notNull(), // "scorers" | "assists"
+    entries: text("entries", { mode: "json" }).$type<TopPlayerEntry[]>().notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.competitionId, t.season, t.kind] })],
 );
 
 export type Broadcaster = typeof broadcasters.$inferSelect;

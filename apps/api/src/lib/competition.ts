@@ -9,7 +9,7 @@ import type {
   StandingRow,
 } from "@lucarne/shared";
 import { db } from "@/db";
-import { competitions, matches, standings, teams } from "@/db/schema";
+import { competitions, matches, standings, teams, topPlayers } from "@/db/schema";
 import { COMPETITIONS, currentSeason } from "@/lib/competitions";
 
 /** The season we track a competition at (World Cup keeps its override). */
@@ -170,6 +170,12 @@ export async function getCompetitionDetail(slug: string): Promise<CompetitionDet
   const season = seasonFor(slug);
   const standingsGroups = await loadStandings(comp.id, season);
   const bracket = comp.type === "cup" ? await loadBracket(comp.id, season) : [];
+  const ranks = await db
+    .select({ kind: topPlayers.kind, entries: topPlayers.entries })
+    .from(topPlayers)
+    .where(and(eq(topPlayers.competitionId, comp.id), eq(topPlayers.season, season)));
+  const scorers = ranks.find((r) => r.kind === "scorers")?.entries ?? [];
+  const assists = ranks.find((r) => r.kind === "assists")?.entries ?? [];
 
   return {
     slug: comp.slug,
@@ -178,5 +184,7 @@ export async function getCompetitionDetail(slug: string): Promise<CompetitionDet
     country: comp.country,
     standings: standingsGroups.length ? standingsGroups : null,
     bracket: bracket.length ? bracket : null,
+    topScorers: scorers.length ? scorers : null,
+    topAssists: assists.length ? assists : null,
   };
 }

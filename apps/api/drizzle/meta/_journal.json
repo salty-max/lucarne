@@ -85,6 +85,13 @@
       "when": 1784474406145,
       "tag": "0011_overrated_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1784475456166,
+      "tag": "0012_bitter_kylun",
+      "breakpoints": true
     }
   ]
 }

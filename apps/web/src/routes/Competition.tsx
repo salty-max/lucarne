@@ -5,6 +5,7 @@ import { useCompetition } from "@/hooks/useCompetition";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { MatchTable } from "@/components/DaySection";
 import { Standings } from "@/components/Standings";
+import { TopPlayers } from "@/components/TopPlayers";
 import { Bracket } from "@/components/Bracket";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
 import { MatchTableSkel } from "@/components/Skeletons";
@@ -46,12 +47,16 @@ export default function Competition() {
 
   const hasStandings = !!detail?.standings;
   const hasBracket = !!detail?.bracket;
+  const hasScorers = !!detail?.topScorers;
+  const hasAssists = !!detail?.topAssists;
   // Lead with the richest view: bracket for a cup, else the table, else matches.
   const defaultTab = hasBracket ? "bracket" : hasStandings ? "standings" : "matches";
 
   const tabs: { key: string; label: string }[] = [
     { key: "matches", label: t.competition.matches },
     ...(hasStandings ? [{ key: "standings", label: t.competition.standings }] : []),
+    ...(hasScorers ? [{ key: "scorers", label: t.competition.scorers }] : []),
+    ...(hasAssists ? [{ key: "assists", label: t.competition.assists }] : []),
     ...(hasBracket ? [{ key: "bracket", label: t.competition.bracket }] : []),
   ];
 
@@ -98,6 +103,16 @@ export default function Competition() {
           {detail?.standings && (
             <Tabs.Content value="standings" className="focus-visible:outline-none">
               <Standings groups={detail.standings} />
+            </Tabs.Content>
+          )}
+          {detail?.topScorers && (
+            <Tabs.Content value="scorers" className="focus-visible:outline-none">
+              <TopPlayers entries={detail.topScorers} valueLabel={t.competition.goalsCol} />
+            </Tabs.Content>
+          )}
+          {detail?.topAssists && (
+            <Tabs.Content value="assists" className="focus-visible:outline-none">
+              <TopPlayers entries={detail.topAssists} valueLabel={t.competition.assistsCol} />
             </Tabs.Content>
           )}
           {detail?.bracket && (

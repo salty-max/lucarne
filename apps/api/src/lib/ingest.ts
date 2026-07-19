@@ -1,7 +1,7 @@
 import { and, eq, lte, sql } from "drizzle-orm";
-import type { TeamStats } from "@lucarne/shared";
+import type { TeamStats, TopPlayerEntry } from "@lucarne/shared";
 import { db } from "@/db";
-import { competitions, teams, matches, matchEvents, matchLineups, standings } from "@/db/schema";
+import { competitions, teams, matches, matchEvents, matchLineups, standings, topPlayers } from "@/db/schema";
 import {
   getFixtures,
   getFixtureById,
@@ -12,6 +12,9 @@ import {
   getLiveFixtures,
   getPredictions,
   getStandings,
+  getTopAssists,
+  getTopScorers,
+  type ApiTopPlayer,
   type ApiFixture,
   type ApiTeamStatistics,
 } from "@/lib/api-football";
@@ -226,6 +229,48 @@ export async function syncAllStandings(): Promise<{
     requestsUsed += 1;
   }
   return { competitions: COMPETITIONS.length, rows, requestsUsed };
+}
+
+const TOP_PLAYERS_N = 20;
+
+function parseTopPlayers(rows: ApiTopPlayer[], kind: "scorers" | "assists"): TopPlayerEntry[] {
+  return rows.slice(0, TOP_PLAYERS_N).map((r, i) => {
+    const st = r.statistics[0];
+    const value = (kind === "scorers" ? st?.goals.total : st?.goals.assists) ?? 0;
+    return { rank: i + 1, player: r.player.name, team: st?.team.name ?? "", value };
+  });
+}
+
+/** Refresh the top-scorers + top-assists rankings for every tracked competition
+ *  (2 requests each). Folded into the daily sync alongside standings. */
+export async function syncAllTopPlayers(): Promise<{ competitions: number; requestsUsed: number }> {
+  const compMap = await competitionIdMap();
+  let requestsUsed = 0;
+  for (const comp of COMPETITIONS) {
+    const competitionId = compMap.get(comp.apiFootballId);
+    if (!competitionId) continue;
+    const season = comp.season ?? currentSeason();
+    try {
+      const scorers = parseTopPlayers(await getTopScorers(comp.apiFootballId, season), "scorers");
+      const assists = parseTopPlayers(await getTopAssists(comp.apiFootballId, season), "assists");
+      for (const [kind, entries] of [
+        ["scorers", scorers],
+        ["assists", assists],
+      ] as const) {
+        await db
+          .insert(topPlayers)
+          .values({ competitionId, season, kind, entries, updatedAt: new Date() })
+          .onConflictDoUpdate({
+            target: [topPlayers.competitionId, topPlayers.season, topPlayers.kind],
+            set: { entries, updatedAt: new Date() },
+          });
+      }
+    } catch (err) {
+      console.error("[topplayers]", comp.slug, err);
+    }
+    requestsUsed += 2;
+  }
+  return { competitions: COMPETITIONS.length, requestsUsed };
 }
 
 /** Backfill one competition over an explicit date range (e.g. a whole tournament). */

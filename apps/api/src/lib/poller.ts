@@ -11,6 +11,7 @@ import {
   storeMatchPredictions,
   storeMatchStatistics,
   syncAllStandings,
+  syncAllTopPlayers,
   syncFixtures,
   type SyncResult,
 } from "@/lib/ingest";
@@ -126,10 +127,11 @@ export async function runLivePollTick(
 export async function runFixtureSync(cache?: ScheduleCache): Promise<SyncResult> {
   const result = await syncFixtures();
   const tables = await syncAllStandings();
+  const top = await syncAllTopPlayers();
   const state = await loadBudget(Date.now());
   await saveBudget({
     ...state,
-    requestsToday: state.requestsToday + result.requestsUsed + tables.requestsUsed,
+    requestsToday: state.requestsToday + result.requestsUsed + tables.requestsUsed + top.requestsUsed,
   });
   if (cache) await refreshWindowCache(cache);
   return result;

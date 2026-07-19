@@ -118,6 +118,9 @@ export type BracketRound = {
 };
 
 /** The competition page payload: its tables and/or knockout bracket. */
+/** One row of a top-scorers / top-assists ranking. `value` = goals or assists. */
+export type TopPlayerEntry = { rank: number; player: string; team: string; value: number };
+
 export type CompetitionDetail = {
   slug: string;
   name: string;
@@ -125,6 +128,8 @@ export type CompetitionDetail = {
   country: string;
   standings: StandingGroup[] | null;
   bracket: BracketRound[] | null;
+  topScorers: TopPlayerEntry[] | null;
+  topAssists: TopPlayerEntry[] | null;
 };
 
 export type LineupPlayer = {

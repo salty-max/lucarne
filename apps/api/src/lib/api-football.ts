@@ -180,6 +180,24 @@ export function getPredictions(fixtureId: number) {
   return call<ApiPrediction[]>("/predictions", { fixture: fixtureId });
 }
 
+export type ApiTopPlayer = {
+  player: { id: number; name: string };
+  statistics: {
+    team: { id: number; name: string };
+    goals: { total: number | null; assists: number | null };
+  }[];
+};
+
+/** Top scorers of a competition+season, already ranked by goals. 1 request. */
+export function getTopScorers(leagueId: number, season: number) {
+  return call<ApiTopPlayer[]>("/players/topscorers", { league: leagueId, season });
+}
+
+/** Top assist providers of a competition+season, ranked by assists. 1 request. */
+export function getTopAssists(leagueId: number, season: number) {
+  return call<ApiTopPlayer[]>("/players/topassists", { league: leagueId, season });
+}
+
 export type ApiStandingRow = {
   rank: number;
   team: { id: number; name: string; logo: string | null };
