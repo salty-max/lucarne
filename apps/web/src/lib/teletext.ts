@@ -31,7 +31,7 @@ export const FASTTEXT = [
  *  click, no colour key. Rendered as a second FastText row under the main four. */
 export const FOOTER_MORE = [
   { cls: "f-blu", no: "200", to: "/favorites", label: { en: "My teams", fr: "Mes équipes" } },
-  { cls: "f-grn", no: "500", to: "/radar", label: { en: "Radar", fr: "Radar" } },
+  { cls: "f-cyn", no: "500", to: "/radar", label: { en: "Radar", fr: "Radar" } },
   { cls: "f-mag", no: "700", to: "/settings", label: { en: "Settings", fr: "Réglages" } },
   { cls: "f-wht", no: "800", to: "/logs", label: { en: "Logs", fr: "Logs" } },
 ] as const;

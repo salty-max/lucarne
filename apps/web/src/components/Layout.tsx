@@ -189,14 +189,16 @@ export function Layout() {
           <nav className="tt-fast">
             {FASTTEXT.map((f) => (
               <Link key={f.no} to={f.to} className={f.cls}>
-                {f.no} {f.label[lang]}
+                <span className="hidden sm:inline">{f.no} </span>
+                {f.label[lang]}
               </Link>
             ))}
           </nav>
           <nav className="tt-fast tt-fast--more">
             {FOOTER_MORE.map((f) => (
               <Link key={f.no} to={f.to} className={f.cls}>
-                {f.no} {f.label[lang]}
+                <span className="hidden sm:inline">{f.no} </span>
+                {f.label[lang]}
               </Link>
             ))}
           </nav>

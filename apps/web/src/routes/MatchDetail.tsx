@@ -47,58 +47,74 @@ function statusLine(m: Detail, t: Messages): { text: string; live: boolean } | n
   return null;
 }
 
-/** Compact, flat teletext scoreboard: crests + score on one line, names below. */
+/** Flat teletext scoreboard: two big team rows (name + goals), status below. */
 function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Result; awayResult: Result }) {
   const { dateFormat, lang } = useSettings();
   const t = useT();
   const status = statusLine(m, t);
+  const scheduled = m.status === "scheduled";
   const pens = m.homePenalties != null && m.awayPenalties != null;
+  // How long the match ran — shown next to the final status (90', 120' for ET…).
+  const duration = m.status === "finished" && m.elapsed != null ? `${m.elapsed}'` : null;
+
   const nameCls = (r: Result) =>
-    cn("min-w-0 flex-1 truncate uppercase", r === "win" ? "font-bold text-[hsl(var(--tt-green))]" : "font-semibold");
+    cn(
+      "tt-2h min-w-0 flex-1 truncate uppercase leading-tight",
+      r === "win" ? "font-bold text-[hsl(var(--tt-green))]" : "font-semibold",
+    );
+
+  const rows = [
+    { name: teamName(m.home.name, lang), goals: m.homeGoals, pen: pens ? m.homePenalties : null, result: homeResult },
+    { name: teamName(m.away.name, lang), goals: m.awayGoals, pen: pens ? m.awayPenalties : null, result: awayResult },
+  ];
 
   return (
-    <div className="flex flex-col items-center gap-1.5 py-3">
-      <div className="flex items-center justify-center gap-3 sm:gap-4">
-        {m.status === "scheduled" ? (
-          <span className="tt-2h font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
-            {parisTime(m.kickoff)}
-          </span>
-        ) : (
-          <span className="tt-2h font-extrabold tabular-nums text-[hsl(var(--tt-yellow))]">
-            {m.homeGoals ?? 0}
-            <span className="mx-1 text-muted-foreground/60">–</span>
-            {m.awayGoals ?? 0}
+    <div className="py-3">
+      {scheduled && (
+        <div className="mb-1.5 text-center tt-2h font-bold tabular-nums text-[hsl(var(--tt-yellow))]">
+          {parisTime(m.kickoff)}
+        </div>
+      )}
+      <div className="mx-auto max-w-sm">
+        {rows.map((r, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 border-b border-dotted border-border py-1.5 last:border-b-0"
+          >
+            <span className={nameCls(r.result)}>{r.name}</span>
+            {!scheduled && (
+              <span className="tt-2h shrink-0 font-extrabold tabular-nums text-[hsl(var(--tt-yellow))]">
+                {r.goals ?? 0}
+                {r.pen != null && (
+                  <span className="ml-1 align-middle text-base font-medium text-muted-foreground">
+                    ({r.pen})
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-2.5 flex flex-col items-center gap-1">
+        {status &&
+          (status.live ? (
+            <Tag className="bg-live py-0.5 text-[hsl(var(--tt-red-on))]">
+              <LiveDot className="mr-1" />
+              {status.text}
+            </Tag>
+          ) : (
+            <span className="font-semibold uppercase tracking-wide text-muted-foreground">
+              {status.text}
+              {duration && <span className="text-muted-foreground/70"> · {duration}</span>}
+            </span>
+          ))}
+        {scheduled && (
+          <span className="uppercase text-muted-foreground">
+            {formatShort(new Date(m.kickoff), dateFormat, lang)}
           </span>
         )}
       </div>
-
-      <div className="flex w-full max-w-sm items-center justify-center gap-2 text-center ">
-        <span className={cn(nameCls(homeResult), "text-right")}>{teamName(m.home.name, lang)}</span>
-        <span className="hrink-0 text-muted-foreground">—</span>
-        <span className={cn(nameCls(awayResult), "text-left")}>{teamName(m.away.name, lang)}</span>
-      </div>
-
-      {pens && (
-        <span className="font-medium text-muted-foreground">
-          {t.match.pens} {m.homePenalties}–{m.awayPenalties}
-        </span>
-      )}
-      {status &&
-        (status.live ? (
-          <Tag className="bg-live py-0.5 text-[hsl(var(--tt-red-on))]">
-            <LiveDot className="mr-1" />
-            {status.text}
-          </Tag>
-        ) : (
-          <span className="font-semibold uppercase tracking-wide text-muted-foreground">
-            {status.text}
-          </span>
-        ))}
-      {m.status === "scheduled" && (
-        <span className="uppercase text-muted-foreground">
-          {formatShort(new Date(m.kickoff), dateFormat, lang)}
-        </span>
-      )}
     </div>
   );
 }
