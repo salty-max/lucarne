@@ -8,6 +8,8 @@ const ROWS: { key: Exclude<keyof TeamStats, "possession">; pct?: boolean; dp?: n
   { key: "xg", dp: 2 },
   { key: "corners" },
   { key: "fouls" },
+  { key: "yellowCards" },
+  { key: "redCards" },
   { key: "offsides" },
   { key: "saves" },
   { key: "passAccuracy", pct: true },

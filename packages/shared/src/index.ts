@@ -160,6 +160,8 @@ export type TeamStats = {
   offsides: number | null;
   saves: number | null;
   passAccuracy: number | null; // %
+  yellowCards: number | null;
+  redCards: number | null;
 };
 
 export type MatchStatistics = { home: TeamStats; away: TeamStats };

@@ -523,6 +523,8 @@ function normalizeStats(stats: ApiTeamStatistics["statistics"]): TeamStats {
     offsides: get("Offsides"),
     saves: get("Goalkeeper Saves"),
     passAccuracy,
+    yellowCards: get("Yellow Cards"),
+    redCards: get("Red Cards"),
   };
 }
 
