@@ -141,6 +141,9 @@ export function Layout() {
 
   const pageNo = pageNoForPath(pathname, comps);
 
+  // Logs is a dev-only diagnostics page — drop its footer link in prod builds.
+  const footerMore = FOOTER_MORE.filter((f) => import.meta.env.DEV || f.to !== "/logs");
+
   return (
     <div className="tt-stage">
       <div className="tt-tv">
@@ -194,8 +197,11 @@ export function Layout() {
               </Link>
             ))}
           </nav>
-          <nav className="tt-fast tt-fast--more">
-            {FOOTER_MORE.map((f) => (
+          <nav
+            className="tt-fast tt-fast--more"
+            style={{ gridTemplateColumns: `repeat(${footerMore.length}, 1fr)` }}
+          >
+            {footerMore.map((f) => (
               <Link key={f.no} to={f.to} className={f.cls}>
                 <span className="hidden sm:inline">{f.no} </span>
                 {f.label[lang]}

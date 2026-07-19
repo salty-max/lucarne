@@ -582,10 +582,15 @@
   text-align: right;
 }
 .tt-navbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7em;
+  height: 1.7em;
   background: hsl(var(--tt-white));
   color: hsl(var(--tt-white-on));
   font-weight: 800;
-  padding: 0 0.6ch;
+  padding: 0;
   cursor: pointer;
 }
 .tt-navbtn:hover {
@@ -685,7 +690,9 @@
     padding: 0.5rem 0.7rem;
   }
   .tt-navbtn {
-    padding: 0.25rem 0.9ch;
+    width: 2em;
+    height: 2em;
+    padding: 0;
   }
   .tt-fast {
     gap: 3px;

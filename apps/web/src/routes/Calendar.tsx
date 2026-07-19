@@ -124,7 +124,7 @@ export default function Calendar() {
           aria-label={t.calendar.prevMonth}
           className="grid w-7 place-items-center border border-border text-muted-foreground hover:bg-accent"
         >
-          ‹
+          ◄
         </button>
         <div className="tt-bar tt-bar-yellow flex-1 justify-center ">
           {t.calendar.months[view.m]} {view.y}
@@ -134,7 +134,7 @@ export default function Calendar() {
           aria-label={t.calendar.nextMonth}
           className="grid w-7 place-items-center border border-border text-muted-foreground hover:bg-accent"
         >
-          ›
+          ►
         </button>
       </div>
 
@@ -154,7 +154,7 @@ export default function Calendar() {
               onClick={() => step(-1)}
               disabled={sel === 0}
               aria-label={t.calendar.prevDay}
-              className="grid w-6 place-items-center border border-border text-muted-foreground hover:bg-accent disabled:opacity-30"
+              className="grid w-7 place-items-center border border-border text-muted-foreground hover:bg-accent disabled:opacity-30"
             >
               ◄
             </button>
@@ -191,7 +191,7 @@ export default function Calendar() {
               onClick={() => step(1)}
               disabled={sel >= dayList.length - 1}
               aria-label={t.calendar.nextDay}
-              className="grid w-6 place-items-center border border-border text-muted-foreground hover:bg-accent disabled:opacity-30"
+              className="grid w-7 place-items-center border border-border text-muted-foreground hover:bg-accent disabled:opacity-30"
             >
               ►
             </button>
