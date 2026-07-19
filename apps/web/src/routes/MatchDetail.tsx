@@ -1,5 +1,6 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { useMatch } from "@/hooks/useMatch";
+import { useWatch } from "@/hooks/useWatch";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { EventMark } from "@/components/EventMark";
 import { BroadcasterBadge } from "@/components/BroadcasterBadge";
@@ -151,12 +152,60 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** The surveillance toggle on the detail header (labelled, unlike the list switch). */
+function WatchButton({ on, onToggle, t }: { on: boolean; onToggle: () => void; t: Messages }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={onToggle}
+      className={cn(
+        "inline-flex items-center gap-2 border px-3 py-1.5 font-bold uppercase tracking-wide transition-colors",
+        on
+          ? "border-[hsl(var(--tt-green))] bg-[hsl(var(--tt-green))]/15 text-[hsl(var(--tt-green))]"
+          : "border-border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span
+        className={cn("h-2.5 w-2.5 rounded-full", on ? "bg-[hsl(var(--tt-green))]" : "bg-muted-foreground")}
+      />
+      {on ? `${t.watch.watching} ✓` : t.watch.watch}
+    </button>
+  );
+}
+
+/** Shown instead of goals/stats for a LIVE match you're not watching: the score
+ *  above is already live, but the minute-by-minute detail needs surveillance. */
+function LiveWatchPanel({ onWatch, t }: { onWatch: () => void; t: Messages }) {
+  return (
+    <section className="mt-3">
+      <SectionLabel>{`${t.match.goals} · ${t.stats.title}`}</SectionLabel>
+      <div className="border border-dashed border-border p-4 text-center">
+        <p className="leading-relaxed text-muted-foreground">
+          {t.watch.liveHint}
+          <br />
+          {t.watch.scoreLive}
+        </p>
+        <button
+          type="button"
+          onClick={onWatch}
+          className="mt-3 inline-flex items-center gap-2 border border-[hsl(var(--tt-green))] px-3 py-2 font-bold uppercase tracking-wide text-[hsl(var(--tt-green))]"
+        >
+          ▸ {t.watch.watchForLive}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function MatchDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
   const { match, loading, error } = useMatch(Number(id));
   const comps = useCompetitions();
   const { dateFormat, lang } = useSettings();
   const t = useT();
+  const { isWatched, toggle } = useWatch();
 
   if (loading) return <MatchDetailSkel />;
   if (error || !match) {
@@ -191,6 +240,14 @@ export default function MatchDetail() {
     ? [...Object.values(stats.home), ...Object.values(stats.away)].some((v) => v != null)
     : false;
 
+  const watched = isWatched(match);
+  const watchable = match.status === "scheduled" || match.status === "live";
+  // Live match you're not monitoring → the detail (scorers/stats) isn't flowing;
+  // show the "watch for live" panel instead of the empty sections.
+  const liveUnwatched = match.status === "live" && !watched;
+  // Just started watching a live match: enrichment lands on the next tick.
+  const awaitingLive = match.status === "live" && watched && goals.length === 0 && cards.length === 0 && !hasStats;
+
   return (
     <>
       <Link
@@ -208,37 +265,53 @@ export default function MatchDetail() {
       </div>
       <Scoreboard m={match} homeResult={homeResult} awayResult={awayResult} />
 
-      {goals.length > 0 && (
-        <section className="mt-3">
-          <SectionLabel>{t.match.goals}</SectionLabel>
-          <div className="flex flex-col">
-            {goals.map((e, i) => (
-              <EventRow key={i} e={e} />
-            ))}
-          </div>
-        </section>
+      {watchable && (
+        <div className="mt-1 flex justify-center">
+          <WatchButton on={watched} onToggle={() => toggle(match)} t={t} />
+        </div>
       )}
 
-      {cards.length > 0 && (
-        <section className="mt-3">
-          <SectionLabel>{t.match.cards}</SectionLabel>
-          <div className="flex flex-col">
-            {cards.map((e, i) => (
-              <EventRow key={i} e={e} />
-            ))}
-          </div>
-        </section>
-      )}
+      {liveUnwatched ? (
+        <LiveWatchPanel onWatch={() => toggle(match)} t={t} />
+      ) : (
+        <>
+          {goals.length > 0 && (
+            <section className="mt-3">
+              <SectionLabel>{t.match.goals}</SectionLabel>
+              <div className="flex flex-col">
+                {goals.map((e, i) => (
+                  <EventRow key={i} e={e} />
+                ))}
+              </div>
+            </section>
+          )}
 
-      {match.status === "finished" && goals.length === 0 && cards.length === 0 && (
-        <p className="mt-3 py-2 italic text-muted-foreground">{t.match.noGoalsCards}</p>
-      )}
+          {cards.length > 0 && (
+            <section className="mt-3">
+              <SectionLabel>{t.match.cards}</SectionLabel>
+              <div className="flex flex-col">
+                {cards.map((e, i) => (
+                  <EventRow key={i} e={e} />
+                ))}
+              </div>
+            </section>
+          )}
 
-      {stats && hasStats && (
-        <section className="mt-3">
-          <SectionLabel>{t.stats.title}</SectionLabel>
-          <MatchStats stats={stats} />
-        </section>
+          {match.status === "finished" && goals.length === 0 && cards.length === 0 && (
+            <p className="mt-3 py-2 italic text-muted-foreground">{t.match.noGoalsCards}</p>
+          )}
+
+          {awaitingLive && (
+            <p className="mt-3 py-2 italic text-muted-foreground">{t.watch.activating}</p>
+          )}
+
+          {stats && hasStats && (
+            <section className="mt-3">
+              <SectionLabel>{t.stats.title}</SectionLabel>
+              <MatchStats stats={stats} />
+            </section>
+          )}
+        </>
       )}
 
       {match.lineups ? (

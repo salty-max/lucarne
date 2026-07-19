@@ -6,6 +6,7 @@ import type {
   MatchDetail,
   RunLogEntry,
   TeamOption,
+  WatchListResponse,
 } from "@lucarne/shared";
 
 export type ScheduleParams = { from?: string; days?: number; competition?: string };
@@ -33,6 +34,23 @@ export async function fetchLive(): Promise<LiveMatch[]> {
   if (!res.ok) return [];
   const data = (await res.json()) as { matches?: LiveMatch[] };
   return data.matches ?? [];
+}
+
+/** This device's explicit surveillance decisions (radar on/off per match). */
+export async function fetchWatchList(deviceId: string): Promise<WatchListResponse> {
+  const res = await fetch(`/api/watch?deviceId=${encodeURIComponent(deviceId)}`, { cache: "no-store" });
+  if (!res.ok) return { on: [], off: [] };
+  const data = (await res.json()) as Partial<WatchListResponse>;
+  return { on: data.on ?? [], off: data.off ?? [] };
+}
+
+/** Set this device's radar decision for a match: "on" = watch, "off" = mute. */
+export async function setWatch(deviceId: string, matchId: number, state: "on" | "off"): Promise<void> {
+  await fetch("/api/watch", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ deviceId, matchId, state }),
+  });
 }
 
 export async function fetchCompetitions(): Promise<CompetitionInfo[]> {

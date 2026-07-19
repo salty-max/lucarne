@@ -75,6 +75,14 @@ const en = {
     tbd: "TBD",
   },
   card: { ft: "FT", aet: "AET", pens: "Pens", live: "LIVE", pp: "PP", tbc: "TBC", ht: "HT", bt: "ET" },
+  watch: {
+    watch: "Watch",
+    watching: "Watching",
+    liveHint: "Detailed scorers & stats land when the match ends.",
+    scoreLive: "The score above is already live.",
+    watchForLive: "Watch for live updates",
+    activating: "Activating — live details in ~1 min",
+  },
   stats: {
     title: "Statistics",
     possession: "Possession",
@@ -265,6 +273,14 @@ const fr: Messages = {
     tbd: "À déterminer",
   },
   card: { ft: "FIN", aet: "a.p.", pens: "t.a.b", live: "DIR", pp: "Rep.", tbc: "à conf.", ht: "MT", bt: "Prol." },
+  watch: {
+    watch: "Surveiller",
+    watching: "Surveillé",
+    liveHint: "Buteurs & stats détaillés à la fin du match.",
+    scoreLive: "Le score ci-dessus est déjà en direct.",
+    watchForLive: "Surveiller pour le suivi live",
+    activating: "Activation — détails live dans ~1 min",
+  },
   stats: {
     title: "Statistiques",
     possession: "Possession",

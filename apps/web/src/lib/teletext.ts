@@ -46,7 +46,7 @@ export function pageNoForPath(path: string, comps: CompetitionInfo[] | null): st
     const i = (comps ?? []).findIndex((c) => c.slug === slug);
     return i >= 0 ? compPageNo(i) : "400";
   }
-  if (path.startsWith("/match/")) return "500";
+  if (path.startsWith("/match/")) return "900"; // 500 is reserved for RADAR
   return "100";
 }
 

@@ -5,7 +5,9 @@ import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { teamName } from "@/lib/teamNames";
 import { channelTt } from "@/lib/channelColor";
+import { useWatch } from "@/hooks/useWatch";
 import { LiveDot, Tag } from "./common";
+import { RadarSwitch } from "./RadarSwitch";
 
 type Result = "win" | "loss" | "none";
 
@@ -55,6 +57,8 @@ export function MatchCard({
 }) {
   const { lang } = useSettings();
   const t = useT();
+  const { isWatched, toggle } = useWatch();
+  const watchable = m.status === "scheduled" || m.status === "live";
   const pens = m.homePenalties != null && m.awayPenalties != null;
   const homeWins = pens
     ? m.homePenalties! > m.awayPenalties!
@@ -82,6 +86,14 @@ export function MatchCard({
         m.status === "live" && "bg-live/5",
       )}
     >
+      <td
+        className="py-2.5 pl-0.5 pr-2 align-middle sm:py-1.5"
+        onClick={watchable ? (e) => e.stopPropagation() : undefined}
+      >
+        {watchable && (
+          <RadarSwitch on={isWatched(m)} onToggle={() => toggle(m)} label={t.watch.watch} />
+        )}
+      </td>
       <td className="whitespace-nowrap py-2.5 pr-3 align-middle sm:py-1.5">
         <StatusCell m={m} />
       </td>

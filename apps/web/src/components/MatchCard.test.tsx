@@ -1,19 +1,25 @@
 import { describe, expect, it } from "bun:test";
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Match } from "@lucarne/shared";
 import { eventMark, eventName } from "@/lib/matchEvents";
 import { goal, match } from "../../test/fixtures";
 import { MatchCard } from "./MatchCard";
 
-/** MatchCard renders a <tr>, so mount it inside a table. */
-const renderCard = (m: Match) =>
-  render(
-    <table>
-      <tbody>
-        <MatchCard m={m} />
-      </tbody>
-    </table>,
+/** MatchCard renders a <tr> (in a table) and reads the radar watch query, so it
+ *  needs a QueryClientProvider. */
+const renderCard = (m: Match) => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <table>
+        <tbody>
+          <MatchCard m={m} />
+        </tbody>
+      </table>
+    </QueryClientProvider>,
   );
+};
 
 describe("event helpers", () => {
   it("eventMark picks a kind by type/detail", () => {
