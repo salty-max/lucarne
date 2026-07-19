@@ -235,11 +235,6 @@ function PredictionSection({ m, t }: { m: Detail; t: Messages }) {
         <div className="bg-muted-foreground/50" style={{ width: `${p.draw}%` }} />
         <div className="bg-[hsl(var(--tt-red))]" style={{ width: `${p.away}%` }} />
       </div>
-      {p.advice && (
-        <p className="mt-2 text-muted-foreground">
-          <span className="uppercase tracking-wide text-foreground/80">{t.prediction.advice}</span> · {p.advice}
-        </p>
-      )}
     </section>
   );
 }
@@ -316,7 +311,7 @@ export default function MatchDetail() {
         </div>
       )}
 
-      {match.status !== "finished" && <PredictionSection m={match} t={t} />}
+      <PredictionSection m={match} t={t} />
 
       {liveUnwatched ? (
         <LiveWatchPanel onWatch={() => toggle(match)} t={t} />
