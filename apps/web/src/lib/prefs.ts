@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 // channels.ts, competitionFilter.ts) are thin facades over this.
 export type DateFormat = "dmy" | "mdy" | "numeric";
 export type Lang = "en" | "fr";
-export type Theme = "cept1" | "neon" | "gray" | "dmg";
+export type Theme = "cept1" | "neon" | "gray" | "dmg" | "minitel" | "newsprint";
 export type FontChoice = "modern" | "retro";
 
 export type Prefs = {

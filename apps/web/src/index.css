@@ -134,6 +134,72 @@
   --tt-red-on: 0 0% 0%;
 }
 
+/* Minitel — France's videotex terminal. A cool steel-blue phosphor ground, pale
+   cyan-white text and a cyan hero accent; the seven colours are softened, faintly
+   desaturated videotex tones. A nod to the Antiope heritage this UI apes. */
+:root[data-theme="minitel"] {
+  --background: 210 45% 6%;
+  --foreground: 190 24% 86%;
+  --card: 210 40% 8%;
+  --card-foreground: 190 24% 86%;
+  --muted: 205 30% 15%;
+  --muted-foreground: 200 16% 60%;
+  --border: 202 28% 30%;
+  --input: 202 28% 30%;
+  --primary: 180 70% 55%;
+  --primary-foreground: 210 45% 6%;
+  --accent: 205 32% 14%;
+  --accent-foreground: 190 24% 88%;
+  --live: 8 85% 62%;
+
+  --tt-red: 6 78% 62%;
+  --tt-green: 155 52% 55%;
+  --tt-yellow: 45 78% 66%;
+  --tt-blue: 205 82% 64%;
+  --tt-magenta: 320 55% 70%;
+  --tt-cyan: 180 66% 60%;
+  --tt-white: 190 24% 90%;
+  /* Softened light slots (like Neon) read better with dark text. */
+  --tt-red-on: 0 0% 0%;
+  --tt-blue-on: 0 0% 0%;
+}
+
+/* Newsprint — the one LIGHT theme: a warm paper ground with dark-ink text and
+   seven saturated ink tones. They read as text on paper AND carry paper-coloured
+   text on the FastText/section blocks (every `-on` var flips to the cream), so
+   the whole chrome inverts cleanly. Daytime-readable, like a printed TV guide. */
+:root[data-theme="newsprint"] {
+  --background: 40 32% 90%;
+  --foreground: 28 18% 14%;
+  --card: 40 30% 86%;
+  --card-foreground: 28 18% 14%;
+  --muted: 40 22% 80%;
+  --muted-foreground: 32 12% 38%;
+  --border: 34 16% 55%;
+  --input: 34 16% 55%;
+  --primary: 215 62% 40%;
+  --primary-foreground: 40 32% 92%;
+  --accent: 40 24% 82%;
+  --accent-foreground: 28 18% 14%;
+  --live: 2 72% 44%;
+
+  --tt-red: 2 68% 45%;
+  --tt-green: 150 48% 32%;
+  --tt-yellow: 40 82% 42%;
+  --tt-blue: 215 62% 42%;
+  --tt-magenta: 320 45% 44%;
+  --tt-cyan: 190 55% 34%;
+  --tt-white: 30 14% 20%;
+  /* Light theme: text ON the ink-coloured blocks is the paper cream, not black. */
+  --tt-red-on: 40 32% 92%;
+  --tt-green-on: 40 32% 92%;
+  --tt-yellow-on: 40 32% 92%;
+  --tt-blue-on: 40 32% 92%;
+  --tt-magenta-on: 40 32% 92%;
+  --tt-cyan-on: 40 32% 92%;
+  --tt-white-on: 40 32% 92%;
+}
+
 /* Retro CRT face (opt-in via the font pref): Teletext50 — a faithful revival of
    the classic broadcast teletext character set (galax.xyz/Teletext50),
    self-hosted. The modern alternative is the plain mono stack. */
@@ -347,7 +413,9 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #05121a;
+  /* Text-on-colour uses the palette's `-on` var so it flips to a light ink on a
+     light theme (Newsprint) — on dark themes the -on values are black, unchanged. */
+  color: hsl(var(--tt-cyan-on));
   background: hsl(var(--tt-cyan));
 }
 .tt-bar-r {
@@ -361,13 +429,15 @@
 }
 .tt-bar-yellow {
   background: hsl(var(--tt-yellow));
+  color: hsl(var(--tt-yellow-on));
 }
 .tt-bar-green {
   background: hsl(var(--tt-green));
+  color: hsl(var(--tt-green-on));
 }
 .tt-bar-magenta {
   background: hsl(var(--tt-magenta));
-  color: #180614;
+  color: hsl(var(--tt-magenta-on));
 }
 
 /* Solid colour block tag (broadcasters, statuses). */
@@ -494,7 +564,7 @@
 }
 .tt-service .pnum {
   background: hsl(var(--tt-yellow));
-  color: #000;
+  color: hsl(var(--tt-yellow-on));
   padding: 0 0.6ch;
 }
 .tt-service .svc {
@@ -513,7 +583,7 @@
 }
 .tt-navbtn {
   background: hsl(var(--tt-white));
-  color: #000;
+  color: hsl(var(--tt-white-on));
   font-weight: 800;
   padding: 0 0.6ch;
   cursor: pointer;
@@ -546,18 +616,23 @@
 }
 .tt-fast .f-grn {
   background: hsl(var(--tt-green));
+  color: hsl(var(--tt-green-on));
 }
 .tt-fast .f-yel {
   background: hsl(var(--tt-yellow));
+  color: hsl(var(--tt-yellow-on));
 }
 .tt-fast .f-cyn {
   background: hsl(var(--tt-cyan));
+  color: hsl(var(--tt-cyan-on));
 }
 .tt-fast .f-mag {
   background: hsl(var(--tt-magenta));
+  color: hsl(var(--tt-magenta-on));
 }
 .tt-fast .f-wht {
   background: hsl(var(--tt-white));
+  color: hsl(var(--tt-white-on));
 }
 .tt-fast .f-blu {
   background: hsl(var(--tt-blue));
@@ -576,7 +651,7 @@
 }
 .tt-kbd .k {
   background: hsl(var(--tt-white));
-  color: #000;
+  color: hsl(var(--tt-white-on));
   padding: 0 0.4ch;
   font-weight: 800;
 }

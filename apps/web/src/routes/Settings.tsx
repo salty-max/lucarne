@@ -28,6 +28,8 @@ const THEME_META: Record<Theme, { name: string; tag: string }> = {
   neon: { name: "themeNeon", tag: "themeNeonTag" },
   gray: { name: "themeGray", tag: "themeGrayTag" },
   dmg: { name: "themeDmg", tag: "themeDmgTag" },
+  minitel: { name: "themeMinitel", tag: "themeMinitelTag" },
+  newsprint: { name: "themeNewsprint", tag: "themeNewsprintTag" },
 };
 
 const FONT_OPTIONS: { id: FontChoice; name: string; tag: string }[] = [
