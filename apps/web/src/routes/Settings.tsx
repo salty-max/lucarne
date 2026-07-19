@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
-import { disablePush, enablePush, pushPermission, pushSupported } from "@/lib/notifications";
+import { disablePush, enablePush, pushPermission, pushSupport } from "@/lib/notifications";
 import { setPrefs, usePrefs } from "@/lib/prefs";
 import {
   setSettings,
@@ -84,7 +84,8 @@ export default function Settings() {
   const s = t.settings as Record<string, string>;
 
   const [notifBusy, setNotifBusy] = useState(false);
-  const notifSupported = pushSupported();
+  const support = pushSupport();
+  const notifSupported = support === "ok";
 
   async function toggleNotifs() {
     if (notifBusy) return;
@@ -217,7 +218,11 @@ export default function Settings() {
             {prefs.notifications ? t.settings.on : t.settings.off}
           </span>
         </button>
-        {!notifSupported ? (
+        {support === "install" ? (
+          <p className="mt-2 text-[hsl(var(--tt-yellow))]">{t.settings.notificationsInstall}</p>
+        ) : support === "insecure" ? (
+          <p className="mt-2 text-[hsl(var(--tt-yellow))]">{t.settings.notificationsInsecure}</p>
+        ) : support === "unsupported" ? (
           <p className="mt-2 text-[hsl(var(--tt-yellow))]">
             {t.settings.notificationsUnsupported}
           </p>

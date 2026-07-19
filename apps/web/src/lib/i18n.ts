@@ -184,6 +184,9 @@ const en = {
     notificationsHelp:
       "Push alerts for your teams — goals, cards, kickoff, full-time. On iPhone, install the app first (iOS 16.4+).",
     notificationsUnsupported: "Not supported on this device.",
+    notificationsInstall:
+      "On iPhone/iPad, add Lucarne to your Home Screen (Share → Add to Home Screen), then open it from its icon to turn notifications on.",
+    notificationsInsecure: "Notifications need a secure (HTTPS) connection.",
     notificationsDenied: "Blocked — allow notifications in your browser settings.",
     notificationsNoTeams: "Follow a team first (My teams) to get alerts.",
   },
@@ -398,6 +401,9 @@ const fr: Messages = {
     notificationsHelp:
       "Alertes push pour tes équipes — buts, cartons, coup d'envoi, score final. Sur iPhone, installe d'abord l'app (iOS 16.4+).",
     notificationsUnsupported: "Non supporté sur cet appareil.",
+    notificationsInstall:
+      "Sur iPhone/iPad, ajoute Lucarne à ton écran d'accueil (Partager → Sur l'écran d'accueil), puis ouvre-la depuis son icône pour activer les notifications.",
+    notificationsInsecure: "Les notifications nécessitent une connexion sécurisée (HTTPS).",
     notificationsDenied: "Bloqué — autorise les notifications dans les réglages du navigateur.",
     notificationsNoTeams: "Suis d'abord une équipe (Mes équipes) pour recevoir des alertes.",
   },

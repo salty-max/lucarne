@@ -14,6 +14,26 @@ export function pushSupported(): boolean {
   );
 }
 
+/** Why push can't be turned on here, so the UI can give a targeted hint instead
+ *  of a flat "not supported". The common iOS case is `install`: iOS only exposes
+ *  Push/Notification to a web app that's been added to the Home Screen and opened
+ *  from its icon (standalone) — in a Safari tab they don't exist, even on iOS 26. */
+export type PushSupport = "ok" | "install" | "insecure" | "unsupported";
+
+export function pushSupport(): PushSupport {
+  if (pushSupported()) return "ok";
+  if (typeof window === "undefined") return "unsupported";
+  const nav = navigator as Navigator & { standalone?: boolean };
+  const standalone =
+    window.matchMedia?.("(display-mode: standalone)").matches === true || nav.standalone === true;
+  const iOS =
+    /iP(hone|ad|od)/.test(nav.userAgent) ||
+    (nav.platform === "MacIntel" && nav.maxTouchPoints > 1); // iPadOS reports as a Mac
+  if (!window.isSecureContext) return "insecure"; // web push needs HTTPS
+  if (iOS && !standalone) return "install"; // add to Home Screen, open from the icon
+  return "unsupported";
+}
+
 export function pushPermission(): NotificationPermission | "unsupported" {
   return pushSupported() ? Notification.permission : "unsupported";
 }
