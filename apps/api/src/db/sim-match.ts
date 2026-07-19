@@ -39,6 +39,7 @@ const AWAY = arg("away", "Angleterre");
 const KEEP = has("keep");
 
 const FIX = 9990001;
+const FIX2 = 9990002; // second fixture, used only by the stuck-live reaper scenario
 const HOME_API = 9990011;
 const AWAY_API = 9990012;
 const LEAGUE = 1; // FIFA World Cup — a tracked league
@@ -75,9 +76,9 @@ let kickoffISO = "";
 let pollN = 0;
 const poll = () => runLivePollTick(new Date(Date.now() + ++pollN * 120_000));
 
-function fixture(short: string, elapsed: number | null, h: number | null, a: number | null): ApiFixture {
+function fixture(short: string, elapsed: number | null, h: number | null, a: number | null, id = FIX): ApiFixture {
   return {
-    fixture: { id: FIX, date: kickoffISO, referee: "Sim Referee", venue: { name: "Sim Stadium" }, status: { short, elapsed } },
+    fixture: { id, date: kickoffISO, referee: "Sim Referee", venue: { name: "Sim Stadium" }, status: { short, elapsed } },
     league: { id: LEAGUE, season, round: "3rd Place Final" },
     teams: { home: { id: HOME_API, name: HOME, logo: "" }, away: { id: AWAY_API, name: AWAY, logo: "" } },
     goals: { home: h, away: a },
@@ -105,14 +106,44 @@ async function dbMatch() {
   const [m] = await db.select().from(matches).where(eq(matches.apiFootballId, FIX));
   return m;
 }
+async function dbMatch2() {
+  const [m] = await db.select().from(matches).where(eq(matches.apiFootballId, FIX2));
+  return m;
+}
+
+/** Seed a match stuck at status="live" `hoursAgo` past kickoff (out of the live
+ *  window), reusing the sim teams — the raw material for the reaper scenario. */
+async function seedStuck(short: string, elapsed: number, h: number, a: number, hoursAgo = 4) {
+  const [wc] = await db.select({ id: competitions.id }).from(competitions).where(eq(competitions.apiFootballId, LEAGUE));
+  const [home] = await db.select({ id: teams.id }).from(teams).where(eq(teams.apiFootballId, HOME_API));
+  const [away] = await db.select({ id: teams.id }).from(teams).where(eq(teams.apiFootballId, AWAY_API));
+  await db.delete(matches).where(eq(matches.apiFootballId, FIX2));
+  await db.insert(matches).values({
+    apiFootballId: FIX2,
+    competitionId: wc.id,
+    season,
+    round: "Stuck",
+    kickoff: new Date(Date.now() - hoursAgo * 60 * 60_000),
+    statusShort: short,
+    status: "live",
+    elapsed,
+    homeTeamId: home.id,
+    awayTeamId: away.id,
+    homeGoals: h,
+    awayGoals: a,
+  });
+}
 function check(label: string, cond: boolean, detail = "") {
   console.log(`   ${cond ? "✓" : "✗ FAIL"} ${label}${detail ? ` (${detail})` : ""}`);
   if (!cond) failures++;
 }
 
 async function cleanup() {
-  const [m] = await db.select({ id: matches.id }).from(matches).where(eq(matches.apiFootballId, FIX));
-  if (m) {
+  const stale = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .where(inArray(matches.apiFootballId, [FIX, FIX2]));
+  for (const m of stale) {
     await db.delete(matchEvents).where(eq(matchEvents.matchId, m.id));
     await db.delete(matchLineups).where(eq(matchLineups.matchId, m.id));
     await db.delete(pushNotified).where(eq(pushNotified.matchId, m.id));
@@ -258,6 +289,34 @@ async function main() {
     const r = await runPushNotify();
     check("full-time push fired (the late goal too)", r.fired >= 1, `fired=${r.fired}`);
     check("4 events stored after drain", (await db.select().from(matchEvents).where(eq(matchEvents.matchId, m.id))).length === 4);
+  });
+
+  // ---- stuck-live reaper: a row left "live" long past the match (we missed its
+  // live=all drop-off while down). It never un-sticks on its own and would be
+  // re-enriched every tick forever. runLivePollTick must reap it. ----
+  await stage("STUCK-LIVE · authoritative", "stuck 'live' 4h, dropped from live=all → finalise by id", async () => {
+    state.live = [];
+    await seedStuck("2H", 90, 4, 5);
+    state.byId[FIX2] = fixture("FT", 90, 4, 6, FIX2); // API's true final: a late goal we missed
+    const enrich = await runLiveEnrich();
+    check("live-enrich SKIPS the out-of-window stuck row", enrich.matches === 0, `matches=${enrich.matches}`);
+    const tick = await runLivePollTick(new Date());
+    check("tick polled to reap", tick.polled === true, tick.reason ?? "");
+    const m = await dbMatch2();
+    check("stuck row finalised", m.status === "finished", m.status);
+    check("score corrected to 4-6 (authoritative)", m.homeGoals === 4 && m.awayGoals === 6, `${m.homeGoals}-${m.awayGoals}`);
+  });
+
+  await stage("STUCK-LIVE · no API → local force-finish", "fixture gone/stale → force finished from last score", async () => {
+    state.live = [];
+    delete state.byId[FIX2];
+    await seedStuck("2H", 90, 3, 3);
+    const tick = await runLivePollTick(new Date());
+    check("tick polled to reap", tick.polled === true, tick.reason ?? "");
+    const m = await dbMatch2();
+    check("stuck row force-finished", m.status === "finished", m.status);
+    check("statusShort FT", m.statusShort === "FT", m.statusShort);
+    check("last-known score preserved 3-3", m.homeGoals === 3 && m.awayGoals === 3, `${m.homeGoals}-${m.awayGoals}`);
   });
 
   console.log(`\n${failures === 0 ? "✓ ALL CHECKS PASSED" : `✗ ${failures} CHECK(S) FAILED`}`);

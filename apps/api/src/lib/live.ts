@@ -14,12 +14,26 @@ import { syncState } from "@/db/schema";
  */
 export const DAILY_API_BUDGET = 7000;
 
+/**
+ * Budget floor the per-minute enrichment + eager drain must NOT dip below, so a
+ * heavy match day (dozens of concurrent live games) can never drain the pool to
+ * zero. If it did, `decideLivePoll` would return `budget-exhausted` and the 1-req/
+ * min LIVE SCORE poll would stop too — every score freezing mid-evening. Scores
+ * (~1 req/min) + one-shot lineups (1 req each) stay well under this reserve for a
+ * whole day, so they're always affordable; near-real-time enrichment is what
+ * degrades on mega days (the nightly drain fills the rest). Only bites when the
+ * day is genuinely huge — normal days never approach it.
+ */
+export const LIVE_BUDGET_RESERVE = 1500;
+
 const MATCH_PREROLL_MS = 5 * 60_000; // start watching 5 min before kickoff
 // Keep a match "live-ish" for 3.5h after kickoff — long enough to cover HT +
 // stoppage + extra time + a late/delayed start, so we're still polling (and can
 // finalise it, see applyLiveUpdate) when it actually ends. A match that ends
 // normally is finalised the moment it drops out of live=all, well before this.
-const MATCH_DURATION_MS = 210 * 60_000;
+// Also the ceiling past which a still-"live" DB row is treated as stuck and
+// reaped (nothing real stays live 3.5h after kickoff).
+export const MATCH_DURATION_MS = 210 * 60_000;
 
 /** The [start, end] window during which a fixture is considered "live-ish". */
 export function liveWindow(kickoff: Date): { start: number; end: number } {

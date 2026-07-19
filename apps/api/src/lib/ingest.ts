@@ -15,6 +15,7 @@ import {
   type ApiTeamStatistics,
 } from "@/lib/api-football";
 import { COMPETITIONS, TRACKED_LEAGUE_IDS, currentSeason } from "@/lib/competitions";
+import { MATCH_DURATION_MS } from "@/lib/live";
 import { normalizeStatus } from "@/lib/status";
 import { ymd, addDays } from "@/lib/time";
 
@@ -282,10 +283,12 @@ export async function applyLiveUpdate(): Promise<{
   }
 
   // DB matches still marked "live" but absent from the snapshot → they ended.
+  const nowMs = Date.now();
+  const stuckCeiling = nowMs - MATCH_DURATION_MS; // past this a still-"live" row is definitively over
   const stillLive = await db
-    .select({ id: matches.id, apiFootballId: matches.apiFootballId })
+    .select({ id: matches.id, apiFootballId: matches.apiFootballId, kickoff: matches.kickoff })
     .from(matches)
-    .where(and(eq(matches.status, "live"), lte(matches.kickoff, new Date())))
+    .where(and(eq(matches.status, "live"), lte(matches.kickoff, new Date(nowMs))))
     .limit(12);
   const dropped = stillLive.filter((m) => !liveIds.has(m.apiFootballId));
 
@@ -294,9 +297,22 @@ export async function applyLiveUpdate(): Promise<{
   for (const m of dropped) {
     const [f] = await getFixtureById(m.apiFootballId); // 1 request, authoritative
     requests++;
-    if (!f) continue;
-    await db.update(matches).set(liveSet(f)).where(eq(matches.id, m.id));
-    if (normalizeStatus(f.fixture.status.short) !== "live") finalized++;
+    if (f && normalizeStatus(f.fixture.status.short) !== "live") {
+      await db.update(matches).set(liveSet(f)).where(eq(matches.id, m.id));
+      finalized++;
+      continue;
+    }
+    // No authoritative finish (fixture gone, or the API is itself stale and still
+    // says "live"). If it's already past the longest possible match it has surely
+    // ended — force it finished from the last-known score so it stops showing as
+    // live and stops being re-polled. Recent drops are left for a retry next tick.
+    if (m.kickoff.getTime() <= stuckCeiling) {
+      await db
+        .update(matches)
+        .set({ status: "finished", statusShort: "FT", elapsed: null })
+        .where(eq(matches.id, m.id));
+      finalized++;
+    }
   }
 
   return { updated, finalized, requests };

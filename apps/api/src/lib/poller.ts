@@ -15,6 +15,8 @@ import {
 } from "@/lib/ingest";
 import { COMPETITIONS, currentSeason } from "@/lib/competitions";
 import {
+  LIVE_BUDGET_RESERVE,
+  MATCH_DURATION_MS,
   budgetRemaining,
   candidateKickoffRange,
   decideLivePoll,
@@ -73,8 +75,27 @@ export async function runLivePollTick(
   const state = await loadBudget(nowMs);
   const decision = decideLivePoll({ nowMs, liveCount, windowEndMs, state });
 
-  if (!decision.poll) {
-    return { polled: false, reason: decision.reason, live: liveCount, budgetRemaining: decision.budgetRemaining };
+  // Reap stuck-live rows: a match still "live" well past the longest possible
+  // match (we missed its live=all drop-off while down) never un-sticks on its
+  // own — it shows as live forever AND gets re-enriched every tick. It's outside
+  // the candidate window above, so `decision` would skip the poll. Force one so
+  // applyLiveUpdate finalises it (authoritative by id, else local force-finish).
+  let poll = decision.poll;
+  let reason: string = decision.reason;
+  if (!poll && decision.budgetRemaining > 0) {
+    const stuck = await db
+      .select({ id: matches.id })
+      .from(matches)
+      .where(and(eq(matches.status, "live"), lte(matches.kickoff, new Date(nowMs - MATCH_DURATION_MS))))
+      .limit(1);
+    if (stuck.length > 0) {
+      poll = true;
+      reason = "reap-stuck";
+    }
+  }
+
+  if (!poll) {
+    return { polled: false, reason, live: liveCount, budgetRemaining: decision.budgetRemaining };
   }
 
   const { updated, finalized, requests } = await applyLiveUpdate();
@@ -189,14 +210,17 @@ export async function runDetailsDrain(
   {
     sinceMs = 3 * 24 * 60 * 60 * 1000,
     stampWhenEmpty = true,
-  }: { sinceMs?: number | null; stampWhenEmpty?: boolean } = {},
+    reserve = 0,
+  }: { sinceMs?: number | null; stampWhenEmpty?: boolean; reserve?: number } = {},
 ): Promise<DrainResult> {
   const now = new Date();
   const nowMs = now.getTime();
   const state = await loadBudget(nowMs);
   let remaining = budgetRemaining(state);
-  if (remaining <= 0)
-    return { matches: 0, events: 0, lineups: 0, stats: 0, ratings: 0, budgetRemaining: 0 };
+  // `reserve` keeps the day-time eager drain off the budget floor reserved for
+  // live scores; the nightly drain passes 0 (it may use the whole fresh bucket).
+  if (remaining <= reserve)
+    return { matches: 0, events: 0, lineups: 0, stats: 0, ratings: 0, budgetRemaining: remaining };
 
   const cutoff = sinceMs == null ? null : new Date(nowMs - sinceMs);
   const home = alias(teams, "home");
@@ -240,9 +264,9 @@ export async function runDetailsDrain(
   let requests = 0;
   let count = 0;
   for (const m of candidates) {
-    if (remaining <= 0) break;
+    if (remaining <= reserve) break;
     let touched = false;
-    if (m.hasDetails == null && remaining > 0) {
+    if (m.hasDetails == null && remaining > reserve) {
       try {
         events += await storeMatchEvents(m, { stampWhenEmpty });
         remaining -= 1;
@@ -252,7 +276,7 @@ export async function runDetailsDrain(
         log.warn("details.events.fail", { matchId: m.id, err: String(err) });
       }
     }
-    if (m.hasLineups == null && remaining > 0) {
+    if (m.hasLineups == null && remaining > reserve) {
       try {
         lineups += await storeMatchLineups(m, { stampWhenEmpty });
         remaining -= 1;
@@ -262,7 +286,7 @@ export async function runDetailsDrain(
         log.warn("details.lineups.fail", { matchId: m.id, err: String(err) });
       }
     }
-    if (m.hasStats == null && remaining > 0) {
+    if (m.hasStats == null && remaining > reserve) {
       try {
         stats += (await storeMatchStatistics(m, { stampWhenEmpty })) > 0 ? 1 : 0;
         remaining -= 1;
@@ -272,7 +296,7 @@ export async function runDetailsDrain(
         log.warn("details.stats.fail", { matchId: m.id, err: String(err) });
       }
     }
-    if (m.hasRatings == null && remaining > 0) {
+    if (m.hasRatings == null && remaining > reserve) {
       try {
         ratings += (await storeMatchPlayerRatings(m, { stampWhenEmpty })) > 0 ? 1 : 0;
         remaining -= 1;
@@ -299,7 +323,11 @@ export async function runDetailsDrain(
  * (which stamps) closes it out.
  */
 export function runEagerDrain(): Promise<DrainResult> {
-  return runDetailsDrain(8, { sinceMs: 5 * 60 * 60 * 1000, stampWhenEmpty: false });
+  return runDetailsDrain(8, {
+    sinceMs: 5 * 60 * 60 * 1000,
+    stampWhenEmpty: false,
+    reserve: LIVE_BUDGET_RESERVE, // never eat the budget floor reserved for scores
+  });
 }
 
 export type LiveEnrichResult = {
@@ -322,7 +350,11 @@ export async function runLiveEnrich(maxMatches = 12): Promise<LiveEnrichResult> 
   const nowMs = Date.now();
   const state = await loadBudget(nowMs);
   let remaining = budgetRemaining(state);
-  if (remaining <= 0) return { matches: 0, events: 0, stats: 0, budgetRemaining: 0 };
+  // Stop before the reserved floor so a mega match day can't drain the pool dry
+  // and freeze the live SCORE poll. Enrichment is the sacrificial consumer here —
+  // the nightly drain fills whatever it skipped.
+  if (remaining <= LIVE_BUDGET_RESERVE)
+    return { matches: 0, events: 0, stats: 0, budgetRemaining: remaining };
 
   const home = alias(teams, "home");
   const away = alias(teams, "away");
@@ -338,7 +370,10 @@ export async function runLiveEnrich(maxMatches = 12): Promise<LiveEnrichResult> 
     .from(matches)
     .innerJoin(home, eq(matches.homeTeamId, home.id))
     .innerJoin(away, eq(matches.awayTeamId, away.id))
-    .where(eq(matches.status, "live"))
+    // Only genuinely in-window matches. A row stuck at "live" past the longest
+    // possible match (reaped by runLivePollTick) must never be enriched here —
+    // otherwise it burns 2 req/tick forever until the reaper flips it.
+    .where(and(eq(matches.status, "live"), gte(matches.kickoff, new Date(nowMs - MATCH_DURATION_MS))))
     .limit(maxMatches);
 
   const opts = { stamp: false, stampWhenEmpty: false } as const;
