@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
-import { matches, teams } from "@/db/schema";
+import { matches, pushSubscription, teams, watchedMatch } from "@/db/schema";
 import {
   applyLiveUpdate,
   backfillFixtures,
@@ -358,23 +358,46 @@ export async function runLiveEnrich(maxMatches = 12): Promise<LiveEnrichResult> 
 
   const home = alias(teams, "home");
   const away = alias(teams, "away");
-  const candidates = await db
+  // In-window live matches (a row stuck "live" past the longest match is reaped
+  // by runLivePollTick and must never be enriched here — it'd burn 2 req/tick).
+  const live = await db
     .select({
       id: matches.id,
       apiFootballId: matches.apiFootballId,
       homeTeamId: matches.homeTeamId,
       homeApiId: home.apiFootballId,
+      homeName: home.name,
       awayTeamId: matches.awayTeamId,
       awayApiId: away.apiFootballId,
+      awayName: away.name,
     })
     .from(matches)
     .innerJoin(home, eq(matches.homeTeamId, home.id))
     .innerJoin(away, eq(matches.awayTeamId, away.id))
-    // Only genuinely in-window matches. A row stuck at "live" past the longest
-    // possible match (reaped by runLivePollTick) must never be enriched here —
-    // otherwise it burns 2 req/tick forever until the reaper flips it.
-    .where(and(eq(matches.status, "live"), gte(matches.kickoff, new Date(nowMs - MATCH_DURATION_MS))))
-    .limit(maxMatches);
+    .where(and(eq(matches.status, "live"), gte(matches.kickoff, new Date(nowMs - MATCH_DURATION_MS))));
+
+  if (live.length === 0) return { matches: 0, events: 0, stats: 0, budgetRemaining: remaining };
+
+  // Enrich only matches SOMEONE is monitoring, so a 56-match day stays in budget:
+  // explicitly WATCHED (the radar toggle) OR involving a followed team (auto-
+  // surveillance). Ranked by how many devices care, capped at maxMatches.
+  const watchRows = await db.select({ matchId: watchedMatch.matchId }).from(watchedMatch);
+  const watchers = new Map<number, number>();
+  for (const r of watchRows) watchers.set(r.matchId, (watchers.get(r.matchId) ?? 0) + 1);
+  const followed = new Set<string>();
+  for (const s of await db.select({ teams: pushSubscription.teams }).from(pushSubscription)) {
+    for (const t of s.teams ?? []) followed.add(t);
+  }
+
+  const candidates = live
+    .map((m) => ({
+      m,
+      score: (watchers.get(m.id) ?? 0) + (followed.has(m.homeName) || followed.has(m.awayName) ? 1 : 0),
+    }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxMatches)
+    .map((x) => x.m);
 
   const opts = { stamp: false, stampWhenEmpty: false } as const;
   let events = 0;

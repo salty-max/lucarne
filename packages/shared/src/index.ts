@@ -190,3 +190,5 @@ export type LiveResponse = { matches: LiveMatch[] };
 export type CompetitionsResponse = { competitions: CompetitionInfo[] };
 export type CompetitionDetailResponse = { competition: CompetitionDetail | null };
 export type LogsResponse = { ok: boolean; runs: RunLogEntry[] };
+/** The match ids this device has under active surveillance ("radar"). */
+export type WatchListResponse = { matchIds: number[] };

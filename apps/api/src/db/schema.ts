@@ -243,6 +243,28 @@ export const pushNotified = sqliteTable(
   (t) => [primaryKey({ columns: [t.matchId, t.key] }), index("push_notified_at_idx").on(t.at)],
 );
 
+// Active surveillance ("radar"): one row per (device, match) the user chose to
+// monitor. Drives the per-minute live enrichment — only WATCHED live matches get
+// events/stats each tick, so a huge match day stays within budget — and (later)
+// push. Keyed by an anonymous client `deviceId`, so it works even without
+// notification permission. `matchId` → matches.id (no hard FK, like pushNotified).
+export const watchedMatch = sqliteTable(
+  "watched_match",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    deviceId: text("device_id").notNull(),
+    matchId: integer("match_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("watched_device_match_idx").on(t.deviceId, t.matchId),
+    index("watched_match_match_idx").on(t.matchId),
+    index("watched_match_device_idx").on(t.deviceId),
+  ],
+);
+
 export type Broadcaster = typeof broadcasters.$inferSelect;
 export type Competition = typeof competitions.$inferSelect;
 export type Team = typeof teams.$inferSelect;
@@ -253,3 +275,4 @@ export type Standing = typeof standings.$inferSelect;
 export type BroadcastRule = typeof broadcastRules.$inferSelect;
 export type RunLog = typeof runLog.$inferSelect;
 export type PushSubscription = typeof pushSubscription.$inferSelect;
+export type WatchedMatch = typeof watchedMatch.$inferSelect;

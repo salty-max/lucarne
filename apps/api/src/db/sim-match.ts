@@ -24,7 +24,9 @@ import {
   pushSubscription,
   syncState,
   teams,
+  watchedMatch,
 } from "@/db/schema";
+import { app } from "@/app";
 import { runEagerDrain, runLineupPoll, runLivePollTick } from "@/lib/poller";
 import { runLiveEnrich } from "@/lib/poller";
 import { runPushNotify } from "@/lib/pushTrigger";
@@ -34,8 +36,11 @@ const arg = (name: string, def: string) =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1] ?? def;
 const has = (name: string) => process.argv.includes(`--${name}`);
 const DELAY = Number(arg("delay", "0")) * 1000;
-const HOME = arg("home", "France");
-const AWAY = arg("away", "Angleterre");
+// Sim-unique default names so the fake match never collides with a REAL followed
+// team (which would auto-surveil it AND push fake goals to real devices). Pass
+// --home=France --away=… to deliberately drive real follows/pushes.
+const HOME = arg("home", "Sim Rovers");
+const AWAY = arg("away", "Sim City");
 const KEEP = has("keep");
 
 const FIX = 9990001;
@@ -147,6 +152,7 @@ async function cleanup() {
     await db.delete(matchEvents).where(eq(matchEvents.matchId, m.id));
     await db.delete(matchLineups).where(eq(matchLineups.matchId, m.id));
     await db.delete(pushNotified).where(eq(pushNotified.matchId, m.id));
+    await db.delete(watchedMatch).where(eq(watchedMatch.matchId, m.id));
     await db.delete(matches).where(eq(matches.id, m.id));
   }
   await db.delete(teams).where(inArray(teams.apiFootballId, [HOME_API, AWAY_API]));
@@ -317,6 +323,48 @@ async function main() {
     check("stuck row force-finished", m.status === "finished", m.status);
     check("statusShort FT", m.statusShort === "FT", m.statusShort);
     check("last-known score preserved 3-3", m.homeGoals === 3 && m.awayGoals === 3, `${m.homeGoals}-${m.awayGoals}`);
+  });
+
+  // ---- surveillance ("radar"): only WATCHED live matches (or followed-team
+  // matches) get the per-minute enrichment — the budget guard for mega days. ----
+  await stage("SURVEILLANCE · radar", "enrich uniquement les matchs surveillés / équipes suivies", async () => {
+    const m = await dbMatch();
+    // Put the fake match back in-window & live, and drop the follow subscription so
+    // NOTHING is auto-surveilling it (the earlier push checks are already done).
+    await db
+      .update(matches)
+      .set({ status: "live", statusShort: "2H", elapsed: 75, kickoff: new Date(Date.now() - 30 * 60_000) })
+      .where(eq(matches.id, m.id));
+    state.byId[FIX] = fixture("2H", 75, 1, 2);
+    state.events[FIX] = [goal(HOME_API, 23, "K. Mbappé")];
+    await db.delete(pushSubscription).where(eq(pushSubscription.endpoint, SIM_ENDPOINT));
+
+    check("un-watched live match → enrich SKIPS it (budget saved)", (await runLiveEnrich()).matches === 0);
+
+    const DEVICE = "sim-device-1";
+    const post = await app.fetch(
+      new Request("http://sim/api/watch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceId: DEVICE, matchId: m.id }),
+      }),
+    );
+    check("POST /api/watch → 200", post.status === 200);
+    check("watched → enrich picks it up", (await runLiveEnrich()).matches >= 1);
+
+    const list = (await (await app.fetch(new Request(`http://sim/api/watch?deviceId=${DEVICE}`))).json()) as {
+      matchIds: number[];
+    };
+    check("GET /api/watch lists the watched match", list.matchIds.includes(m.id));
+
+    await app.fetch(
+      new Request("http://sim/api/watch", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceId: DEVICE, matchId: m.id }),
+      }),
+    );
+    check("un-watched again → enrich SKIPS it", (await runLiveEnrich()).matches === 0);
   });
 
   console.log(`\n${failures === 0 ? "✓ ALL CHECKS PASSED" : `✗ ${failures} CHECK(S) FAILED`}`);

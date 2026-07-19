@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { and, asc, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { competitions, matches, teams } from "@/db/schema";
+import { competitions, matches, teams, watchedMatch } from "@/db/schema";
 import { runSeed } from "@/db/seed-data";
 import { authorizeCron } from "@/lib/auth";
 import { COMPETITIONS } from "@/lib/competitions";
@@ -34,6 +34,7 @@ import type {
   RunLogEntry,
   ScheduleResponse,
   TeamsResponse,
+  WatchListResponse,
 } from "@lucarne/shared";
 
 // Portable Hono JSON API — runs on both the Node server and Cloudflare Workers.
@@ -192,6 +193,58 @@ app.post("/api/push/unsubscribe", async (c) => {
   } catch (err) {
     console.error("[/api/push/unsubscribe]", err);
     return c.json({ ok: false }, 500);
+  }
+});
+
+// --- active surveillance ("radar"): a device marks which matches it wants live-
+//     enriched (+ later, notified). Keyed by an anonymous client deviceId, so it
+//     works without push permission. The per-minute enrichment reads these. ---
+function watchKey(body: { deviceId?: unknown; matchId?: unknown }): { deviceId: string; matchId: number } | null {
+  const deviceId = typeof body.deviceId === "string" ? body.deviceId.trim() : "";
+  const matchId = typeof body.matchId === "number" ? body.matchId : Number(body.matchId);
+  if (!deviceId || deviceId.length > 100 || !Number.isInteger(matchId) || matchId <= 0) return null;
+  return { deviceId, matchId };
+}
+
+app.post("/api/watch", async (c) => {
+  try {
+    const v = watchKey(await c.req.json());
+    if (!v) return c.json({ ok: false }, 400);
+    await db.insert(watchedMatch).values(v).onConflictDoNothing();
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/watch POST]", err);
+    return c.json({ ok: false }, 500);
+  }
+});
+
+app.delete("/api/watch", async (c) => {
+  try {
+    const v = watchKey(await c.req.json());
+    if (!v) return c.json({ ok: false }, 400);
+    await db
+      .delete(watchedMatch)
+      .where(and(eq(watchedMatch.deviceId, v.deviceId), eq(watchedMatch.matchId, v.matchId)));
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/watch DELETE]", err);
+    return c.json({ ok: false }, 500);
+  }
+});
+
+// This device's watched match ids, so the UI can render each toggle's state.
+app.get("/api/watch", async (c) => {
+  try {
+    const deviceId = (c.req.query("deviceId") ?? "").trim();
+    if (!deviceId) return c.json({ matchIds: [] } satisfies WatchListResponse);
+    const rows = await db
+      .select({ matchId: watchedMatch.matchId })
+      .from(watchedMatch)
+      .where(eq(watchedMatch.deviceId, deviceId));
+    return c.json({ matchIds: rows.map((r) => r.matchId) } satisfies WatchListResponse);
+  } catch (err) {
+    console.error("[/api/watch GET]", err);
+    return c.json({ matchIds: [] } satisfies WatchListResponse, 500);
   }
 });
 
