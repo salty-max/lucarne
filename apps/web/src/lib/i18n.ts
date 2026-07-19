@@ -11,6 +11,12 @@ const en = {
     upcoming: "Upcoming",
     finished: "Finished",
   },
+  radar: {
+    title: "Radar",
+    emptyTitle: "No matches on your radar",
+    emptyBody:
+      "Flip the switch on a match to watch it — live details and alerts. Your followed teams' matches are on automatically.",
+  },
   calendar: {
     title: "Calendar",
     pickADay: "Pick a day",
@@ -208,6 +214,12 @@ const fr: Messages = {
     live: "En direct",
     upcoming: "À venir",
     finished: "Terminés",
+  },
+  radar: {
+    title: "Radar",
+    emptyTitle: "Aucun match surveillé",
+    emptyBody:
+      "Active le switch sur un match pour le surveiller — détails en direct et alertes. Les matchs de tes équipes suivies le sont automatiquement.",
   },
   calendar: {
     title: "Calendrier",

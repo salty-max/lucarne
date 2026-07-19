@@ -9,6 +9,7 @@ import Broadcasters from "@/routes/Broadcasters";
 import Settings from "@/routes/Settings";
 import Logs from "@/routes/Logs";
 import Favorites from "@/routes/Favorites";
+import Radar from "@/routes/Radar";
 
 const rootRoute = createRootRoute({ component: Layout });
 
@@ -45,6 +46,11 @@ const favoritesRoute = createRoute({
   path: "/favorites",
   component: Favorites,
 });
+const radarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/radar",
+  component: Radar,
+});
 
 const routeTree = rootRoute.addChildren([
   todayRoute,
@@ -56,6 +62,7 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
   logsRoute,
   favoritesRoute,
+  radarRoute,
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: "intent" });
