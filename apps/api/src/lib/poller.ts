@@ -441,7 +441,8 @@ export async function runLineupPoll(maxMatches = 12): Promise<LineupPollResult> 
   const nowMs = now.getTime();
   const state = await loadBudget(nowMs);
   let remaining = budgetRemaining(state);
-  if (remaining <= 0) return { matches: 0, lineups: 0, budgetRemaining: 0 };
+  // Reserve floor, like enrich/eager/predictions — the score poll always comes first.
+  if (remaining <= LIVE_BUDGET_RESERVE) return { matches: 0, lineups: 0, budgetRemaining: remaining };
 
   const home = alias(teams, "home");
   const away = alias(teams, "away");
@@ -475,7 +476,7 @@ export async function runLineupPoll(maxMatches = 12): Promise<LineupPollResult> 
   let requests = 0;
   let count = 0;
   for (const m of candidates) {
-    if (remaining <= 0) break;
+    if (remaining <= LIVE_BUDGET_RESERVE) break;
     try {
       const n = await storeMatchLineups(m, { stampWhenEmpty: false });
       remaining -= 1;

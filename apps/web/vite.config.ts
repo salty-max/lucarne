@@ -38,39 +38,11 @@ export default defineConfig(({ command }) => ({
         // Keep the precache to the app shell: skip the unused crest/logo assets
         // (~9.5 MB) and the iOS launch images (~335 KB, fetched on demand by iOS).
         globIgnores: ["**/logos/**", "**/splash/**"],
-        runtimeCaching: [
-          {
-            // Match detail drives the live/pre/post detail page — lineups appear
-            // ~40 min pre-kickoff, scores change live, stats/ratings land after FT.
-            // It MUST be fresh when online, so NetworkFirst: hit the network, fall
-            // back to cache only when offline (or if the network stalls >3s). A
-            // StaleWhileRevalidate here served the last-seen copy first, so a poll
-            // that coincided with the lineup drop showed no lineups for a cycle —
-            // or stuck until relaunch if the background revalidate hiccupped.
-            urlPattern: ({ url }: { url: URL }) => /^\/api\/match\//.test(url.pathname),
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "lucarne-match",
-              networkTimeoutSeconds: 3,
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Schedule / competitions / teams: less time-critical (Today patches
-            // live scores on top from the always-fresh /api/live). Serve the
-            // last-seen copy instantly, then revalidate in the background.
-            urlPattern: ({ url }: { url: URL }) =>
-              /^\/api\/(schedule|competitions|competition\/|teams)/.test(url.pathname),
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "lucarne-data",
-              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
-        // live scores + logs aren't matched above → always straight to network.
+        // The SW precaches ONLY the app shell — it never caches /api. Every data
+        // request goes straight to the network, so it's always fresh (a stale SW
+        // can't serve stale scores/lineups), in dev and prod alike. React Query
+        // holds the in-session cache for instant navigation; a cold relaunch loads
+        // the shell from precache and fetches fresh data (brief skeleton, no stale).
       },
       // Run the service worker on the dev server too, so the PWA is testable with
       // hot reload. `type: "module"` is required for the dev SW.

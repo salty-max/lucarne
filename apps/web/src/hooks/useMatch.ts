@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchMatch } from "@/api";
 import type { MatchDetail } from "@lucarne/shared";
 
-const LIVE_MS = 30 * 1000; // snappy while the match is on (goals/events)
+const LIVE_MS = 15 * 1000; // snappy while the match is on (goals/events) — our API, no API-Football cost
 const SETTLE_MS = 60 * 1000; // pre-match (lineups) + post-match (stats/ratings)
 const PREGAME_MS = 5 * 60 * 1000; // slow ticking BEFORE the window, just to wake up
 

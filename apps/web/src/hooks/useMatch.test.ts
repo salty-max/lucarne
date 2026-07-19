@@ -3,7 +3,7 @@ import type { MatchDetail } from "@lucarne/shared";
 import { pollInterval } from "./useMatch";
 
 const NOW = 1_700_000_000_000;
-const LIVE = 30_000;
+const LIVE = 15_000;
 const SETTLE = 60_000;
 const PREGAME = 300_000;
 

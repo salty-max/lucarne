@@ -7,19 +7,19 @@ import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 
 const KICKOFF_LEAD_MS = 11 * 60_000; // notify up to ~10 min before kickoff
 
-/** Stable per-event key so re-fetching a match's events never double-notifies.
- *  Deliberately omits the player name — the API often refines it after the fact
- *  (e.g. "Mbappé" → "K. Mbappé"), which would look like a new event. Team + minute
- *  (+ red/yellow for cards) identifies an event uniquely enough in practice. */
-function eventKey(e: {
-  teamId: number | null;
-  minute: number | null;
-  extraMinute: number | null;
-  type: string;
-  detail: string | null;
-}): string {
-  const card = e.type === "Card" ? ((e.detail ?? "").includes("Red") ? ":R" : ":Y") : "";
-  return `${e.type}:${e.teamId ?? 0}:${e.minute ?? 0}:${e.extraMinute ?? 0}${card}`;
+/** Notifiable category of an event, or null to ignore it. Used to bucket events
+ *  per (team, category) so each gets a stable ordinal key (see runPushNotify).
+ *  G = goal, PM = missed penalty, Y = yellow, Y2 = second yellow (sending-off),
+ *  R = straight red. */
+function eventCategory(type: string, detail: string | null): "G" | "PM" | "Y" | "Y2" | "R" | null {
+  const d = detail ?? "";
+  if (type === "Goal") return d === "Missed Penalty" ? "PM" : "G";
+  if (type === "Card") {
+    if (d.includes("Second Yellow")) return "Y2";
+    if (d.includes("Red")) return "R";
+    if (d.includes("Yellow")) return "Y";
+  }
+  return null;
 }
 
 function minuteLabel(min: number | null, extra: number | null): string {
@@ -68,7 +68,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
     .innerJoin(away, eq(away.id, matches.awayTeamId))
     .where(
       and(
-        gte(matches.kickoff, new Date(nowMs - 5 * 60 * 60_000)), // a full match + ET + late ratings back
+        gte(matches.kickoff, new Date(nowMs - 8 * 60 * 60_000)), // full match + ET + late/nightly ratings back
         lte(matches.kickoff, new Date(nowMs + 60 * 60_000)), // pre-match (lineups ~40 min out)
       ),
     );
@@ -120,28 +120,30 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
     let events: (typeof matchEvents.$inferSelect)[] = [];
     if (m.status === "live" || m.status === "finished") {
       events = await db.select().from(matchEvents).where(eq(matchEvents.matchId, m.id));
-      for (const e of events) {
+      // Dedup by a STABLE key: the event's ordinal within its (team, category), in
+      // chronological order — so the API later correcting a minute (which would
+      // change a minute-based key) never re-notifies an already-sent event.
+      const ord = new Map<string, number>();
+      const sorted = [...events].sort(
+        (a, b) => (a.minute ?? 0) - (b.minute ?? 0) || (a.extraMinute ?? 0) - (b.extraMinute ?? 0),
+      );
+      for (const e of sorted) {
+        const cat = eventCategory(e.type, e.detail);
+        if (!cat) continue;
+        const bucket = `${cat}:${e.teamId ?? 0}`;
+        const n = (ord.get(bucket) ?? 0) + 1;
+        ord.set(bucket, n);
         if (!e.player) continue; // never notify without the player's name — wait a tick
-        const key = eventKey(e);
+        const key = `${bucket}:${n}`;
         if (notified.has(key)) continue;
         const min = minuteLabel(e.minute, e.extraMinute);
-        const detail = e.detail ?? "";
-        if (e.type === "Goal") {
-          if (detail === "Missed Penalty") {
-            await fire(key, "goal", `❌ Penalty manqué · ${e.player} ${min}`.trim());
-          } else {
-            const og = detail === "Own Goal" ? " (csc)" : "";
-            await fire(key, "goal", `⚽ ${score(m)} · ${e.player}${og} ${min}`.trim());
-          }
-        } else if (e.type === "Card") {
-          if (detail.includes("Second Yellow")) {
-            await fire(key, "red", `🟥 Expulsion (2e jaune) · ${e.player} ${min}`.trim());
-          } else if (detail.includes("Red")) {
-            await fire(key, "red", `🟥 Carton rouge · ${e.player} ${min}`.trim());
-          } else if (detail.includes("Yellow")) {
-            await fire(key, "yellow", `🟨 Carton jaune · ${e.player} ${min}`.trim());
-          }
-        }
+        if (cat === "PM") await fire(key, "goal", `❌ Penalty manqué · ${e.player} ${min}`.trim());
+        else if (cat === "G") {
+          const og = e.detail === "Own Goal" ? " (csc)" : "";
+          await fire(key, "goal", `⚽ ${score(m)} · ${e.player}${og} ${min}`.trim());
+        } else if (cat === "Y2") await fire(key, "red", `🟥 Expulsion (2e jaune) · ${e.player} ${min}`.trim());
+        else if (cat === "R") await fire(key, "red", `🟥 Carton rouge · ${e.player} ${min}`.trim());
+        else if (cat === "Y") await fire(key, "yellow", `🟨 Carton jaune · ${e.player} ${min}`.trim());
       }
     }
 
