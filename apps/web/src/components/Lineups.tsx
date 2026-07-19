@@ -15,9 +15,11 @@ function ratingClass(r: number): string {
   return "bg-[hsl(var(--tt-red))]";
 }
 
-function Rating({ value }: { value: number }) {
+function Rating({ value, className }: { value: number; className?: string }) {
   return (
-    <span className={cn("px-1 font-bold leading-tight tabular-nums text-black", ratingClass(value))}>
+    <span
+      className={cn("px-1 font-bold leading-none tabular-nums text-black", ratingClass(value), className)}
+    >
       {value.toFixed(1)}
     </span>
   );
@@ -95,11 +97,14 @@ function pitchLines(
 }
 
 function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
+  // Compact on purpose: on the vertical (mobile) pitch a half holds up to ~5
+  // player rows in a fixed-aspect box, so the disc + name + rating stack must
+  // stay short enough that all rows fit without overflowing (and getting clipped).
   return (
-    <div className="flex w-full min-w-0 flex-col items-center gap-0.5 px-0.5">
+    <div className="flex w-full min-w-0 flex-col items-center gap-px px-0.5 leading-none">
       <span
         className={cn(
-          "grid h-6 w-6 place-items-center rounded-full font-bold",
+          "grid h-5 w-5 place-items-center rounded-full text-[0.72rem] font-bold",
           side === "home"
             ? "bg-[hsl(var(--tt-blue))] text-[hsl(var(--tt-blue-on))]"
             : "bg-[hsl(var(--tt-red))] text-[hsl(var(--tt-red-on))]",
@@ -107,10 +112,10 @@ function PitchPlayer({ p, side }: { p: LineupPlayer; side: "home" | "away" }) {
       >
         {p.number ?? ""}
       </span>
-      <span className="max-w-full truncate text-center leading-tight text-foreground/90">
+      <span className="max-w-full truncate text-center text-[0.72rem] text-foreground/90">
         {lastName(p.name)}
       </span>
-      {p.rating != null && <Rating value={p.rating} />}
+      {p.rating != null && <Rating value={p.rating} className="text-[0.62rem]" />}
     </div>
   );
 }
@@ -123,7 +128,7 @@ function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "a
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-1",
+        "flex min-h-0 min-w-0 flex-1",
         side === "home"
           ? "flex-col-reverse sm:flex-row" // GK at bottom (mobile) / left (desktop)
           : "flex-col sm:flex-row-reverse", // GK at top (mobile) / right (desktop)
@@ -135,7 +140,7 @@ function PitchHalf({ lines, side }: { lines: LineupPlayer[][]; side: "home" | "a
         <div
           key={i}
           style={{ flexGrow: i === 0 ? 0.6 : 1 }}
-          className="flex min-w-0 basis-0 flex-row items-center justify-around py-0.5 sm:flex-col sm:py-1"
+          className="flex min-h-0 min-w-0 basis-0 flex-row items-center justify-around py-0.5 sm:flex-col sm:py-1"
         >
           {line.map((p, j) => (
             <PitchPlayer key={j} p={p} side={side} />
@@ -214,7 +219,7 @@ function Pitch({ home, away }: { home: TeamLineup; away: TeamLineup }) {
       <PitchMarkings />
       {/* Players — away on top, home on bottom (mobile); home left, away right
           (desktop). Padding keeps the goalkeepers off the goal lines. */}
-      <div className="relative flex h-full flex-col-reverse px-1 py-3 sm:flex-row sm:px-3 sm:py-2">
+      <div className="relative flex h-full flex-col-reverse px-1 py-2 sm:flex-row sm:px-3 sm:py-2">
         <PitchHalf lines={pitchLines(home.startXI, home.formation)} side="home" />
         <PitchHalf lines={pitchLines(away.startXI, away.formation, true)} side="away" />
       </div>
