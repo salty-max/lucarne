@@ -54,6 +54,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       awayId: matches.awayTeamId,
       home: home.name,
       away: away.name,
+      lineupsFetchedAt: matches.lineupsFetchedAt,
     })
     .from(matches)
     .innerJoin(home, eq(home.id, matches.homeTeamId))
@@ -61,7 +62,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
     .where(
       and(
         gte(matches.kickoff, new Date(nowMs - 3 * 60 * 60_000)), // covers a full match back
-        lte(matches.kickoff, new Date(nowMs + 15 * 60_000)), // imminent kickoffs ahead
+        lte(matches.kickoff, new Date(nowMs + 60 * 60_000)), // pre-match (lineups ~40 min out)
       ),
     );
 
@@ -86,6 +87,11 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       fired++;
       sent += await deliver({ ...payload, matchId: m.id, tag: `match-${m.id}` }, { teams: teamsForMatch, trigger });
     };
+
+    // Lineups published (~40 min out) — once the XI is confirmed.
+    if (m.lineupsFetchedAt != null) {
+      await fire("LINEUPS", "lineups", { title: `${m.home} – ${m.away}`, body: "Compositions disponibles" });
+    }
 
     // Kickoff reminder — a scheduled match starting within the lead window.
     if (m.status === "scheduled" && m.kickoff.getTime() - nowMs <= KICKOFF_LEAD_MS && m.kickoff.getTime() > nowMs) {

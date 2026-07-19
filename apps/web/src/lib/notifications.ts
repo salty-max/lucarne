@@ -1,7 +1,7 @@
 // Client side of Web Push: request permission, (de)register the browser's
 // subscription with the API, and keep the followed-team targeting in sync.
 // The user opted into every event kind, so we send the full trigger set.
-const TRIGGERS = ["goal", "yellow", "red", "kickoff", "ft"];
+const TRIGGERS = ["goal", "yellow", "red", "lineups", "kickoff", "ft"];
 
 export function pushSupported(): boolean {
   return (

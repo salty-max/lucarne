@@ -4,8 +4,8 @@ import { pushSubscription } from "@/db/schema";
 import { log } from "@/lib/log";
 import { sendPush, type PushSub, type Vapid } from "@/lib/webpush";
 
-export type PushTrigger = "goal" | "yellow" | "red" | "kickoff" | "ft";
-export const ALL_TRIGGERS: PushTrigger[] = ["goal", "yellow", "red", "kickoff", "ft"];
+export type PushTrigger = "goal" | "yellow" | "red" | "lineups" | "kickoff" | "ft";
+export const ALL_TRIGGERS: PushTrigger[] = ["goal", "yellow", "red", "lineups", "kickoff", "ft"];
 
 /** VAPID config from the environment, or null if push isn't set up. */
 export function getVapid(): Vapid | null {

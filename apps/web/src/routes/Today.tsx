@@ -9,7 +9,10 @@ import { EmptyState, Loading, TeletextHero } from "@/components/common";
 import { MatchTableSkel } from "@/components/Skeletons";
 
 export default function Today() {
-  const { days, error } = useSchedule({ days: 8 }, { live: true });
+  // Fetch from yesterday so a match that kicked off last night and is still
+  // playing past midnight doesn't vanish from Today at the day rollover.
+  const yesterdayKey = parisDayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const { days, error } = useSchedule({ from: yesterdayKey, days: 9 }, { live: true });
   const { dateFormat, lang } = useSettings();
   const hidden = useHiddenCompetitions();
   const t = useT();
@@ -25,34 +28,38 @@ export default function Today() {
   }
 
   const todayMatches = keepCompetitions(days.find((d) => d.key === todayKey)?.matches ?? [], hidden);
+  // Still-live matches from before today (kicked off last night, ran past midnight).
+  const carryover = days
+    .filter((d) => d.key < todayKey)
+    .flatMap((d) => keepCompetitions(d.matches, hidden))
+    .filter((m) => m.status === "live");
   const upcoming = days
     .filter((d) => d.key > todayKey)
     .map((d) => ({ ...d, matches: keepCompetitions(d.matches, hidden) }))
     .filter((d) => d.matches.length > 0);
-  const live = todayMatches.filter((m) => m.status === "live");
+
+  const live = [...carryover, ...todayMatches.filter((m) => m.status === "live")];
   const up = todayMatches.filter((m) => m.status === "scheduled");
   const done = todayMatches.filter((m) => m.status === "finished" || m.status === "postponed");
+  const hasToday = todayMatches.length > 0 || carryover.length > 0;
 
-  const groups: MatchGroup[] =
-    todayMatches.length > 0
-      ? [
-          { key: "live", label: t.today.live, matches: live, tone: "live" },
-          { key: "up", label: t.today.upcoming, matches: up, tone: "yellow" },
-          { key: "done", label: t.today.finished, matches: done, tone: "cyan" },
-        ]
-      : upcoming.slice(0, 5).map((d) => ({
-          key: d.key,
-          label: formatLong(dayKeyToDate(d.key), dateFormat, lang),
-          matches: d.matches,
-          tone: "yellow" as const,
-        }));
+  const groups: MatchGroup[] = hasToday
+    ? [
+        { key: "live", label: t.today.live, matches: live, tone: "live" },
+        { key: "up", label: t.today.upcoming, matches: up, tone: "yellow" },
+        { key: "done", label: t.today.finished, matches: done, tone: "cyan" },
+      ]
+    : upcoming.slice(0, 5).map((d) => ({
+        key: d.key,
+        label: formatLong(dayKeyToDate(d.key), dateFormat, lang),
+        matches: d.matches,
+        tone: "yellow" as const,
+      }));
 
   return (
     <>
       <TeletextHero />
-      {todayMatches.length === 0 && (
-        <EmptyState title={t.today.noMatchesTitle}>{t.today.noMatchesBody}</EmptyState>
-      )}
+      {!hasToday && <EmptyState title={t.today.noMatchesTitle}>{t.today.noMatchesBody}</EmptyState>}
       <MatchTable groups={groups} />
     </>
   );

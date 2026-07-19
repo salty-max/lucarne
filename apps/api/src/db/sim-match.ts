@@ -178,6 +178,8 @@ async function main() {
     const r = await runLineupPoll();
     check("lineup poll picked up the match", r.matches >= 1);
     check("lineupsFetchedAt stamped", (await dbMatch()).lineupsFetchedAt != null);
+    const p = await runPushNotify();
+    check("lineups push fired", p.fired === 1, `fired=${p.fired}`);
   });
 
   await stage("KICKOFF", "1H 1' → front Today: passe en DIRECT", async () => {
