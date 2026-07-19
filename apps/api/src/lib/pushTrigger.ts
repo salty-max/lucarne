@@ -2,7 +2,7 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { matchEvents, matches, pushNotified, teams } from "@/db/schema";
-import { deliver, getVapid, type PushPayload, type PushTrigger } from "@/lib/push";
+import { deliver, getVapid, type PushTrigger } from "@/lib/push";
 import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 
 const KICKOFF_LEAD_MS = 11 * 60_000; // notify up to ~10 min before kickoff
@@ -27,6 +27,11 @@ function minuteLabel(min: number | null, extra: number | null): string {
   return `${min}${extra ? "+" + extra : ""}'`;
 }
 
+function lastName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts[parts.length - 1] || name;
+}
+
 /**
  * Scan the matches around now that involve a followed team, and push their new
  * events (goals, cards), imminent kickoffs and full-times — each exactly once
@@ -46,6 +51,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
     .select({
       id: matches.id,
       status: matches.status,
+      statusShort: matches.statusShort,
       kickoff: matches.kickoff,
       homeGoals: matches.homeGoals,
       awayGoals: matches.awayGoals,
@@ -54,13 +60,15 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       home: home.name,
       away: away.name,
       lineupsFetchedAt: matches.lineupsFetchedAt,
+      motmName: matches.motmName,
+      motmRating: matches.motmRating,
     })
     .from(matches)
     .innerJoin(home, eq(home.id, matches.homeTeamId))
     .innerJoin(away, eq(away.id, matches.awayTeamId))
     .where(
       and(
-        gte(matches.kickoff, new Date(nowMs - 3 * 60 * 60_000)), // covers a full match back
+        gte(matches.kickoff, new Date(nowMs - 5 * 60 * 60_000)), // a full match + ET + late ratings back
         lte(matches.kickoff, new Date(nowMs + 60 * 60_000)), // pre-match (lineups ~40 min out)
       ),
     );
@@ -79,62 +87,79 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
     `${m.homeGoals ?? 0}–${m.awayGoals ?? 0}`;
 
   for (const { m, watchers } of relevant) {
+    // Title is ALWAYS the fixture, body is the event — so two notifications from
+    // two different live matches are instantly distinguishable.
+    const title = `${m.home} – ${m.away}`;
     const notified = new Set(
       (await db.select({ key: pushNotified.key }).from(pushNotified).where(eq(pushNotified.matchId, m.id))).map(
         (r) => r.key,
       ),
     );
     const fresh: string[] = [];
-    const fire = async (key: string, trigger: PushTrigger, payload: Omit<PushPayload, "matchId" | "tag">) => {
+    const fire = async (key: string, trigger: PushTrigger, body: string) => {
       if (notified.has(key)) return;
       fresh.push(key);
       fired++;
-      sent += await deliver({ ...payload, matchId: m.id, tag: `match-${m.id}` }, { deviceIds: watchers, trigger });
+      sent += await deliver({ title, body, matchId: m.id, tag: `match-${m.id}` }, { deviceIds: watchers, trigger });
     };
 
-    // Lineups published (~40 min out) — once the XI is confirmed.
-    if (m.lineupsFetchedAt != null) {
-      await fire("LINEUPS", "lineups", { title: `${m.home} – ${m.away}`, body: "Compositions disponibles" });
-    }
-
-    // Kickoff reminder — a scheduled match starting within the lead window.
+    // Lineups (~40 min out) + kickoff reminder.
+    if (m.lineupsFetchedAt != null) await fire("LINEUPS", "lineups", "Compositions disponibles");
     if (m.status === "scheduled" && m.kickoff.getTime() - nowMs <= KICKOFF_LEAD_MS && m.kickoff.getTime() > nowMs) {
-      await fire("KO", "kickoff", { title: `${m.home} – ${m.away}`, body: "Coup d'envoi imminent" });
+      await fire("KO", "kickoff", "Coup d'envoi imminent");
     }
 
-    // Goals + cards — only for in-play / finished matches.
+    // Phase transitions — each fires once.
+    if (m.status === "live") {
+      if (m.statusShort === "HT") await fire("HT", "ht", `⏸ Mi-temps · ${score(m)}`);
+      else if (m.statusShort === "ET" || m.statusShort === "BT") await fire("ET", "phase", "⏱ Prolongations");
+      else if (m.statusShort === "P") await fire("PENS", "phase", "🥅 Séance de tirs au but");
+    }
+
+    // Goals + cards (need the events; also reused for the full-time scorers).
+    let events: (typeof matchEvents.$inferSelect)[] = [];
     if (m.status === "live" || m.status === "finished") {
-      const events = await db
-        .select()
-        .from(matchEvents)
-        .where(eq(matchEvents.matchId, m.id));
+      events = await db.select().from(matchEvents).where(eq(matchEvents.matchId, m.id));
       for (const e of events) {
+        if (!e.player) continue; // never notify without the player's name — wait a tick
         const key = eventKey(e);
         if (notified.has(key)) continue;
         const min = minuteLabel(e.minute, e.extraMinute);
-        const teamName = e.teamId === m.homeId ? m.home : e.teamId === m.awayId ? m.away : "";
-        if (e.type === "Goal" && e.detail !== "Missed Penalty") {
-          await fire(key, "goal", {
-            title: `⚽ ${m.home} ${score(m)} ${m.away}`,
-            body: `${e.player ?? teamName} ${min}`.trim(),
-          });
-        } else if (e.type === "Card" && (e.detail ?? "").includes("Red")) {
-          await fire(key, "red", {
-            title: `${m.home} – ${m.away}`,
-            body: `🟥 Carton rouge — ${e.player ?? teamName} ${min}`.trim(),
-          });
-        } else if (e.type === "Card" && (e.detail ?? "").includes("Yellow")) {
-          await fire(key, "yellow", {
-            title: `${m.home} – ${m.away}`,
-            body: `🟨 Carton jaune — ${e.player ?? teamName} ${min}`.trim(),
-          });
+        const detail = e.detail ?? "";
+        if (e.type === "Goal") {
+          if (detail === "Missed Penalty") {
+            await fire(key, "goal", `❌ Penalty manqué · ${e.player} ${min}`.trim());
+          } else {
+            const og = detail === "Own Goal" ? " (csc)" : "";
+            await fire(key, "goal", `⚽ ${score(m)} · ${e.player}${og} ${min}`.trim());
+          }
+        } else if (e.type === "Card") {
+          if (detail.includes("Second Yellow")) {
+            await fire(key, "red", `🟥 Expulsion (2e jaune) · ${e.player} ${min}`.trim());
+          } else if (detail.includes("Red")) {
+            await fire(key, "red", `🟥 Carton rouge · ${e.player} ${min}`.trim());
+          } else if (detail.includes("Yellow")) {
+            await fire(key, "yellow", `🟨 Carton jaune · ${e.player} ${min}`.trim());
+          }
         }
       }
     }
 
-    // Full-time.
+    // Full-time — with the scorers.
     if (m.status === "finished") {
-      await fire("FT", "ft", { title: `${m.home} ${score(m)} ${m.away}`, body: "Fin du match" });
+      const scorers = (teamId: number) =>
+        events
+          .filter((e) => e.type === "Goal" && e.detail !== "Missed Penalty" && e.teamId === teamId && e.player)
+          .map((e) => lastName(e.player as string))
+          .join(", ");
+      const line = [scorers(m.homeId), scorers(m.awayId)].filter(Boolean).join(" / ");
+      await fire("FT", "ft", `⏱ Fin · ${score(m)}${line ? ` · ${line}` : ""}`);
+    }
+
+    // Man of the match — once the ratings resolved it.
+    if (m.status === "finished" && m.motmName != null) {
+      const r = m.motmRating != null ? ` (${m.motmRating})` : "";
+      await fire("MOTM", "motm", `⭐ Homme du match · ${m.motmName}${r}`);
     }
 
     if (fresh.length > 0) {

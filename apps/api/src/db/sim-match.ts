@@ -268,6 +268,8 @@ async function main() {
     const m = await dbMatch();
     check("status still live", m.status === "live");
     check("statusShort HT", m.statusShort === "HT", m.statusShort);
+    const p = await runPushNotify();
+    check("mi-temps push fired", p.fired === 1, `fired=${p.fired}`);
   });
 
   await stage("GOAL 70' + yellow 65'", "1-1 + notifs but adverse & carton", async () => {
@@ -284,6 +286,19 @@ async function main() {
     const m = await dbMatch();
     check("score 1-1", m.homeGoals === 1 && m.awayGoals === 1);
     check("2 pushes fired (new goal + new card, not the old goal)", r.fired === 2, `fired=${r.fired}`);
+  });
+
+  await stage("NOTIFS · penalty manqué + 2e jaune", "nouveaux types d'events → notifs dédiées", async () => {
+    state.events[FIX] = [
+      goal(HOME_API, 23, "K. Mbappé"),
+      card(AWAY_API, 65, "Rice"),
+      goal(AWAY_API, 70, "Kane"),
+      { ...card(HOME_API, 80, "Barcola"), detail: "Second Yellow card" },
+      { ...goal(AWAY_API, 82, "Kane"), detail: "Missed Penalty" },
+    ];
+    await runLiveEnrich();
+    const r = await runPushNotify();
+    check("penalty manqué + expulsion (2e jaune) → 2 notifs", r.fired === 2, `fired=${r.fired}`);
   });
 
   await stage("FULL TIME", "drops from live=all → FINALISE 1-2 (late England goal) + FT push", async () => {
@@ -307,6 +322,13 @@ async function main() {
     const r = await runPushNotify();
     check("full-time push fired (the late goal too)", r.fired >= 1, `fired=${r.fired}`);
     check("4 events stored after drain", (await db.select().from(matchEvents).where(eq(matchEvents.matchId, m.id))).length === 4);
+    // Man of the match — once ratings resolved the top-rated player.
+    await db
+      .update(matches)
+      .set({ motmName: "K. Mbappé", motmSide: "home", motmRating: 8.7 })
+      .where(eq(matches.id, m.id));
+    const mp = await runPushNotify();
+    check("homme du match → notif", mp.fired === 1, `fired=${mp.fired}`);
   });
 
   // ---- stuck-live reaper: a row left "live" long past the match (we missed its
