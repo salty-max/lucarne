@@ -73,7 +73,9 @@ export function MatchCard({
 
   const nameCls = (r: Result) =>
     cn(
-      "inline-block max-w-[7rem] truncate align-middle uppercase sm:max-w-[16rem]",
+      // min-w-0 lets the name shrink & ellipsize when the row is tight (narrow
+      // phones) instead of forcing the table wider than the viewport.
+      "min-w-0 max-w-[7rem] truncate align-middle uppercase sm:max-w-[16rem]",
       r === "win" ? "font-bold text-[hsl(var(--tt-green))]" : "text-foreground",
     );
 
@@ -97,10 +99,15 @@ export function MatchCard({
       <td className="whitespace-nowrap py-2.5 pr-3 align-middle sm:py-1.5">
         <StatusCell m={m} />
       </td>
-      <td className="py-2.5 align-middle sm:py-1.5">
+      {/* Flexible fixture column: absorbs the row's slack (packing left after
+          the time, broadcasters pinned right) AND shrinks the team names when
+          space is tight, so the row never forces a horizontal scroll. `max-w-0`
+          stops the auto-table from sizing this column to the names' intrinsic
+          width — the trick that lets the names actually truncate on narrow phones. */}
+      <td className="w-full max-w-0 py-2.5 align-middle sm:py-1.5">
         <span className="flex items-center gap-2">
           <span className={nameCls(homeResult)}>{teamName(m.home.name, lang)}</span>
-          <span className="hrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
+          <span className="shrink-0 whitespace-nowrap text-center font-extrabold tabular-nums">
             {hasScore ? (
               <span className="block leading-none text-[hsl(var(--tt-yellow))]">
                 {m.homeGoals}–{m.awayGoals}
@@ -117,7 +124,6 @@ export function MatchCard({
           <span className={nameCls(awayResult)}>{teamName(m.away.name, lang)}</span>
         </span>
       </td>
-      <td className="w-full" />
       <td className="whitespace-nowrap py-2.5 pl-3 text-right align-middle sm:py-1.5">
         {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
           <span className="inline-flex items-center justify-end gap-1">
