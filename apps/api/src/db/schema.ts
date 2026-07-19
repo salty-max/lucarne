@@ -72,10 +72,17 @@ export const matches = sqliteTable(
       home: Record<string, number>;
       away: Record<string, number>;
     }>(),
+    // Pre-match prediction (win %, advice) from API-Football, fetched once before
+    // kickoff. Percentages are 0–100 ints; advice is the API's one-line tip.
+    predHome: integer("pred_home"),
+    predDraw: integer("pred_draw"),
+    predAway: integer("pred_away"),
+    predAdvice: text("pred_advice"),
     detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
     lineupsFetchedAt: integer("lineups_fetched_at", { mode: "timestamp_ms" }),
     statsFetchedAt: integer("stats_fetched_at", { mode: "timestamp_ms" }),
     ratingsFetchedAt: integer("ratings_fetched_at", { mode: "timestamp_ms" }),
+    predictionsFetchedAt: integer("predictions_fetched_at", { mode: "timestamp_ms" }),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),

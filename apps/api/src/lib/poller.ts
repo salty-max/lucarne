@@ -8,6 +8,7 @@ import {
   storeMatchEvents,
   storeMatchLineups,
   storeMatchPlayerRatings,
+  storeMatchPredictions,
   storeMatchStatistics,
   syncAllStandings,
   syncFixtures,
@@ -489,4 +490,51 @@ export async function runLineupPoll(maxMatches = 12): Promise<LineupPollResult> 
   const next = { ...state, requestsToday: state.requestsToday + requests };
   await saveBudget(next);
   return { matches: count, lineups, budgetRemaining: budgetRemaining(next) };
+}
+
+export type PredictionsPollResult = { matches: number; budgetRemaining: number };
+
+/**
+ * Pre-match predictions poll. For scheduled matches kicking off within ~36h that
+ * don't have a prediction yet, fetch it once (win %, advice) — one request each,
+ * stamped so it never re-fetches. Budget-gated with the live reserve so it never
+ * starves scores; capped per tick, so it drains the backlog then idles.
+ */
+export async function runPredictionsPoll(maxMatches = 20): Promise<PredictionsPollResult> {
+  const nowMs = Date.now();
+  const state = await loadBudget(nowMs);
+  let remaining = budgetRemaining(state);
+  if (remaining <= LIVE_BUDGET_RESERVE) return { matches: 0, budgetRemaining: remaining };
+
+  const candidates = await db
+    .select({ id: matches.id, apiFootballId: matches.apiFootballId })
+    .from(matches)
+    .where(
+      and(
+        eq(matches.status, "scheduled"),
+        isNull(matches.predictionsFetchedAt),
+        gte(matches.kickoff, new Date(nowMs)),
+        lte(matches.kickoff, new Date(nowMs + 36 * 60 * 60_000)),
+      ),
+    )
+    .orderBy(asc(matches.kickoff))
+    .limit(maxMatches);
+
+  let count = 0;
+  let requests = 0;
+  for (const m of candidates) {
+    if (remaining <= LIVE_BUDGET_RESERVE) break;
+    try {
+      await storeMatchPredictions(m); // stamps always → one attempt per match
+      count += 1;
+    } catch (err) {
+      log.warn("predictions.match.fail", { matchId: m.id, err: String(err) });
+    }
+    remaining -= 1;
+    requests += 1;
+  }
+
+  const next = { ...state, requestsToday: state.requestsToday + requests };
+  await saveBudget(next);
+  return { matches: count, budgetRemaining: budgetRemaining(next) };
 }

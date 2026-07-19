@@ -160,12 +160,16 @@ export type TeamStats = {
 export type MatchStatistics = { home: TeamStats; away: TeamStats };
 
 /** A single match with the extra fields worth showing on its detail page. */
+/** Pre-match prediction: win probabilities (0–100) + the API's one-line advice. */
+export type MatchPrediction = { home: number; draw: number; away: number; advice: string | null };
+
 export type MatchDetail = Match & {
   venue: string | null;
   round: string | null;
   referee: string | null;
   lineups: MatchLineups | null;
   statistics: MatchStatistics | null;
+  predictions: MatchPrediction | null;
 };
 
 /** One scheduled-job outcome, as surfaced by the logs page. `at` is an ISO

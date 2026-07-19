@@ -165,6 +165,21 @@ export function getFixturePlayers(fixtureId: number) {
   return call<ApiFixturePlayers[]>("/fixtures/players", { fixture: fixtureId });
 }
 
+export type ApiPrediction = {
+  predictions: {
+    winner: { id: number | null; name: string | null; comment: string | null };
+    advice: string | null;
+    // Win/draw/away probabilities as percent strings, e.g. "45%".
+    percent: { home: string | null; draw: string | null; away: string | null };
+  };
+};
+
+/** Pre-match prediction (win %, advice, likely winner) for ONE fixture. One
+ *  request per match, fetched once before kickoff. */
+export function getPredictions(fixtureId: number) {
+  return call<ApiPrediction[]>("/predictions", { fixture: fixtureId });
+}
+
 export type ApiStandingRow = {
   rank: number;
   team: { id: number; name: string; logo: string | null };

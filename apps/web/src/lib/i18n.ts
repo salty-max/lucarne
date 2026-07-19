@@ -89,6 +89,7 @@ const en = {
     watchForLive: "Watch for live updates",
     activating: "Activating — live details in ~1 min",
   },
+  prediction: { title: "Prediction", draw: "Draw", advice: "Tip" },
   stats: {
     title: "Statistics",
     possession: "Possession",
@@ -293,6 +294,7 @@ const fr: Messages = {
     watchForLive: "Surveiller pour le suivi live",
     activating: "Activation — détails live dans ~1 min",
   },
+  prediction: { title: "Pronostic", draw: "Nul", advice: "Conseil" },
   stats: {
     title: "Statistiques",
     possession: "Possession",

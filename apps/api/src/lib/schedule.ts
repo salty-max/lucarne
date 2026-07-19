@@ -6,6 +6,7 @@ import type {
   MatchDetail,
   MatchEvent,
   MatchLineups,
+  MatchPrediction,
   MatchStatistics,
   MatchStatus,
   Team,
@@ -28,6 +29,7 @@ export type ScheduleMatchDetail = ScheduleMatch & {
   referee: string | null;
   lineups: MatchLineups | null;
   statistics: MatchStatistics | null;
+  predictions: MatchPrediction | null;
 };
 
 /** Serialize to the wire shape (Date → ISO) for a JSON response. */
@@ -199,6 +201,10 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
       round: matches.round,
       referee: matches.referee,
       statistics: matches.statistics,
+      predHome: matches.predHome,
+      predDraw: matches.predDraw,
+      predAway: matches.predAway,
+      predAdvice: matches.predAdvice,
       playerRatings: matches.playerRatings,
       homeFormation: matches.homeFormation,
       awayFormation: matches.awayFormation,
@@ -319,6 +325,10 @@ export async function getMatchDetail(id: number): Promise<ScheduleMatchDetail | 
     referee: r.referee,
     lineups,
     statistics: r.statistics,
+    predictions:
+      r.predHome != null && r.predDraw != null && r.predAway != null
+        ? { home: r.predHome, draw: r.predDraw, away: r.predAway, advice: r.predAdvice }
+        : null,
     competition: { name: r.competitionName, slug: r.competitionSlug },
     home: { name: r.homeName, shortName: r.homeShort, logo: r.homeLogo },
     away: { name: r.awayName, shortName: r.awayShort, logo: r.awayLogo },

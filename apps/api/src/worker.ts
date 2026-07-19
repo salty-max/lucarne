@@ -12,6 +12,7 @@ import {
   runLineupPoll,
   runLiveEnrich,
   runLivePollTick,
+  runPredictionsPoll,
 } from "@/lib/poller";
 import { runPushNotify } from "@/lib/pushTrigger";
 import { pickCache } from "@/lib/scheduleCache";
@@ -75,6 +76,7 @@ export default {
           await runJob("live-enrich", () => runLiveEnrich(), (r) => r.matches > 0);
           await runJob("push", () => runPushNotify(), (r) => r.fired > 0);
           await runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0);
+          await runJob("predictions", () => runPredictionsPoll(), (r) => r.matches > 0);
           await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
         })(),
       );

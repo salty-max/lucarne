@@ -10,6 +10,7 @@ import {
   getFixturePlayers,
   getFixtureStatistics,
   getLiveFixtures,
+  getPredictions,
   getStandings,
   type ApiFixture,
   type ApiTeamStatistics,
@@ -542,4 +543,31 @@ export async function storeMatchPlayerRatings(
     .where(eq(matches.id, m.id));
 
   return count;
+}
+
+/** Fetch + store the pre-match prediction (win %, advice) for ONE match. Costs
+ *  one API request; fetched once before kickoff. Returns 1 if a prediction landed. */
+export async function storeMatchPredictions(
+  m: { id: number; apiFootballId: number },
+  { stampWhenEmpty = true }: StoreOpts = {},
+): Promise<number> {
+  const [p] = await getPredictions(m.apiFootballId); // 1 API request
+  const pct = (s: string | null | undefined) => {
+    const n = s ? Number.parseInt(s, 10) : NaN;
+    return Number.isFinite(n) ? n : null;
+  };
+  const predHome = pct(p?.predictions.percent.home);
+  const predDraw = pct(p?.predictions.percent.draw);
+  const predAway = pct(p?.predictions.percent.away);
+  const predAdvice = p?.predictions.advice ?? null;
+  const hasData = predHome != null || predDraw != null || predAway != null || predAdvice != null;
+
+  if (!hasData && !stampWhenEmpty) return 0;
+
+  await db
+    .update(matches)
+    .set({ predHome, predDraw, predAway, predAdvice, predictionsFetchedAt: new Date() })
+    .where(eq(matches.id, m.id));
+
+  return hasData ? 1 : 0;
 }

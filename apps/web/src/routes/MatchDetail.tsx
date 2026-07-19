@@ -215,6 +215,35 @@ function LiveWatchPanel({ onWatch, t }: { onWatch: () => void; t: Messages }) {
   );
 }
 
+/** Pre-match prediction: a 3-way win-probability bar (home / draw / away) + the
+ *  API's one-line tip. Home is blue, away red — matching the events colours. */
+function PredictionSection({ m, t }: { m: Detail; t: Messages }) {
+  const p = m.predictions;
+  if (!p) return null;
+  return (
+    <section className="mt-3">
+      <SectionLabel>{t.prediction.title}</SectionLabel>
+      <div className="flex items-center justify-between font-bold tabular-nums">
+        <span className="text-[hsl(var(--tt-blue))]">{p.home}%</span>
+        <span className="text-muted-foreground">
+          {t.prediction.draw} {p.draw}%
+        </span>
+        <span className="text-[hsl(var(--tt-red))]">{p.away}%</span>
+      </div>
+      <div className="mt-1 flex h-2.5 w-full overflow-hidden">
+        <div className="bg-[hsl(var(--tt-blue))]" style={{ width: `${p.home}%` }} />
+        <div className="bg-muted-foreground/50" style={{ width: `${p.draw}%` }} />
+        <div className="bg-[hsl(var(--tt-red))]" style={{ width: `${p.away}%` }} />
+      </div>
+      {p.advice && (
+        <p className="mt-2 text-muted-foreground">
+          <span className="uppercase tracking-wide text-foreground/80">{t.prediction.advice}</span> · {p.advice}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function MatchDetail() {
   const { id } = useParams({ strict: false }) as { id: string };
   const { match, loading, error } = useMatch(Number(id));
@@ -286,6 +315,8 @@ export default function MatchDetail() {
           <WatchButton on={watched} onToggle={() => toggle(match)} t={t} />
         </div>
       )}
+
+      {match.status !== "finished" && <PredictionSection m={match} t={t} />}
 
       {liveUnwatched ? (
         <LiveWatchPanel onWatch={() => toggle(match)} t={t} />
