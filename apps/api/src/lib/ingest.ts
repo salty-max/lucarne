@@ -504,6 +504,15 @@ function normalizeStats(stats: ApiTeamStatistics["statistics"]): TeamStats {
     const n = typeof s.value === "number" ? s.value : parseFloat(String(s.value).replace("%", ""));
     return Number.isFinite(n) ? n : null;
   };
+  // Pass accuracy: the API only sends the pre-computed "Passes %" for some
+  // fixtures (and often only after full-time). When it's missing but the raw
+  // counts are present — as they are live — derive it so it shows during the
+  // match instead of staying blank. (xG has no such fallback: no live components.)
+  const acc = get("Passes accurate");
+  const total = get("Total passes");
+  const passAccuracy =
+    get("Passes %") ?? (acc != null && total ? Math.round((acc / total) * 100) : null);
+
   return {
     possession: get("Ball Possession"),
     shots: get("Total Shots"),
@@ -513,7 +522,7 @@ function normalizeStats(stats: ApiTeamStatistics["statistics"]): TeamStats {
     fouls: get("Fouls"),
     offsides: get("Offsides"),
     saves: get("Goalkeeper Saves"),
-    passAccuracy: get("Passes %"),
+    passAccuracy,
   };
 }
 
