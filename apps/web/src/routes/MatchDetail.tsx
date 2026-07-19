@@ -81,7 +81,7 @@ function Scoreboard({ m, homeResult, awayResult }: { m: Detail; homeResult: Resu
             key={i}
             className="flex items-center gap-3 border-b border-dotted border-border py-1.5 last:border-b-0"
           >
-            <span className={nameCls(r.result)}>{r.name}</span>
+            <span className={cn(nameCls(r.result), scheduled && "text-center")}>{r.name}</span>
             {!scheduled && (
               <span className="tt-2h shrink-0 font-extrabold tabular-nums text-[hsl(var(--tt-yellow))]">
                 {r.goals ?? 0}
