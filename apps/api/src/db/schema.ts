@@ -221,12 +221,35 @@ export const pushSubscription = sqliteTable("push_subscription", {
   endpoint: text("endpoint").primaryKey(),
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
+  // Which device this browser endpoint belongs to — push now targets the matches
+  // a DEVICE is surveilling (watched_match ∪ followed_team), not a teams[] list.
+  // Nullable for legacy rows until they re-subscribe. `teams` is legacy/unused.
+  deviceId: text("device_id"),
   teams: text("teams", { mode: "json" }).$type<string[]>().notNull(),
   triggers: text("triggers", { mode: "json" }).$type<string[]>().notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+// A device's followed teams — the server-side mirror of the client's favourites,
+// synced independently of push (so auto-surveillance works without notifications).
+// Drives both live enrichment (auto-watch) and push targeting, per device.
+export const followedTeam = sqliteTable(
+  "followed_team",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    deviceId: text("device_id").notNull(),
+    team: text("team").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("followed_device_team_idx").on(t.deviceId, t.team),
+    index("followed_device_idx").on(t.deviceId),
+  ],
+);
 
 // Dedup ledger: one row per (match, event) already pushed, so re-fetching a
 // match's events on the next tick never sends a goal/card twice. `key` is a
@@ -280,3 +303,4 @@ export type BroadcastRule = typeof broadcastRules.$inferSelect;
 export type RunLog = typeof runLog.$inferSelect;
 export type PushSubscription = typeof pushSubscription.$inferSelect;
 export type WatchedMatch = typeof watchedMatch.$inferSelect;
+export type FollowedTeam = typeof followedTeam.$inferSelect;

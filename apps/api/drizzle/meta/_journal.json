@@ -71,6 +71,13 @@
       "when": 1784470598531,
       "tag": "0009_fantastic_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1784472321801,
+      "tag": "0010_sour_boomer",
+      "breakpoints": true
     }
   ]
 }

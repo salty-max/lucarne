@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { useLiveCount } from "@/hooks/useLiveCount";
-import { syncPushTeams } from "@/lib/notifications";
+import { resyncPush, syncFollows } from "@/lib/notifications";
 import { usePrefs } from "@/lib/prefs";
 import { LiveDot } from "@/components/common";
 import { useSettings } from "@/lib/settings";
@@ -27,10 +27,18 @@ export function Layout() {
   const { notifications, favorites } = usePrefs();
   const t = useT();
 
-  // Keep the push targeting in sync when the followed teams change.
+  // Mirror followed teams to the server whenever they change (and on load). This
+  // drives auto-surveillance — live enrichment + push — so it runs regardless of
+  // whether notifications are enabled.
   useEffect(() => {
-    if (notifications) void syncPushTeams(favorites);
-  }, [notifications, favorites]);
+    void syncFollows(favorites);
+  }, [favorites]);
+
+  // Re-link an existing push subscription to this device (migrates subs made
+  // before push moved from teams to per-device surveillance).
+  useEffect(() => {
+    if (notifications) void resyncPush();
+  }, [notifications]);
 
   const [now, setNow] = useState(() => new Date());
   const [entry, setEntry] = useState("");

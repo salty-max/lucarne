@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { competitions, matches, teams, watchedMatch } from "@/db/schema";
+import { competitions, followedTeam, matches, teams, watchedMatch } from "@/db/schema";
 import { runSeed } from "@/db/seed-data";
 import { authorizeCron } from "@/lib/auth";
 import { COMPETITIONS } from "@/lib/competitions";
@@ -161,7 +161,7 @@ app.post("/api/push/subscribe", async (c) => {
   try {
     const body = (await c.req.json()) as {
       subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-      teams?: unknown;
+      deviceId?: unknown;
       triggers?: unknown;
       welcome?: boolean;
     };
@@ -169,14 +169,13 @@ app.post("/api/push/subscribe", async (c) => {
     if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
       return c.json({ ok: false, error: "bad subscription" }, 400);
     }
-    const teams = Array.isArray(body.teams)
-      ? body.teams.filter((t): t is string => typeof t === "string")
-      : [];
+    const deviceId =
+      typeof body.deviceId === "string" && body.deviceId.trim() ? body.deviceId.trim() : null;
     const triggers = Array.isArray(body.triggers)
       ? body.triggers.filter((t): t is PushTrigger => (ALL_TRIGGERS as string[]).includes(t as string))
       : ALL_TRIGGERS;
     const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
-    await saveSubscription(pushSub, teams, triggers);
+    await saveSubscription(pushSub, deviceId, triggers);
     if (body.welcome) await sendWelcome(pushSub);
     return c.json({ ok: true });
   } catch (err) {
@@ -263,6 +262,30 @@ app.get("/api/watch", async (c) => {
   } catch (err) {
     console.error("[/api/watch GET]", err);
     return c.json(empty, 500);
+  }
+});
+
+// --- followed teams: the server-side mirror of the client's favourites, per
+//     device. Drives auto-surveillance (enrich + push) independently of push. ---
+app.put("/api/follows", async (c) => {
+  try {
+    const body = (await c.req.json()) as { deviceId?: unknown; teams?: unknown };
+    const deviceId = typeof body.deviceId === "string" ? body.deviceId.trim() : "";
+    if (!deviceId || deviceId.length > 100) return c.json({ ok: false }, 400);
+    const teamList = Array.isArray(body.teams)
+      ? [...new Set(body.teams.filter((t): t is string => typeof t === "string" && t.trim().length > 0))]
+      : [];
+    await db.delete(followedTeam).where(eq(followedTeam.deviceId, deviceId));
+    if (teamList.length > 0) {
+      await db
+        .insert(followedTeam)
+        .values(teamList.map((team) => ({ deviceId, team })))
+        .onConflictDoNothing();
+    }
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/follows PUT]", err);
+    return c.json({ ok: false }, 500);
   }
 });
 

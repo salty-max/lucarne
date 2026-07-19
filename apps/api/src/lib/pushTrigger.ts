@@ -1,8 +1,9 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
-import { matchEvents, matches, pushNotified, pushSubscription, teams } from "@/db/schema";
+import { matchEvents, matches, pushNotified, teams } from "@/db/schema";
 import { deliver, getVapid, type PushPayload, type PushTrigger } from "@/lib/push";
+import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 
 const KICKOFF_LEAD_MS = 11 * 60_000; // notify up to ~10 min before kickoff
 
@@ -34,11 +35,9 @@ function minuteLabel(min: number | null, extra: number | null): string {
 export async function runPushNotify(now = new Date()): Promise<{ sent: number; fired: number }> {
   if (!getVapid()) return { sent: 0, fired: 0 };
 
-  // Union of every followed team; if nobody follows anything, there's no work.
-  const subs = await db.select({ teams: pushSubscription.teams }).from(pushSubscription);
-  const followed = new Set<string>();
-  for (const s of subs) for (const t of s.teams) followed.add(t);
-  if (followed.size === 0) return { sent: 0, fired: 0 };
+  // Everyone's surveillance state; if nobody watches anything, there's no work.
+  const st = await loadWatchState();
+  if (st.devices.size === 0) return { sent: 0, fired: 0 };
 
   const nowMs = now.getTime();
   const home = alias(teams, "home");
@@ -66,15 +65,20 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       ),
     );
 
-  const relevant = rows.filter((m) => followed.has(m.home) || followed.has(m.away));
+  const relevant = rows
+    .map((m) => ({
+      m,
+      watchers: new Set(devicesWatching(st, { id: m.id, homeName: m.home, awayName: m.away })),
+    }))
+    .filter((x) => x.watchers.size > 0);
   if (relevant.length === 0) return { sent: 0, fired: 0 };
 
   let sent = 0;
   let fired = 0;
-  const score = (m: (typeof relevant)[number]) => `${m.homeGoals ?? 0}–${m.awayGoals ?? 0}`;
+  const score = (m: { homeGoals: number | null; awayGoals: number | null }) =>
+    `${m.homeGoals ?? 0}–${m.awayGoals ?? 0}`;
 
-  for (const m of relevant) {
-    const teamsForMatch = [m.home, m.away];
+  for (const { m, watchers } of relevant) {
     const notified = new Set(
       (await db.select({ key: pushNotified.key }).from(pushNotified).where(eq(pushNotified.matchId, m.id))).map(
         (r) => r.key,
@@ -85,7 +89,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       if (notified.has(key)) return;
       fresh.push(key);
       fired++;
-      sent += await deliver({ ...payload, matchId: m.id, tag: `match-${m.id}` }, { teams: teamsForMatch, trigger });
+      sent += await deliver({ ...payload, matchId: m.id, tag: `match-${m.id}` }, { deviceIds: watchers, trigger });
     };
 
     // Lineups published (~40 min out) — once the XI is confirmed.

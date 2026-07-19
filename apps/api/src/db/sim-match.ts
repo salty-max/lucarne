@@ -17,6 +17,7 @@ import { initLocalDb } from "@/db/local";
 import { db } from "@/db";
 import {
   competitions,
+  followedTeam,
   matches,
   matchEvents,
   matchLineups,
@@ -49,6 +50,7 @@ const HOME_API = 9990011;
 const AWAY_API = 9990012;
 const LEAGUE = 1; // FIFA World Cup — a tracked league
 const SIM_ENDPOINT = "https://sim.invalid/push";
+const SIM_DEVICE = "sim-device-1"; // the fake device: follows HOME + owns the push sub
 
 // ---- faked API state, mutated per stage; served by the mocked fetch ----
 const state: {
@@ -157,6 +159,8 @@ async function cleanup() {
   }
   await db.delete(teams).where(inArray(teams.apiFootballId, [HOME_API, AWAY_API]));
   await db.delete(pushSubscription).where(eq(pushSubscription.endpoint, SIM_ENDPOINT));
+  await db.delete(followedTeam).where(eq(followedTeam.deviceId, SIM_DEVICE));
+  await db.delete(watchedMatch).where(eq(watchedMatch.deviceId, SIM_DEVICE));
   // Reset the live-poll budget/throttle — the sim's virtual clock writes a future
   // lastPollAt that would otherwise throttle the next run (and the real dev poll).
   await db.delete(syncState).where(eq(syncState.key, "api_budget"));
@@ -189,13 +193,21 @@ async function seed() {
     homeTeamId: ids.get(HOME_API)!,
     awayTeamId: ids.get(AWAY_API)!,
   });
-  // a fake subscription following the home team, so the push trigger actually
-  // runs. Real EC keys so encryption succeeds; delivery to the bogus endpoint
-  // fails harmlessly — what we assert is `fired` (the trigger + dedup logic).
+  // The fake DEVICE follows HOME (drives auto-surveillance = enrich + push) and
+  // owns a push subscription. Real EC keys so encryption succeeds; delivery to the
+  // bogus endpoint fails harmlessly — what we assert is `fired` (trigger + dedup).
+  await db.insert(followedTeam).values({ deviceId: SIM_DEVICE, team: HOME });
   const kp = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
   const p256dh = Buffer.from(await crypto.subtle.exportKey("raw", kp.publicKey)).toString("base64url");
   const auth = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
-  await db.insert(pushSubscription).values({ endpoint: SIM_ENDPOINT, p256dh, auth, teams: [HOME], triggers: ["goal", "yellow", "red", "kickoff", "ft"] });
+  await db.insert(pushSubscription).values({
+    endpoint: SIM_ENDPOINT,
+    p256dh,
+    auth,
+    deviceId: SIM_DEVICE,
+    teams: [],
+    triggers: ["goal", "yellow", "red", "kickoff", "ft"],
+  });
 }
 
 async function stage(name: string, note: string, fn: () => Promise<void>) {
@@ -338,7 +350,7 @@ async function main() {
     state.byId[FIX] = fixture("2H", 75, 1, 2);
     state.events[FIX] = [goal(HOME_API, 23, "K. Mbappé")];
 
-    const DEVICE = "sim-device-1";
+    const DEVICE = SIM_DEVICE;
     const watch = (body: Record<string, unknown>, method = "POST") =>
       app.fetch(
         new Request("http://sim/api/watch", {
@@ -357,7 +369,7 @@ async function main() {
     check("un-muted → auto-enriched again", (await runLiveEnrich()).matches >= 1);
 
     // drop the follow entirely → nothing auto-surveils it now
-    await db.delete(pushSubscription).where(eq(pushSubscription.endpoint, SIM_ENDPOINT));
+    await db.delete(followedTeam).where(eq(followedTeam.deviceId, SIM_DEVICE));
     check("no follow + no watch → enrich SKIPS (budget saved)", (await runLiveEnrich()).matches === 0);
     // explicit radar watch → enriched
     check("POST on → 200", (await watch({ state: "on" })).status === 200);

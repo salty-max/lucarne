@@ -1,6 +1,8 @@
 // Client side of Web Push: request permission, (de)register the browser's
-// subscription with the API, and keep the followed-team targeting in sync.
+// subscription (linked to its deviceId), and mirror followed teams to the server.
 // The user opted into every event kind, so we send the full trigger set.
+import { getDeviceId } from "@/lib/device";
+
 const TRIGGERS = ["goal", "yellow", "red", "lineups", "kickoff", "ft"];
 
 export function pushSupported(): boolean {
@@ -24,12 +26,22 @@ function urlB64ToU8(base64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-async function postSubscribe(sub: PushSubscription, teams: string[], welcome = false): Promise<void> {
+async function postSubscribe(sub: PushSubscription, welcome = false): Promise<void> {
   await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscription: sub.toJSON(), teams, triggers: TRIGGERS, welcome }),
+    body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId(), triggers: TRIGGERS, welcome }),
   });
+}
+
+/** Mirror the followed teams to the server (per device). Drives auto-surveillance
+ *  — live enrichment + push — independently of notification permission. */
+export async function syncFollows(teams: string[]): Promise<void> {
+  await fetch("/api/follows", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ deviceId: getDeviceId(), teams }),
+  }).catch(() => {});
 }
 
 /** Ask permission, subscribe, and register with the API. Returns false if the
@@ -49,7 +61,8 @@ export async function enablePush(teams: string[]): Promise<boolean> {
       applicationServerKey: urlB64ToU8(key),
     });
   }
-  await postSubscribe(sub, teams, true);
+  await postSubscribe(sub, true);
+  await syncFollows(teams);
   return true;
 }
 
@@ -66,10 +79,12 @@ export async function disablePush(): Promise<void> {
   await sub.unsubscribe();
 }
 
-/** If already subscribed, refresh the API with the current followed teams. */
-export async function syncPushTeams(teams: string[]): Promise<void> {
+/** If already subscribed, re-register so the subscription is linked to this
+ *  device (push targets the matches a device surveils). Cheap idempotent upsert;
+ *  run on load to migrate subscriptions made before the teams→device switch. */
+export async function resyncPush(): Promise<void> {
   if (!pushSupported()) return;
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
-  if (sub) await postSubscribe(sub, teams);
+  if (sub) await postSubscribe(sub);
 }

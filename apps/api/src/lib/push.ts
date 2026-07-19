@@ -20,10 +20,12 @@ export function vapidPublicKey(): string | null {
   return process.env.VAPID_PUBLIC_KEY ?? null;
 }
 
-/** Store (or refresh) a browser's subscription + who it wants to hear about. */
+/** Store (or refresh) a browser's subscription, linked to its device. Push now
+ *  targets the matches a device surveils (watched_match ∪ followed_team), so the
+ *  legacy `teams` column is left empty. */
 export async function saveSubscription(
   sub: PushSub,
-  teams: string[],
+  deviceId: string | null,
   triggers: PushTrigger[],
 ): Promise<void> {
   await db
@@ -32,12 +34,13 @@ export async function saveSubscription(
       endpoint: sub.endpoint,
       p256dh: sub.keys.p256dh,
       auth: sub.keys.auth,
-      teams,
+      deviceId,
+      teams: [],
       triggers,
     })
     .onConflictDoUpdate({
       target: pushSubscription.endpoint,
-      set: { p256dh: sub.keys.p256dh, auth: sub.keys.auth, teams, triggers },
+      set: { p256dh: sub.keys.p256dh, auth: sub.keys.auth, deviceId, triggers },
     });
 }
 
@@ -65,20 +68,19 @@ export type PushPayload = {
 };
 
 /**
- * Fan a notification out to every subscription that follows one of `teams` and
- * opted into `trigger`. Dead subscriptions (404/410) are pruned. Returns how many
- * pushes were accepted by the push services.
+ * Fan a notification out to every subscription whose DEVICE surveils this match
+ * and opted into `trigger`. Dead subscriptions (404/410) are pruned. Returns how
+ * many pushes were accepted by the push services.
  */
 export async function deliver(
   payload: PushPayload,
-  opts: { teams: string[]; trigger: PushTrigger },
+  opts: { deviceIds: Set<string>; trigger: PushTrigger },
 ): Promise<number> {
   const vapid = getVapid();
   if (!vapid) return 0;
-  const teamSet = new Set(opts.teams);
   const subs = await db.select().from(pushSubscription);
   const targets = subs.filter(
-    (s) => s.triggers.includes(opts.trigger) && s.teams.some((t) => teamSet.has(t)),
+    (s) => s.deviceId != null && opts.deviceIds.has(s.deviceId) && s.triggers.includes(opts.trigger),
   );
   if (targets.length === 0) return 0;
 
