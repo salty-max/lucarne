@@ -16,20 +16,20 @@ const state = (over: Partial<BudgetState> = {}): BudgetState => ({
 });
 
 describe("liveWindow", () => {
-  it("spans 5 min before to 150 min after kickoff", () => {
+  it("spans 5 min before to 210 min after kickoff", () => {
     const k = new Date("2025-08-16T19:00:00Z");
     const w = liveWindow(k);
     expect(w.start).toBe(k.getTime() - 5 * 60_000);
-    expect(w.end).toBe(k.getTime() + 150 * 60_000);
+    expect(w.end).toBe(k.getTime() + 210 * 60_000);
   });
 });
 
 describe("candidateKickoffRange", () => {
-  it("brackets now by [-150min, +5min]", () => {
+  it("brackets now by [-210min, +5min]", () => {
     const now = Date.parse("2025-08-16T19:00:00Z");
     const { earliest, latest } = candidateKickoffRange(now);
     expect(latest.getTime() - now).toBe(5 * 60_000);
-    expect(now - earliest.getTime()).toBe(150 * 60_000);
+    expect(now - earliest.getTime()).toBe(210 * 60_000);
   });
 });
 

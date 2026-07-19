@@ -1,9 +1,10 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, lte, sql } from "drizzle-orm";
 import type { TeamStats } from "@lucarne/shared";
 import { db } from "@/db";
 import { competitions, teams, matches, matchEvents, matchLineups, standings } from "@/db/schema";
 import {
   getFixtures,
+  getFixtureById,
   getFixtureEvents,
   getFixtureLineups,
   getFixturePlayers,
@@ -240,27 +241,65 @@ export async function backfillFixtures(
  * globally in one request; we filter to our tracked leagues (keeps the update
  * count tiny + well under the Workers subrequest limit) then update scores.
  */
-export async function applyLiveUpdate(): Promise<{ updated: number }> {
+/** Write one fixture's live state (status/score/elapsed/pens) onto its match. */
+function liveSet(f: ApiFixture) {
+  return {
+    statusShort: f.fixture.status.short,
+    status: normalizeStatus(f.fixture.status.short),
+    elapsed: f.fixture.status.elapsed,
+    homeGoals: f.goals.home,
+    awayGoals: f.goals.away,
+    homePenalties: f.score?.penalty?.home ?? null,
+    awayPenalties: f.score?.penalty?.away ?? null,
+    updatedAt: new Date(),
+  };
+}
+
+/**
+ * Pull the `live=all` snapshot and patch every tracked live match. Then FINALISE
+ * stragglers: a match that's still `live` in our DB but is no longer in the live
+ * snapshot has just finished (or been suspended) — `live=all` drops it, so
+ * nothing else would ever flip it off "live". We fetch its authoritative final
+ * state by id (1 request each, rare) and write it, which also lets the drain
+ * pick it up and the full-time push fire. Returns the extra requests spent.
+ */
+export async function applyLiveUpdate(): Promise<{
+  updated: number;
+  finalized: number;
+  requests: number;
+}> {
   const live = (await getLiveFixtures()).filter((f) => TRACKED_LEAGUE_IDS.has(f.league.id));
+  const liveIds = new Set(live.map((f) => f.fixture.id));
+
   let updated = 0;
   for (const f of live) {
     const res = await db
       .update(matches)
-      .set({
-        statusShort: f.fixture.status.short,
-        status: normalizeStatus(f.fixture.status.short),
-        elapsed: f.fixture.status.elapsed,
-        homeGoals: f.goals.home,
-        awayGoals: f.goals.away,
-        homePenalties: f.score?.penalty?.home ?? null,
-        awayPenalties: f.score?.penalty?.away ?? null,
-        updatedAt: new Date(),
-      })
+      .set(liveSet(f))
       .where(eq(matches.apiFootballId, f.fixture.id))
       .returning({ id: matches.id });
     updated += res.length;
   }
-  return { updated };
+
+  // DB matches still marked "live" but absent from the snapshot → they ended.
+  const stillLive = await db
+    .select({ id: matches.id, apiFootballId: matches.apiFootballId })
+    .from(matches)
+    .where(and(eq(matches.status, "live"), lte(matches.kickoff, new Date())))
+    .limit(12);
+  const dropped = stillLive.filter((m) => !liveIds.has(m.apiFootballId));
+
+  let finalized = 0;
+  let requests = 1; // the live=all call
+  for (const m of dropped) {
+    const [f] = await getFixtureById(m.apiFootballId); // 1 request, authoritative
+    requests++;
+    if (!f) continue;
+    await db.update(matches).set(liveSet(f)).where(eq(matches.id, m.id));
+    if (normalizeStatus(f.fixture.status.short) !== "live") finalized++;
+  }
+
+  return { updated, finalized, requests };
 }
 
 /** A finished match ready for its post-match details fetch. */

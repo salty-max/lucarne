@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:seed": "bun run src/db/seed.ts",
-    "db:backfill-details": "bun run src/db/backfill-details.ts"
+    "db:backfill-details": "bun run src/db/backfill-details.ts",
+    "db:sim": "bun run src/db/sim-match.ts"
   },
   "dependencies": {
     "@lucarne/shared": "workspace:*",

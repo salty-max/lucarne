@@ -15,7 +15,11 @@ import { syncState } from "@/db/schema";
 export const DAILY_API_BUDGET = 7000;
 
 const MATCH_PREROLL_MS = 5 * 60_000; // start watching 5 min before kickoff
-const MATCH_DURATION_MS = 150 * 60_000; // covers HT + stoppage + extra time
+// Keep a match "live-ish" for 3.5h after kickoff — long enough to cover HT +
+// stoppage + extra time + a late/delayed start, so we're still polling (and can
+// finalise it, see applyLiveUpdate) when it actually ends. A match that ends
+// normally is finalised the moment it drops out of live=all, well before this.
+const MATCH_DURATION_MS = 210 * 60_000;
 
 /** The [start, end] window during which a fixture is considered "live-ish". */
 export function liveWindow(kickoff: Date): { start: number; end: number } {

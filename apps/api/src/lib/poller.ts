@@ -29,6 +29,7 @@ export type LiveTickResult = {
   polled: boolean;
   reason?: string;
   updated?: number;
+  finalized?: number;
   live: number;
   budgetRemaining: number;
   nextIntervalMs?: number;
@@ -76,10 +77,10 @@ export async function runLivePollTick(
     return { polled: false, reason: decision.reason, live: liveCount, budgetRemaining: decision.budgetRemaining };
   }
 
-  const { updated } = await applyLiveUpdate();
+  const { updated, finalized, requests } = await applyLiveUpdate();
   const next = {
     utcDate: state.utcDate,
-    requestsToday: state.requestsToday + 1,
+    requestsToday: state.requestsToday + requests,
     lastPollAt: now.toISOString(),
   };
   await saveBudget(next);
@@ -87,6 +88,7 @@ export async function runLivePollTick(
   return {
     polled: true,
     updated,
+    finalized,
     live: liveCount,
     nextIntervalMs: Math.round(decision.intervalMs),
     budgetRemaining: budgetRemaining(next),

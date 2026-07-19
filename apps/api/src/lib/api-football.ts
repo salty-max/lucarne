@@ -88,6 +88,12 @@ export function getLiveFixtures() {
   return call<ApiFixture[]>("/fixtures", { live: "all" });
 }
 
+/** One fixture's authoritative current state by id. Used to finalise a match
+ *  that has dropped out of `live=all` (i.e. just finished). One request. */
+export function getFixtureById(fixtureId: number) {
+  return call<ApiFixture[]>("/fixtures", { id: fixtureId });
+}
+
 export type ApiEvent = {
   time: { elapsed: number | null; extra: number | null };
   team: { id: number; name: string };

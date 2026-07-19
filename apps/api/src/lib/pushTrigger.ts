@@ -6,9 +6,19 @@ import { deliver, getVapid, type PushPayload, type PushTrigger } from "@/lib/pus
 
 const KICKOFF_LEAD_MS = 11 * 60_000; // notify up to ~10 min before kickoff
 
-/** Stable per-event key so re-fetching a match's events never double-notifies. */
-function eventKey(e: { minute: number | null; extraMinute: number | null; type: string; detail: string | null; player: string | null }): string {
-  return `${e.minute ?? 0}:${e.extraMinute ?? 0}:${e.type}:${e.detail ?? ""}:${e.player ?? ""}`;
+/** Stable per-event key so re-fetching a match's events never double-notifies.
+ *  Deliberately omits the player name — the API often refines it after the fact
+ *  (e.g. "Mbappé" → "K. Mbappé"), which would look like a new event. Team + minute
+ *  (+ red/yellow for cards) identifies an event uniquely enough in practice. */
+function eventKey(e: {
+  teamId: number | null;
+  minute: number | null;
+  extraMinute: number | null;
+  type: string;
+  detail: string | null;
+}): string {
+  const card = e.type === "Card" ? ((e.detail ?? "").includes("Red") ? ":R" : ":Y") : "";
+  return `${e.type}:${e.teamId ?? 0}:${e.minute ?? 0}:${e.extraMinute ?? 0}${card}`;
 }
 
 function minuteLabel(min: number | null, extra: number | null): string {
