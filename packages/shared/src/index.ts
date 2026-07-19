@@ -168,6 +168,9 @@ export type MatchStatistics = { home: TeamStats; away: TeamStats };
 /** Pre-match prediction: win probabilities (0–100) + the API's one-line advice. */
 export type MatchPrediction = { home: number; draw: number; away: number; advice: string | null };
 
+/** Man of the match: the top-rated player. */
+export type MatchMotm = { name: string; side: "home" | "away"; rating: number };
+
 export type MatchDetail = Match & {
   venue: string | null;
   round: string | null;
@@ -175,6 +178,7 @@ export type MatchDetail = Match & {
   lineups: MatchLineups | null;
   statistics: MatchStatistics | null;
   predictions: MatchPrediction | null;
+  motm: MatchMotm | null;
 };
 
 /** One scheduled-job outcome, as surfaced by the logs page. `at` is an ISO

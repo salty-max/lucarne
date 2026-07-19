@@ -1,4 +1,4 @@
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import type { MatchStatistics, TopPlayerEntry } from "@lucarne/shared";
 
 /**
@@ -78,6 +78,11 @@ export const matches = sqliteTable(
     predDraw: integer("pred_draw"),
     predAway: integer("pred_away"),
     predAdvice: text("pred_advice"),
+    // Man of the match = the top-rated player, resolved when ratings land.
+    motmName: text("motm_name"),
+    motmSide: text("motm_side"), // "home" | "away"
+    motmRating: real("motm_rating"),
+
     detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
     lineupsFetchedAt: integer("lineups_fetched_at", { mode: "timestamp_ms" }),
     statsFetchedAt: integer("stats_fetched_at", { mode: "timestamp_ms" }),

@@ -356,6 +356,28 @@ export default function MatchDetail() {
         </>
       )}
 
+      {match.motm && (
+        <section className="mt-3">
+          <SectionLabel>{t.match.motm}</SectionLabel>
+          <div className="flex items-center gap-2 py-1.5">
+            <span>⭐</span>
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate font-semibold uppercase",
+                match.motm.side === "home"
+                  ? "text-[hsl(var(--tt-blue))]"
+                  : "text-[hsl(var(--tt-red))]",
+              )}
+            >
+              {match.motm.name}
+            </span>
+            <span className="shrink-0 px-1 font-bold tabular-nums text-black bg-[hsl(var(--tt-green))]">
+              {match.motm.rating.toFixed(1)}
+            </span>
+          </div>
+        </section>
+      )}
+
       {match.lineups ? (
         <section className="mt-3">
           <SectionLabel>{t.match.lineups}</SectionLabel>

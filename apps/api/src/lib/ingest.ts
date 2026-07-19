@@ -566,13 +566,16 @@ export async function storeMatchPlayerRatings(
   const teams = await getFixturePlayers(m.apiFootballId); // 1 API request
 
   const byNumber = { home: {} as Record<string, number>, away: {} as Record<string, number> };
+  let motm: { name: string; side: "home" | "away"; rating: number } | null = null;
   for (const t of teams) {
     const side = t.team.id === m.homeApiId ? "home" : t.team.id === m.awayApiId ? "away" : null;
     if (!side) continue;
     for (const p of t.players) {
       const g = p.statistics[0]?.games;
       const r = g?.rating != null ? parseFloat(g.rating) : NaN;
-      if (Number.isFinite(r) && g?.number != null) byNumber[side][String(g.number)] = r;
+      if (!Number.isFinite(r)) continue;
+      if (g?.number != null) byNumber[side][String(g.number)] = r;
+      if (!motm || r > motm.rating) motm = { name: p.player.name, side, rating: r };
     }
   }
   const count = Object.keys(byNumber.home).length + Object.keys(byNumber.away).length;
@@ -581,6 +584,11 @@ export async function storeMatchPlayerRatings(
   if (playerRatings === null && !stampWhenEmpty) return 0;
 
   const set: Partial<typeof matches.$inferInsert> = { playerRatings };
+  if (motm) {
+    set.motmName = motm.name;
+    set.motmSide = motm.side;
+    set.motmRating = motm.rating;
+  }
   if (stamp) set.ratingsFetchedAt = new Date();
   await db
     .update(matches)
