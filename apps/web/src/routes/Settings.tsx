@@ -164,7 +164,7 @@ export default function Settings() {
               onClick={() => setSettings({ dateFormat: o.value })}
             >
               <span className="min-w-0 flex-1 truncate uppercase">{t.settings[o.labelKey]}</span>
-              <span className="hrink-0 uppercase text-muted-foreground">
+              <span className="shrink-0 uppercase text-muted-foreground">
                 {formatLong(sample, o.value, lang)}
               </span>
             </Radio>

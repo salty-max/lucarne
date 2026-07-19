@@ -124,9 +124,11 @@ export function MatchCard({
           <span className={nameCls(awayResult)}>{teamName(m.away.name, lang)}</span>
         </span>
       </td>
-      <td className="whitespace-nowrap py-2.5 pl-3 text-right align-middle sm:py-1.5">
+      <td className="py-2.5 pl-3 text-right align-middle sm:py-1.5">
         {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
-          <span className="inline-flex items-center justify-end gap-1">
+          // Wrap to a second line (right-aligned) when the row is too tight for
+          // all broadcasters — stays one line whenever there's room (desktop).
+          <span className="flex flex-wrap items-center justify-end gap-1">
             {m.broadcasters.map((b) => (
               <Tag key={b.id} ttColor={channelTt(b.color)}>
                 {b.name}
