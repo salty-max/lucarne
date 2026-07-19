@@ -13,7 +13,8 @@ export type PushTrigger =
   | "ft"
   | "ht" // half-time
   | "phase" // extra time / penalty shootout starting
-  | "motm"; // man of the match (post-match)
+  | "motm" // man of the match (post-match)
+  | "subst"; // substitution(s), batched per team+minute
 export const ALL_TRIGGERS: PushTrigger[] = [
   "goal",
   "yellow",
@@ -24,6 +25,7 @@ export const ALL_TRIGGERS: PushTrigger[] = [
   "ht",
   "phase",
   "motm",
+  "subst",
 ];
 
 /** VAPID config from the environment, or null if push isn't set up. */

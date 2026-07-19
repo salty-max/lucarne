@@ -3,7 +3,7 @@
 // The user opted into every event kind, so we send the full trigger set.
 import { getDeviceId } from "@/lib/device";
 
-const TRIGGERS = ["goal", "yellow", "red", "lineups", "kickoff", "ft", "ht", "phase", "motm"];
+const TRIGGERS = ["goal", "yellow", "red", "lineups", "kickoff", "ft", "ht", "phase", "motm", "subst"];
 
 export function pushSupported(): boolean {
   return (

@@ -145,6 +145,43 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
         else if (cat === "R") await fire(key, "red", `🟥 Carton rouge · ${e.player} ${min}`.trim());
         else if (cat === "Y") await fire(key, "yellow", `🟨 Carton jaune · ${e.player} ${min}`.trim());
       }
+
+      // Substitutions — notify each exactly ONCE (keyed by team + outgoing player,
+      // stable across minute corrections), batching those that first appear in the
+      // same tick + minute into ONE multi-line notification: one sub per line,
+      // team-labelled, in↑ / out↓ (assist = in, player = out). Live only, so
+      // opening a finished match doesn't dump every sub.
+      if (m.status === "live") {
+        const subKey = (e: (typeof events)[number]) => `SUB:${e.teamId ?? 0}:${e.player ?? e.assist ?? ""}`;
+        const teamOf = (e: (typeof events)[number]) =>
+          e.teamId === m.homeId ? m.home : e.teamId === m.awayId ? m.away : "";
+        const fresh2 = events
+          .filter((e) => e.type === "subst" && (e.assist || e.player) && !notified.has(subKey(e)))
+          .sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0) || (a.extraMinute ?? 0) - (b.extraMinute ?? 0));
+        const groups = new Map<string, typeof fresh2>();
+        for (const e of fresh2) {
+          const gk = `${e.minute ?? 0}:${e.extraMinute ?? 0}`;
+          const arr = groups.get(gk);
+          if (arr) arr.push(e);
+          else groups.set(gk, [e]);
+        }
+        for (const [, list] of groups) {
+          const min = minuteLabel(list[0].minute, list[0].extraMinute);
+          const lines = list.map((e) => {
+            const io = [e.assist ? `${lastName(e.assist)} ↑` : "", e.player ? `${lastName(e.player)} ↓` : ""]
+              .filter(Boolean)
+              .join(" ");
+            const team = teamOf(e);
+            return team ? `${team} · ${io}` : io;
+          });
+          list.forEach((e) => fresh.push(subKey(e)));
+          fired++;
+          sent += await deliver(
+            { title, body: `🔄 ${min}\n${lines.join("\n")}`, matchId: m.id, tag: `match-${m.id}` },
+            { deviceIds: watchers, trigger: "subst" },
+          );
+        }
+      }
     }
 
     // Full-time — with the scorers.
