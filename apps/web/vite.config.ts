@@ -40,11 +40,28 @@ export default defineConfig(({ command }) => ({
         globIgnores: ["**/logos/**", "**/splash/**"],
         runtimeCaching: [
           {
-            // Read data: serve the last-seen copy instantly (so a PWA relaunch has
-            // no network wait), then revalidate in the background. React Query does
-            // the same on the client — together, loads rarely show a skeleton.
+            // Match detail drives the live/pre/post detail page — lineups appear
+            // ~40 min pre-kickoff, scores change live, stats/ratings land after FT.
+            // It MUST be fresh when online, so NetworkFirst: hit the network, fall
+            // back to cache only when offline (or if the network stalls >3s). A
+            // StaleWhileRevalidate here served the last-seen copy first, so a poll
+            // that coincided with the lineup drop showed no lineups for a cycle —
+            // or stuck until relaunch if the background revalidate hiccupped.
+            urlPattern: ({ url }: { url: URL }) => /^\/api\/match\//.test(url.pathname),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "lucarne-match",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Schedule / competitions / teams: less time-critical (Today patches
+            // live scores on top from the always-fresh /api/live). Serve the
+            // last-seen copy instantly, then revalidate in the background.
             urlPattern: ({ url }: { url: URL }) =>
-              /^\/api\/(schedule|competitions|competition\/|teams|match\/)/.test(url.pathname),
+              /^\/api\/(schedule|competitions|competition\/|teams)/.test(url.pathname),
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "lucarne-data",
