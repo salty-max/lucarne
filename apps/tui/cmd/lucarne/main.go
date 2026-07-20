@@ -10,33 +10,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/salty-max/lucarne/apps/tui/internal/app"
-	"github.com/salty-max/lucarne/apps/tui/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/salty-max/lucarne/apps/tui/internal/ui"
 )
 
 func main() {
-	if err := run(); err != nil {
+	// Bubble Tea owns the terminal: alternate screen, raw mode, and restoring
+	// both on exit, on signals and on panic.
+	p := tea.NewProgram(ui.New(context.Background()), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "lucarne:", err)
 		os.Exit(1)
 	}
-}
-
-func run() (err error) {
-	term, openErr := tui.Open()
-	if openErr != nil {
-		return openErr
-	}
-
-	// The terminal must be restored whatever happens. A panic here would
-	// otherwise leave the user in raw mode on the alternate screen — no echo,
-	// no cursor, no obvious way back — so re-panic only after restoring.
-	defer func() {
-		if r := recover(); r != nil {
-			term.Close()
-			panic(r)
-		}
-		term.Close()
-	}()
-
-	return app.New(term).Run(context.Background())
 }
