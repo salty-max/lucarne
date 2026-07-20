@@ -201,64 +201,115 @@ bun --filter @lucarne/api test     # one package
 | `GET /api/logs` | Recent scheduled-job runs |
 | `POST /api/admin/{seed,backfill-details}` | Idempotent reference-data seed / detail backfill (authed) |
 
-## Deploy — Cloudflare Workers
+## Deploy — always-on host (Bun)
 
-Cron Triggers start firing the moment the Worker goes live, so the order matters.
+One process serves the JSON API, the built SPA and the `node-cron` scheduler, all on
+the same origin — so there is no separate front-end host, no API base URL to configure
+and no CORS to open. Any always-on box works; Oracle Cloud's Always Free ARM instance
+keeps the total cost at just the API subscription.
 
-**1 — Database.**
+**1 — Box.** Install Bun, clone, build.
+```bash
+curl -fsSL https://bun.sh/install | bash
+git clone https://github.com/salty-max/lucarne.git /opt/lucarne && cd /opt/lucarne
+bun install && bun run build          # builds apps/web/dist, which the server serves
+```
+
+**2 — Config + database.**
+```bash
+cp apps/api/.env.example apps/api/.env.local   # API_FOOTBALL_KEY, CRON_SECRET, VAPID_*
+bun run db:migrate                             # create the schema
+bun run db:seed                                # broadcasters, competitions, rights rules
+```
+Seed *before* the first start: the fixture sync refuses to run without competitions
+(loudly — it used to write nothing and report success).
+
+**3 — systemd.** `/etc/systemd/system/lucarne.service`:
+```ini
+[Unit]
+Description=Lucarne (API + SPA + scheduler)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lucarne
+WorkingDirectory=/opt/lucarne/apps/api
+EnvironmentFile=/opt/lucarne/apps/api/.env.local
+ExecStart=/home/lucarne/.bun/bin/bun src/server.ts
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+```bash
+sudo systemctl enable --now lucarne && journalctl -u lucarne -f
+```
+`Restart=always` plus the job catch-up means a reboot or crash self-heals: any daily
+slot missed while the box was down is picked up within a minute of coming back.
+
+**4 — Expose it with a Cloudflare Tunnel**, rather than opening 80/443. You get TLS, a
+CDN, DDoS protection and a hidden origin IP, with no inbound ports at all.
+```bash
+cloudflared tunnel login
+cloudflared tunnel create lucarne
+cloudflared tunnel route dns lucarne lucarne.example.com
+```
+`~/.cloudflared/config.yml`:
+```yaml
+tunnel: <TUNNEL_ID>
+credentials-file: /home/lucarne/.cloudflared/<TUNNEL_ID>.json
+ingress:
+  - hostname: lucarne.example.com
+    service: http://localhost:3000
+  - service: http_status:404
+```
+```bash
+sudo cloudflared service install     # runs it as a service too
+```
+Then add rate-limiting rules in the Cloudflare dashboard — `/api/watch` and
+`/api/follows` at 60 req/min/IP, `/api/push/subscribe` at 10 — since those endpoints are
+unauthenticated by design (per-device caps are already enforced in code).
+
+**5 — Back up the database.** This is the real trade-off of self-hosting: the database is
+a single SQLite file (`apps/api/local.db`), not a replicated service. Either replicate it
+continuously with [Litestream](https://litestream.io) to an S3-compatible bucket
+(Cloudflare R2's free tier fits), or at minimum snapshot it nightly:
+```bash
+sqlite3 /opt/lucarne/apps/api/local.db ".backup '/var/backups/lucarne-$(date +%F).db'"
+```
+
+**6 — Verify.**
+```bash
+curl https://lucarne.example.com/api/schedule | head -c 200            # fixtures present
+curl https://lucarne.example.com/match/1 -o /dev/null -w '%{http_code}\n'  # 200 = SPA fallback
+curl -H "Authorization: Bearer $CRON_SECRET" https://lucarne.example.com/api/logs
+```
+
+### Alternative: Cloudflare Workers + D1
+
+The Worker entry point (`apps/api/src/worker.ts`) is maintained and D1-safe — every bulk
+write and `inArray` is split through `lib/d1` to respect D1's **100 bound parameters per
+statement**. Keep new ones going through those helpers.
+
+> **This needs the Workers *Paid* plan.** Free caps a scheduled invocation at **10 ms of
+> CPU and 50 subrequests**; the daily sync alone parses ten competitions' fixtures and
+> spends ~40 upstream requests plus one binding call per chunked statement. The
+> minute-by-minute poll would survive, the daily sync and the drain would not.
+
 ```bash
 cd apps/api
 bun run wrangler d1 create lucarne                      # paste database_id into wrangler.jsonc
-bun run wrangler d1 migrations apply lucarne --remote   # 14 migrations, pure DDL, safe on an empty DB
-```
-
-**2 — Secrets.** The first two are required; the VAPID trio only if you want push.
-```bash
-bun run wrangler secret put API_FOOTBALL_KEY
-bun run wrangler secret put CRON_SECRET        # also guards /api/cron/*, /api/admin/*, /api/logs
-bun run wrangler secret put VAPID_PUBLIC_KEY
-bun run wrangler secret put VAPID_PRIVATE_KEY
-bun run wrangler secret put VAPID_SUBJECT
-```
-
-**3 — Deploy, then seed immediately.**
-```bash
+bun run wrangler d1 migrations apply lucarne --remote
+bun run wrangler secret put API_FOOTBALL_KEY            # + CRON_SECRET, VAPID_*
 cd ../.. && bun run deploy
-curl -X POST https://<your-worker>/api/admin/seed -H "Authorization: Bearer $CRON_SECRET"
+curl -X POST https://<worker>/api/admin/seed -H "Authorization: Bearer $CRON_SECRET"
 ```
-The seed writes the reference data (broadcasters, competitions, rights rules). Until it
-runs, the fixture sync has no competitions to attach fixtures to and **fails loudly** —
-that is deliberate: it used to write nothing and report success, leaving an empty schedule
-for a day. Expect one failed `sync` in the log if a cron fires in the gap; the catch-up
-retries within the minute once the seed has landed.
-
-**4 — Rate limiting.** `/api/watch`, `/api/follows` and `/api/push/subscribe` are
-unauthenticated by design (no accounts, just an anonymous device id). Per-device caps are
-enforced in code, but add Cloudflare rate-limiting rules for the per-IP case:
-
-| Path | Suggested rule |
-|---|---|
-| `/api/watch`, `/api/follows` | 60 requests / minute / IP |
-| `/api/push/subscribe` | 10 requests / minute / IP |
-
-**5 — Verify.**
-```bash
-curl https://<your-worker>/api/schedule | head -c 200        # fixtures present
-curl -H "Authorization: Bearer $CRON_SECRET" https://<your-worker>/api/logs   # jobs green
-```
-
-Notes:
-- SPA (`apps/web/dist`) → Workers Static Assets; `/api/*` runs the Worker.
-- **D1** is the `DB` binding. `wrangler.jsonc` `migrations_dir` points at `drizzle/`, so
-  `db:generate` output is what `d1 migrations apply` runs.
-- D1 caps a statement at **100 bound parameters**; every bulk write and `inArray` is split
-  through `lib/d1` to respect it. Keep new ones going through those helpers.
-- Consider setting explicit `limits` (`cpu_ms`) in `wrangler.jsonc` so an overrun shows up
-  as `exceededCpu` in metrics rather than a silent truncation.
-
-**Alt: Bun host** (Koyeb / Oracle Always Free / VM). `bun run build` then, in `apps/api`,
-`bun src/server.ts` — same app with the in-process `node-cron` scheduler serving
-`../web/dist`. `SCHEDULER=off` disables the internal timer.
+Cron triggers start firing on deploy, so seed immediately; a sync landing in the gap
+fails loudly and the catch-up repairs it within the minute.
 
 ## Data sources / rights
 
