@@ -12,6 +12,7 @@ import {
   runPredictionsPoll,
 } from "@/lib/poller";
 import { runPushNotify } from "@/lib/pushTrigger";
+import { cleanupWatched } from "@/lib/surveillance";
 import { memoryCache } from "@/lib/scheduleCache";
 
 /**
@@ -40,6 +41,8 @@ export function startScheduler(): void {
     await runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0);
     await runJob("predictions", () => runPredictionsPoll(), (r) => r.matches > 0);
     await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
+    // Last: drop surveillance for matches whose post-match tail has settled.
+    await runJob("unwatch", () => cleanupWatched(), (r) => r > 0);
   });
 
   // Nightly deep drain — backstop that also stamps matches the API never enriches

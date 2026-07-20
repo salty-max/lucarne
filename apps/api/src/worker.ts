@@ -15,6 +15,7 @@ import {
   runPredictionsPoll,
 } from "@/lib/poller";
 import { runPushNotify } from "@/lib/pushTrigger";
+import { cleanupWatched } from "@/lib/surveillance";
 import { pickCache } from "@/lib/scheduleCache";
 
 // Minimal Workers types (D1Database is imported for the driver; the rest stay
@@ -78,6 +79,8 @@ export default {
           await runJob("lineups", () => runLineupPoll(), (r) => r.matches > 0);
           await runJob("predictions", () => runPredictionsPoll(), (r) => r.matches > 0);
           await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
+          // Last: drop surveillance for matches whose post-match tail has settled.
+          await runJob("unwatch", () => cleanupWatched(), (r) => r > 0);
         })(),
       );
     }

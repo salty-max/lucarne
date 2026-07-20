@@ -1,5 +1,6 @@
+import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { db } from "@/db";
-import { followedTeam, watchedMatch } from "@/db/schema";
+import { followedTeam, matches, watchedMatch } from "@/db/schema";
 
 /**
  * The whole surveillance picture, per device: explicit watched_match decisions
@@ -31,6 +32,42 @@ export async function loadWatchState(): Promise<WatchState> {
     s.add(r.team);
   }
   return { watch, follows, devices };
+}
+
+/**
+ * Drop explicit surveillance once a match is over AND its post-match tail has
+ * landed, so `watched_match` (re-read in full on every tick) doesn't grow forever.
+ *
+ * We wait ~15 min past the ratings stamp on purpose: the full-time and
+ * man-of-the-match pushes target *watchers*, and the MOTM one fires a tick AFTER
+ * the drain stamps the ratings — purging in the same tick would silently swallow
+ * it. Fallback: anything that kicked off over a day ago goes regardless, since
+ * plenty of fixtures never get ratings at all.
+ *
+ * Starts from `watched_match` (small) rather than the match history (unbounded).
+ * Returns how many rows were dropped.
+ */
+export async function cleanupWatched(now = new Date()): Promise<number> {
+  const settled = new Date(now.getTime() - 15 * 60_000);
+  const stale = new Date(now.getTime() - 24 * 60 * 60_000);
+  const rows = await db
+    .select({ id: watchedMatch.id })
+    .from(watchedMatch)
+    .innerJoin(matches, eq(matches.id, watchedMatch.matchId))
+    .where(
+      and(
+        eq(matches.status, "finished"),
+        or(lt(matches.ratingsFetchedAt, settled), lt(matches.kickoff, stale)),
+      ),
+    );
+  if (rows.length === 0) return 0;
+  await db.delete(watchedMatch).where(
+    inArray(
+      watchedMatch.id,
+      rows.map((r) => r.id),
+    ),
+  );
+  return rows.length;
 }
 
 /** Device ids whose effective surveillance includes this match. */

@@ -8,8 +8,9 @@ import { MatchTableSkel } from "@/components/Skeletons";
 
 const byKickoff = (a: { kickoff: string }, b: { kickoff: string }) => a.kickoff.localeCompare(b.kickoff);
 
-/** RADAR (P500) — every match this device is monitoring: live now, upcoming, and
- *  recently finished. Auto-includes followed teams' matches; explicit toggles too. */
+/** RADAR (P500) — every match this device is monitoring: live now and upcoming.
+ *  Auto-includes followed teams' matches; explicit toggles too. Finished matches
+ *  leave the radar once their post-match data has settled. */
 export default function Radar() {
   // From yesterday (a match past midnight is still "live") through a fortnight so
   // followed teams' upcoming fixtures show up.
@@ -29,15 +30,17 @@ export default function Radar() {
 
   const watched = days.flatMap((d) => d.matches).filter((m) => isWatched(m));
   const live = watched.filter((m) => m.status === "live").sort(byKickoff);
-  const up = watched.filter((m) => m.status === "scheduled").sort(byKickoff);
-  const done = watched
-    .filter((m) => m.status === "finished" || m.status === "postponed")
-    .sort((a, b) => byKickoff(b, a));
+  // Finished matches drop off the radar: the server purges their surveillance once
+  // the post-match tail has settled, and a followed team's finished fixture would
+  // otherwise linger here forever (the follow is a standing rule, not a per-match
+  // row). Postponed ones stay — they haven't been played.
+  const up = watched
+    .filter((m) => m.status === "scheduled" || m.status === "postponed")
+    .sort(byKickoff);
 
   const groups: MatchGroup[] = [
     { key: "live", label: t.today.live, matches: live, tone: "live" },
     { key: "up", label: t.today.upcoming, matches: up, tone: "yellow" },
-    { key: "done", label: t.today.finished, matches: done, tone: "cyan" },
   ];
 
   return (
