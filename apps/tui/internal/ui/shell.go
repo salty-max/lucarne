@@ -154,6 +154,6 @@ func pageLabel(p teletext.Page) string {
 	}
 }
 
-// chromeHeight is what the shell takes: service line, the two footer rows and
-// the hint. The rest belongs to the page.
-const chromeHeight = 4
+// chromeHeight is what the shell takes: service line, the two footer rows, the
+// blank that separates them from the hint, and the hint itself.
+const chromeHeight = 5

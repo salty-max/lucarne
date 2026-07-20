@@ -38,8 +38,7 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 	label := theme.Upper(i18n.DayLabel(d.Key))
 	pad := max(width-theme.Width(label)-theme.Width(count)-2, 1)
 	out = append(out,
-		plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)),
-		plainLine(""))
+		plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)))
 
 	for _, f := range d.Matches {
 		fixture := f
@@ -50,7 +49,6 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 				return tea.Batch(cmd, m.fetchMatch(fixture.ID))
 			},
 		})
-		out = append(out, plainLine(""))
 	}
 	return out
 }
@@ -68,7 +66,7 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 func fixtureLine(f api.Match, width int) string {
 	var b strings.Builder
 
-	b.WriteString(theme.Muted.Render("  ▢  "))
+	b.WriteString(theme.Muted.Render(" ▢  "))
 
 	switch f.Status {
 	case api.MatchStatusLive:
@@ -95,7 +93,7 @@ func fixtureLine(f api.Match, width int) string {
 		castW = min(theme.Width(cast)+2, max(width/3, 8))
 	}
 
-	room := width - 14 - castW - 2
+	room := width - 14 - castW - 1
 	tie = theme.Truncate(tie, room)
 	lead := max(room-theme.Width(tie)-2, 0)
 

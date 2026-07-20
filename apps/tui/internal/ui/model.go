@@ -339,8 +339,14 @@ func (m *Model) refresh() {
 	}
 	rows := make([]string, len(m.lines))
 	for i, l := range m.lines {
+		// The cursor is a marker in the margin, not a fill. Painting the row
+		// solid meant flattening everything on it — the live tag, the score
+		// colour, the broadcaster — into one block, and the web client's
+		// .tt-cur is an outline over a faint tint for the same reason.
 		if i == m.cur && l.open != nil {
-			rows[i] = theme.Cursor.Render(theme.Pad(theme.Plain(l.text), m.width))
+			rows[i] = theme.CursorMark.Render("▌") + l.text
+		} else if l.open != nil {
+			rows[i] = " " + l.text
 		} else {
 			rows[i] = l.text
 		}
@@ -378,6 +384,7 @@ func (m Model) View() string {
 	parts = append(parts,
 		fastRow(teletext.FastText, m.width),
 		fastRow(teletext.More, m.width),
+		"",
 		kbdHint(m.width))
 
 	// Paint every line to the edge so the page is a black screen rather than

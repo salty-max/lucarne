@@ -265,3 +265,8 @@ func Screen(line string, width int) string {
 		return lipgloss.NewStyle().Background(Black).Render(line + strings.Repeat(" ", width-w))
 	}
 }
+
+// CursorMark flags the selected row in the margin. A marker rather than a fill:
+// painting the row solid would flatten the live tag, the score colour and the
+// broadcaster into one block, losing exactly the information the row carries.
+var CursorMark = lipgloss.NewStyle().Foreground(Cyan).Bold(true)
