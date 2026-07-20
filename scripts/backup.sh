@@ -72,10 +72,12 @@ else
 fi
 
 # --- rotation ---------------------------------------------------------------
-mapfile -t old < <(rclone lsf "$REMOTE/db/" --include 'lucarne-*.db' | sort -r | tail -n "+$((KEEP + 1))")
-for f in "${old[@]:-}"; do
-  [ -n "$f" ] && rclone deletefile "$REMOTE/db/$f"
-done
+# A plain read loop rather than mapfile: bash 3.2 (stock macOS) lacks it, and a
+# backup script failing on the operator's laptop is a bad way to learn that.
+rclone lsf "$REMOTE/db/" --include 'lucarne-*.db' | sort -r | tail -n "+$((KEEP + 1))" \
+  | while IFS= read -r f; do
+      [ -n "$f" ] && rclone deletefile "$REMOTE/db/$f"
+    done
 
 printf 'backup: ok — db/lucarne-%s.db (%s), %d snapshots retained\n' \
   "$stamp" "$(du -h "$tmp/lucarne.db" | cut -f1)" \
