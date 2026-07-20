@@ -373,13 +373,19 @@ func (m Model) View() string {
 	if !m.ready {
 		return ""
 	}
-	return strings.Join([]string{
-		m.serviceLine(m.width),
-		m.vp.View(),
+	parts := []string{m.serviceLine(m.width)}
+	parts = append(parts, strings.Split(m.vp.View(), "\n")...)
+	parts = append(parts,
 		fastRow(teletext.FastText, m.width),
 		fastRow(teletext.More, m.width),
-		kbdHint(),
-	}, "\n")
+		kbdHint(m.width))
+
+	// Paint every line to the edge so the page is a black screen rather than
+	// text sitting on the terminal's own background.
+	for i, l := range parts {
+		parts[i] = theme.Screen(l, m.width)
+	}
+	return strings.Join(parts, "\n")
 }
 
 func todayIndex(days []api.Day) int {

@@ -248,3 +248,20 @@ func Truncate(s string, max int) string {
 // Rule is the dotted separator drawn under a row — the web client's .tt-dotted
 // bottom border. Quiet enough to separate without competing with the content.
 var Rule = lipgloss.NewStyle().Foreground(Blue)
+
+// Screen paints a line black to the full page width.
+//
+// Teletext is black — not "whatever the terminal theme is". Without this the
+// page inherits the user's background, and every style reset mid-line drops
+// back to it, so coloured bars sit on one colour and the text beside them on
+// another. Painting each line to the edge makes the page read as a screen
+// rather than as text in a window.
+func Screen(line string, width int) string {
+	// Truncate as well as pad: a line one column too long wraps, and a wrapped
+	// line shifts everything below it for the rest of the page.
+	if w := lipgloss.Width(line); w > width {
+		return lipgloss.NewStyle().Background(Black).MaxWidth(width).Render(line)
+	} else {
+		return lipgloss.NewStyle().Background(Black).Render(line + strings.Repeat(" ", width-w))
+	}
+}

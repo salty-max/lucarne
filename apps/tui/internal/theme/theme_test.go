@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 // Lipgloss makes a generic Charm-looking app the path of least resistance:
@@ -114,4 +117,28 @@ func stripComments(s string) string {
 		b.WriteString("\n")
 	}
 	return b.String()
+}
+
+// The point of Screen is that the page stops inheriting the terminal's own
+// background, so the escape has to actually be there — padding with plain
+// spaces would look right in a plain-text dump and wrong on screen.
+func TestScreenPaintsBlackToTheEdge(t *testing.T) {
+	// Lipgloss strips colour when stdout is not a terminal, which is right for
+	// piped output but blinds this test. Force the profile so we check what a
+	// real terminal receives.
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+
+	out := Screen("AB", 8)
+	if Width(stripANSI(out)) != 8 {
+		t.Errorf("painted to %d columns, want 8: %q", Width(stripANSI(out)), stripANSI(out))
+	}
+	if !strings.Contains(out, "\x1b[") {
+		t.Fatalf("no escape sequence emitted: %q", out)
+	}
+	// 48;2;0;0;0 is truecolor black; 40 is the ANSI fallback.
+	if !strings.Contains(out, "48;2;0;0;0") && !strings.Contains(out, "[40m") {
+		t.Errorf("background is not black: %q", out)
+	}
 }

@@ -99,15 +99,34 @@ func fastRow(keys []teletext.Key, width int) string {
 // kbdHint is the instruction line under the footer. The web client spells the
 // same four things out; a terminal user has no other way to discover that
 // typing three digits jumps to a page.
-func kbdHint() string {
+// kbdHint drops hints from the right until the line fits, rather than
+// overflowing: an over-long line wraps and shifts the whole page.
+func kbdHint(width int) string {
 	k, t := theme.Key, i18n.T()
-	return theme.Muted.Render(" ") +
-		k("###") + theme.Muted.Render(" "+t.Page+"  ") +
-		k("↑") + k("↓") + theme.Muted.Render(" "+t.Move+"  ") +
-		k("↵") + theme.Muted.Render(" "+t.Open+"  ") +
-		k("R") + k("G") + k("Y") + k("C") + theme.Muted.Render(" "+t.Sections+"  ") +
-		k("⌫") + theme.Muted.Render(" "+t.Back+"  ") +
-		k("q") + theme.Muted.Render(" "+t.Quit)
+	hints := []struct {
+		keys  []string
+		label string
+	}{
+		{[]string{"###"}, t.Page},
+		{[]string{"↑", "↓"}, t.Move},
+		{[]string{"↵"}, t.Open},
+		{[]string{"R", "G", "Y", "C"}, t.Sections},
+		{[]string{"⌫"}, t.Back},
+		{[]string{"q"}, t.Quit},
+	}
+	for n := len(hints); n > 0; n-- {
+		out := " "
+		for _, h := range hints[:n] {
+			for _, key := range h.keys {
+				out += k(key)
+			}
+			out += theme.Muted.Render(" " + h.label + "  ")
+		}
+		if theme.Rendered(out) <= width {
+			return out
+		}
+	}
+	return ""
 }
 
 // pageLabel is the localised name of a section.

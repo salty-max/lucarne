@@ -50,7 +50,7 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 				return tea.Batch(cmd, m.fetchMatch(fixture.ID))
 			},
 		})
-		out = append(out, plainLine(rule(width)))
+		out = append(out, plainLine(""))
 	}
 	return out
 }
@@ -58,8 +58,9 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 // fixtureLine is one row: surveillance box, kickoff, the tie, then the
 // broadcaster set flush right.
 //
-// The dots belong under the row, not inside it: the web client's .tt-dotted is
-// a bottom border, and reading it as a leader glued every row to the next.
+// The dots run from the tie to the tag, which is what makes the pairing legible
+// across a wide page. Vertical separation comes from a blank line rather than a
+// second run of dots — two dotted things a row apart read as noise.
 //
 // Status is carried by a glyph as well as by colour — a live match reads as
 // live under NO_COLOR, in a monochrome capture, and for anyone who cannot rely
@@ -96,17 +97,14 @@ func fixtureLine(f api.Match, width int) string {
 
 	room := width - 14 - castW - 2
 	tie = theme.Truncate(tie, room)
+	lead := max(room-theme.Width(tie)-2, 0)
 
-	b.WriteString(theme.TeamName.Render(theme.Pad(tie, room)))
+	b.WriteString(theme.TeamName.Render(tie))
+	b.WriteString(theme.Rule.Render(" " + strings.Repeat("·", lead) + " "))
 	if cast != "" {
 		b.WriteString(theme.Tag(theme.Truncate(cast, castW-2), theme.Green))
 	}
 	return b.String()
-}
-
-// rule is the dotted separator the web client draws under each row.
-func rule(width int) string {
-	return theme.Rule.Render(" " + strings.Repeat("·", max(width-2, 0)))
 }
 
 // scoreboard is the match page's headline: both sides and the result, with the
