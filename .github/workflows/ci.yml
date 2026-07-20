@@ -56,6 +56,26 @@ jobs:
       - run: go test -race ./...
       - run: go build ./...
 
+  # packages/shared is the single source of truth for the wire contract; the Go
+  # types are generated from it. Regenerate and fail on any diff, so the TUI
+  # cannot quietly drift from the API the way a hand-maintained copy would.
+  codegen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter @lucarne/shared gen:go
+      - name: generated types are up to date
+        run: |
+          if ! git diff --quiet -- apps/tui/internal/api/types.go; then
+            echo "apps/tui/internal/api/types.go is stale — run: bun run --filter @lucarne/shared gen:go"
+            git diff -- apps/tui/internal/api/types.go
+            exit 1
+          fi
+
   # The deploy scripts are infrastructure now — a typo in them surfaces during a
   # recovery, which is the worst possible moment. shellcheck would have caught
   # the bash-4-only mapfile that broke rotation outside the VM.
