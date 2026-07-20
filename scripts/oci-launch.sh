@@ -25,7 +25,11 @@ SHAPE="${SHAPE:-VM.Standard.A1.Flex}"
 OCPUS="${OCPUS:-1}"
 MEM_GB="${MEM_GB:-6}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519.pub}"
-INTERVAL="${INTERVAL:-60}"        # seconds between full rounds
+# 3 minutes between rounds. Capacity does not free up on a 60-second granularity,
+# and Oracle rate-limits LaunchInstance — a throttled account creates nothing at
+# all, so polling harder is strictly worse than polling patiently.
+INTERVAL="${INTERVAL:-180}"
+MAX_BACKOFF="${MAX_BACKOFF:-1800}"   # 30 min ceiling once throttled
 BOOT_GB="${BOOT_GB:-50}"
 
 say() { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -70,6 +74,7 @@ shape_config=$(printf '{"ocpus":%s,"memoryInGBs":%s}' "$OCPUS" "$MEM_GB")
 
 say "Launching $NAME ($OCPUS OCPU / $MEM_GB GB). Ctrl-C to stop."
 attempt=0
+backoff=0
 while :; do
   for ad in "${ADS[@]}"; do
     attempt=$((attempt + 1))
@@ -99,8 +104,17 @@ while :; do
 
     # Only capacity is worth waiting out. Anything else is a real problem and
     # retrying it just hides the message.
-    if printf '%s' "$out" | grep -qiE 'out of host capacity|outofcapacity|too busy'; then
+    if printf '%s' "$out" | grep -qiE 'too ?many ?requests|429|rate ?limit'; then
+      # Being throttled means the previous pace was already too fast. Back off
+      # hard rather than digging in: a limited account launches nothing.
+      backoff=$(( backoff == 0 ? INTERVAL * 2 : backoff * 2 ))
+      [ "$backoff" -gt "$MAX_BACKOFF" ] && backoff=$MAX_BACKOFF
+      printf '  [%s] rate-limited by Oracle — backing off %ss\n' "$(date +%H:%M:%S)" "$backoff"
+      sleep "$backoff"
+      continue
+    elif printf '%s' "$out" | grep -qiE 'out of host capacity|outofcapacity|too busy'; then
       printf '  [%s] %s — no capacity\n' "$(date +%H:%M:%S)" "$ad"
+      backoff=0        # normal answer, so the earlier pace was acceptable
     else
       printf '%s\n' "$out" >&2
       die "launch failed for a reason other than capacity (see above)"
