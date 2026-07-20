@@ -155,7 +155,7 @@ func scoreboardLines(d *api.MatchDetail, width int) []line {
 // spelled out beside it — a bar alone cannot be read precisely, and cannot be
 // read at all without colour.
 func predictionLines(p api.MatchPrediction, width int) []line {
-	span := max(width-4, 10)
+	span := max(width-4, 12)
 	total := max(p.Home+p.Draw+p.Away, 1)
 	h := p.Home * span / total
 	a := p.Away * span / total
@@ -165,16 +165,118 @@ func predictionLines(p api.MatchPrediction, width int) []line {
 		lipgloss.NewStyle().Foreground(theme.White).Render(strings.Repeat("█", dr)) +
 		lipgloss.NewStyle().Foreground(theme.Red).Render(strings.Repeat("█", a))
 
-	legend := fmt.Sprintf("%d%%  %s %d%%  %d%%", p.Home, theme.Upper(i18n.T().Draw), p.Draw, p.Away)
-	out := []line{
-		plainLine("  " + bar),
-		plainLine("  " + theme.Muted.Render(theme.Truncate(legend, width-3))),
+	// Each figure sits under its own segment and takes its colour, so the
+	// pairing survives both a glance and the loss of colour.
+	home := strconv.Itoa(p.Home) + "%"
+	draw := theme.Upper(i18n.T().Draw) + " " + strconv.Itoa(p.Draw) + "%"
+	away := strconv.Itoa(p.Away) + "%"
+
+	labels, fitted := placeLabels(span, []segment{
+		{start: 0, w: h, text: home, colour: theme.Blue, align: alignLeft},
+		{start: h, w: dr, text: draw, colour: theme.White, align: alignCentre},
+		{start: h + dr, w: a, text: away, colour: theme.Red, align: alignRight},
+	})
+	if !fitted {
+		// Nothing lines up usefully at these proportions; state all three plainly.
+		labels = lipgloss.NewStyle().Foreground(theme.Blue).Render(home) + "  " +
+			lipgloss.NewStyle().Foreground(theme.White).Render(draw) + "  " +
+			lipgloss.NewStyle().Foreground(theme.Red).Render(away)
 	}
+
+	out := []line{plainLine("  " + bar), plainLine("  " + labels)}
 	if p.Advice != nil && *p.Advice != "" {
 		out = append(out, plainLine("  "+theme.Muted.Render(
 			theme.Truncate(theme.Upper(*p.Advice), width-3))))
 	}
 	return out
+}
+
+type align int
+
+const (
+	alignLeft align = iota
+	alignCentre
+	alignRight
+)
+
+type segment struct {
+	start, w int
+	text     string
+	colour   lipgloss.Color
+	align    align
+}
+
+// placeLabels writes each label under its segment on one row of exactly span
+// columns, and reports whether all of them fit.
+//
+// A lopsided prediction leaves a segment one column wide, with nowhere to put
+// its figure. Dropping it would lose the number, and shifting it would put it
+// under the wrong colour; the caller falls back to a plain legend instead, so
+// the alignment is abandoned rather than the information.
+func placeLabels(span int, segs []segment) (string, bool) {
+	row := make([]rune, span)
+	for i := range row {
+		row[i] = ' '
+	}
+	colour := make([]lipgloss.Color, span)
+
+	// One column of clearance either side: labels that merely touch read as one
+	// word ("10%NUL 20%") and the pairing is lost.
+	taken := func(from, n int) bool {
+		for i := from - 1; i <= from+n; i++ {
+			if i < 0 || i >= span {
+				continue
+			}
+			if row[i] != ' ' {
+				return true
+			}
+		}
+		return false
+	}
+
+	ok := true
+	for _, s := range segs {
+		t := []rune(s.text)
+		if len(t) > span {
+			ok = false
+			continue
+		}
+		var at int
+		switch s.align {
+		case alignLeft:
+			at = s.start
+		case alignRight:
+			at = s.start + s.w - len(t)
+		default:
+			at = s.start + (s.w-len(t))/2
+		}
+		at = min(max(at, 0), span-len(t))
+		if taken(at, len(t)) {
+			ok = false
+			continue
+		}
+		for i, r := range t {
+			row[at+i] = r
+			colour[at+i] = s.colour
+		}
+	}
+
+	// Emit runs of one colour together rather than styling every cell.
+	var b strings.Builder
+	for i := 0; i < span; {
+		j := i
+		for j < span && colour[j] == colour[i] {
+			j++
+		}
+		text := string(row[i:j])
+		if colour[i] == "" {
+			b.WriteString(text)
+		} else {
+			b.WriteString(lipgloss.NewStyle().Foreground(colour[i]).Render(text))
+		}
+		i = j
+	}
+	return b.String(), ok
 }
 
 func splitEvents(events []api.MatchEvent) (goals, cards, subs []api.MatchEvent) {

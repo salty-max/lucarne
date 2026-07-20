@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -122,18 +123,75 @@ func TestZeroRatingsAreNotShown(t *testing.T) {
 	}
 }
 
-// The probability bar must be readable without colour: the figures are printed
-// beside it, and the three shares are proportioned, not equal thirds.
-func TestPredictionIsReadableWithoutColour(t *testing.T) {
-	p := api.MatchPrediction{Home: 70, Draw: 20, Away: 10}
+func predictionText(p api.MatchPrediction, w int) string {
 	var rows []string
-	for _, l := range predictionLines(p, 80) {
+	for _, l := range predictionLines(p, w) {
 		rows = append(rows, plain(l.text))
 	}
-	text := strings.Join(rows, "\n")
-	for _, want := range []string{"70%", "20%", "10%"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("%q not printed beside the bar: %q", want, text)
+	return strings.Join(rows, "\n")
+}
+
+// All three figures must survive every distribution and width. A lopsided
+// prediction leaves a segment one column wide; aligning under it is impossible,
+// and the fallback must state the figures plainly rather than drop one.
+func TestPredictionAlwaysStatesAllThree(t *testing.T) {
+	for _, w := range []int{40, 56, 80, 120} {
+		for _, p := range []api.MatchPrediction{
+			{Home: 45, Draw: 45, Away: 10},
+			{Home: 70, Draw: 20, Away: 10},
+			{Home: 10, Draw: 20, Away: 70},
+			{Home: 96, Draw: 3, Away: 1},
+			{Home: 1, Draw: 1, Away: 98},
+			{Home: 33, Draw: 34, Away: 33},
+		} {
+			text := predictionText(p, w)
+			for _, want := range []string{
+				strconv.Itoa(p.Home) + "%", strconv.Itoa(p.Draw) + "%", strconv.Itoa(p.Away) + "%",
+			} {
+				if !strings.Contains(text, want) {
+					t.Errorf("width %d, %d/%d/%d: %q missing\n%s",
+						w, p.Home, p.Draw, p.Away, want, text)
+				}
+			}
+		}
+	}
+}
+
+// Labels are placed under their own segment, so the home figure must sit left of
+// the away one — that is the whole point of aligning them.
+func TestPredictionLabelsFollowTheirSegments(t *testing.T) {
+	p := api.MatchPrediction{Home: 70, Draw: 20, Away: 10}
+	rows := strings.Split(predictionText(p, 80), "\n")
+	labels := rows[len(rows)-1]
+
+	home := strings.Index(labels, "70%")
+	away := strings.Index(labels, "10%")
+	if home < 0 || away < 0 {
+		t.Fatalf("figures missing: %q", labels)
+	}
+	if home >= away {
+		t.Errorf("home figure at %d is not left of away at %d: %q", home, away, labels)
+	}
+	// And the away figure ends at the right edge, under its segment.
+	if trimmed := strings.TrimRight(labels, " "); !strings.HasSuffix(trimmed, "10%") {
+		t.Errorf("the away figure is not set right: %q", labels)
+	}
+}
+
+// Labels that merely touch read as one word and the pairing is lost.
+func TestPredictionLabelsKeepClearOfEachOther(t *testing.T) {
+	for _, w := range []int{40, 56, 80} {
+		for _, p := range []api.MatchPrediction{
+			{Home: 10, Draw: 20, Away: 70},
+			{Home: 45, Draw: 45, Away: 10},
+			{Home: 33, Draw: 34, Away: 33},
+		} {
+			rows := strings.Split(predictionText(p, w), "\n")
+			labels := rows[len(rows)-1]
+			if strings.Contains(labels, "%NUL") || strings.Contains(labels, "%DRAW") {
+				t.Errorf("width %d, %d/%d/%d: labels collide: %q",
+					w, p.Home, p.Draw, p.Away, labels)
+			}
 		}
 	}
 }
