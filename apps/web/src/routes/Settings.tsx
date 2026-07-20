@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
 import { disablePush, enablePush, pushPermission, pushSupport } from "@/lib/notifications";
+import { openInstallGuide } from "@/lib/install";
 import { setPrefs, usePrefs } from "@/lib/prefs";
 import {
   setSettings,
@@ -219,7 +220,16 @@ export default function Settings() {
           </span>
         </button>
         {support === "install" ? (
-          <p className="mt-2 text-[hsl(var(--tt-yellow))]">{t.settings.notificationsInstall}</p>
+          <>
+            <p className="mt-2 text-[hsl(var(--tt-yellow))]">{t.settings.notificationsInstall}</p>
+            <button
+              data-nav
+              onClick={openInstallGuide}
+              className="tt-tag mt-2 bg-[hsl(var(--tt-cyan))] py-1 text-[hsl(var(--tt-cyan-on))]"
+            >
+              {t.install.howTo}
+            </button>
+          </>
         ) : support === "insecure" ? (
           <p className="mt-2 text-[hsl(var(--tt-yellow))]">{t.settings.notificationsInsecure}</p>
         ) : support === "unsupported" ? (

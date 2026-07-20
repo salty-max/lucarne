@@ -2,6 +2,7 @@
 // subscription (linked to its deviceId), and mirror followed teams to the server.
 // The user opted into every event kind, so we send the full trigger set.
 import { getDeviceId } from "@/lib/device";
+import { canInstall } from "@/lib/install";
 
 const TRIGGERS = ["goal", "yellow", "red", "lineups", "kickoff", "ft", "ht", "phase", "motm", "subst"];
 
@@ -23,14 +24,8 @@ export type PushSupport = "ok" | "install" | "insecure" | "unsupported";
 export function pushSupport(): PushSupport {
   if (pushSupported()) return "ok";
   if (typeof window === "undefined") return "unsupported";
-  const nav = navigator as Navigator & { standalone?: boolean };
-  const standalone =
-    window.matchMedia?.("(display-mode: standalone)").matches === true || nav.standalone === true;
-  const iOS =
-    /iP(hone|ad|od)/.test(nav.userAgent) ||
-    (nav.platform === "MacIntel" && nav.maxTouchPoints > 1); // iPadOS reports as a Mac
   if (!window.isSecureContext) return "insecure"; // web push needs HTTPS
-  if (iOS && !standalone) return "install"; // add to Home Screen, open from the icon
+  if (canInstall()) return "install"; // iOS in a tab → add to Home Screen first
   return "unsupported";
 }
 

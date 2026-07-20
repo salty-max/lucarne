@@ -87,6 +87,16 @@ const en = {
     tbd: "TBD",
   },
   card: { ft: "FT", aet: "AET", pens: "Pens", live: "LIVE", pp: "PP", tbc: "TBC", ht: "HT", bt: "ET" },
+  install: {
+    title: "Install Lucarne",
+    why: "Add Lucarne to your Home Screen to get goals, cards and line-ups as alerts — iOS only allows notifications for installed apps.",
+    step1: "Tap Share in the Safari toolbar",
+    step2: "Scroll and choose “Add to Home Screen”",
+    step3: "Open Lucarne from its new icon",
+    later: "Not now",
+    gotIt: "Got it",
+    howTo: "How do I install it?",
+  },
   watch: {
     watch: "Watch",
     watching: "Watching",
@@ -312,6 +322,16 @@ const fr: Messages = {
     tbd: "À déterminer",
   },
   card: { ft: "FIN", aet: "a.p.", pens: "t.a.b", live: "DIR", pp: "Rep.", tbc: "à conf.", ht: "MT", bt: "Prol." },
+  install: {
+    title: "Installer Lucarne",
+    why: "Ajoute Lucarne à ton écran d'accueil pour recevoir les buts, cartons et compos en notification — iOS ne les autorise que pour les apps installées.",
+    step1: "Touche Partager dans la barre de Safari",
+    step2: "Fais défiler et choisis « Sur l'écran d'accueil »",
+    step3: "Ouvre Lucarne depuis sa nouvelle icône",
+    later: "Plus tard",
+    gotIt: "C'est fait",
+    howTo: "Comment l'installer ?",
+  },
   watch: {
     watch: "Surveiller",
     watching: "Surveillé",
