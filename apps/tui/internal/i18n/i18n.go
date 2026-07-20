@@ -39,6 +39,12 @@ type Messages struct {
 	Page, Move, Open, Sections, Back, Quit string
 
 	MatchOne, MatchMany string
+
+	Motm, Formation, Coach, Bench, Starters string
+	AfterExtraTime, AfterPens               string
+	Possession, Shots, OnTarget, Corners    string
+	Fouls, Offsides, Saves, PassAccuracy    string
+	XG, YellowCards, RedCards               string
 }
 
 var fr = Messages{
@@ -67,6 +73,13 @@ var fr = Messages{
 	Sections: "sections", Back: "retour", Quit: "quitter",
 
 	MatchOne: "match", MatchMany: "matchs",
+
+	Motm: "Homme du match", Formation: "Formation", Coach: "Entraîneur",
+	Bench: "Remplaçants", Starters: "Titulaires",
+	AfterExtraTime: "Après prolongation", AfterPens: "Après t.a.b.",
+	Possession: "Possession", Shots: "Tirs", OnTarget: "Cadrés", Corners: "Corners",
+	Fouls: "Fautes", Offsides: "Hors-jeu", Saves: "Arrêts", PassAccuracy: "Passes réussies",
+	XG: "Buts attendus", YellowCards: "Cartons jaunes", RedCards: "Cartons rouges",
 }
 
 var en = Messages{
@@ -95,6 +108,13 @@ var en = Messages{
 	Sections: "sections", Back: "back", Quit: "quit",
 
 	MatchOne: "match", MatchMany: "matches",
+
+	Motm: "Man of the match", Formation: "Formation", Coach: "Coach",
+	Bench: "Substitutes", Starters: "Starting XI",
+	AfterExtraTime: "After extra time", AfterPens: "After penalties",
+	Possession: "Possession", Shots: "Shots", OnTarget: "On target", Corners: "Corners",
+	Fouls: "Fouls", Offsides: "Offsides", Saves: "Saves", PassAccuracy: "Pass accuracy",
+	XG: "Expected goals", YellowCards: "Yellow cards", RedCards: "Red cards",
 }
 
 var active = detect()

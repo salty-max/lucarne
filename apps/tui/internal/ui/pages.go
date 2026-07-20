@@ -228,34 +228,10 @@ func (p *matchPage) Update(m *Model, msg tea.Msg) (tea.Cmd, bool) {
 
 func (p *matchPage) Lines(m *Model, width int) []line {
 	if p.data == nil {
-		return append(headerLines("Match", "", width),
+		return append(headerLines(i18n.T().Match, "", width),
 			plainLine(theme.Muted.Render(" "+theme.Upper(i18n.T().Loading))))
 	}
-	d := p.data
-	out := headerLines(teamName(d.Home)+" v "+teamName(d.Away), d.Competition.Name, width)
-
-	out = append(out, plainLine(""), plainLine(" "+scoreboard(*d)))
-	if d.Venue != nil && *d.Venue != "" {
-		out = append(out, plainLine(theme.Muted.Render(" "+theme.Upper(*d.Venue))))
-	}
-	if d.Referee != nil && *d.Referee != "" {
-		out = append(out, plainLine(theme.Muted.Render(" REFEREE "+theme.Upper(*d.Referee))))
-	}
-
-	if len(d.Broadcasters) > 0 {
-		out = append(out, plainLine(""),
-			plainLine(theme.SectionLabel("Broadcast", theme.Yellow, width)),
-			plainLine(" "+theme.Broadcaster.Render(broadcasters(d.Match))))
-	}
-
-	if len(d.Events) > 0 {
-		out = append(out, plainLine(""),
-			plainLine(theme.SectionLabel("Events", theme.Red, width)))
-		for _, e := range d.Events {
-			out = append(out, plainLine(eventRow(e, width)))
-		}
-	}
-	return out
+	return matchLines(p.data, width)
 }
 
 // ── Placeholder for sections not ported yet ─────────────────────────────────
