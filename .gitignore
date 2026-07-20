@@ -31,3 +31,6 @@ dev-dist
 *.pem
 *.log
 *.tsbuildinfo
+
+# Go TUI build output
+apps/tui/dist/
