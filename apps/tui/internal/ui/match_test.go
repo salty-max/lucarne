@@ -206,3 +206,61 @@ func TestNoMatchLineOverflows(t *testing.T) {
 		}
 	}
 }
+
+// Events sit under the team they belong to — home left, away right — which is
+// what the web client does and why its cards all sat right on the World Cup
+// final: every one of them was Argentina's. The column tells you whose event it
+// was before you read the name.
+func TestEventsAlignByTeam(t *testing.T) {
+	w := 74
+	home, away := "home", "away"
+	min := 41
+	name := "PLAYER"
+
+	e := api.MatchEvent{Type: "Card", Minute: &min, Player: &name, Side: &home}
+	left := plain(cardRow(e, w))
+	e.Side = &away
+	right := plain(cardRow(e, w))
+
+	if strings.TrimLeft(left, " ") == left {
+		t.Errorf("a home event is not set left: %q", left)
+	}
+	if strings.Index(left, name) >= strings.Index(right, name) {
+		t.Errorf("home %q is not left of away %q", left, right)
+	}
+
+	// The minute stays on the outer edge on both sides, so each column of times
+	// is straight rather than ragged with the length of the names.
+	if !strings.HasPrefix(strings.TrimLeft(left, " "), "41'") {
+		t.Errorf("home minute is not on the left edge: %q", left)
+	}
+	if !strings.HasSuffix(strings.TrimRight(right, " "), "41'") {
+		t.Errorf("away minute is not on the right edge: %q", right)
+	}
+}
+
+// An event with no side recorded must still render rather than vanish.
+func TestEventWithoutSideStillRenders(t *testing.T) {
+	min := 12
+	name := "SOMEBODY"
+	row := plain(cardRow(api.MatchEvent{Type: "Card", Minute: &min, Player: &name}, 74))
+	if !strings.Contains(row, name) {
+		t.Errorf("a sideless event was dropped: %q", row)
+	}
+}
+
+// Each heading is followed by a blank line: dense sections starting flush
+// against the bar were unreadable.
+func TestSectionsBreatheAfterTheirHeading(t *testing.T) {
+	d := loadMatch(t)
+	lines := matchLines(d, 74)
+	for i, l := range lines {
+		if !l.section || i+1 >= len(lines) {
+			continue
+		}
+		if strings.TrimSpace(plain(lines[i+1].text)) != "" {
+			t.Errorf("section at line %d is followed straight by content: %q",
+				i, plain(lines[i+1].text))
+		}
+	}
+}

@@ -91,7 +91,11 @@ func matchLines(d *api.MatchDetail, width int) []line {
 // section is a cyan bar with a blank line above it, the rhythm the web client
 // gets from its section margins.
 func section(label string, width int) []line {
-	return []line{plainLine(""), sectionLine(theme.SectionLabel(label, theme.Cyan, width))}
+	return []line{
+		plainLine(""),
+		sectionLine(theme.SectionLabel(label, theme.Cyan, width)),
+		plainLine(""),
+	}
 }
 
 // barWithRight is .tt-bar with a .tt-bar-r element pushed to the far end.
@@ -303,38 +307,49 @@ func minuteOf(e api.MatchEvent) string {
 	return strconv.Itoa(*e.Minute) + "'"
 }
 
+// sideRow sets an event under the team it belongs to: home to the left, away to
+// the right. That is what the web client does, and it is why its cards all sat
+// right on the World Cup final — every one of them was Argentina's. Reading the
+// column tells you whose event it was before you read the name.
+//
+// The minute stays on the outer edge either way, so both sides get a straight
+// column of times instead of one ragged with the length of the names.
+func sideRow(minute, content string, side *string, width int) string {
+	const mw = 7
+	body := width - mw - 4
+	content = theme.Truncate(content, body)
+	if side != nil && *side == "away" {
+		return "  " + theme.PadLeft(content, body) + "  " + theme.Time.Render(theme.Pad(minute, mw))
+	}
+	return "  " + theme.Time.Render(theme.Pad(minute, mw)) + theme.Pad(content, body)
+}
+
 func goalRow(e api.MatchEvent, width int) string {
 	who := ""
 	if e.Player != nil {
-		who = *e.Player
+		who = theme.Upper(*e.Player)
 	}
-	row := "  " + theme.Time.Render(theme.Pad(minuteOf(e), 7)) +
-		theme.Muted.Render("⚽ ") + theme.ScoreLive.Render(theme.Upper(who))
+	row := theme.Muted.Render("⚽ ") + theme.ScoreLive.Render(who)
 	if e.Assist != nil && *e.Assist != "" {
 		row += theme.Muted.Render(" (" + theme.Upper(*e.Assist) + ")")
 	}
 	if e.Detail != nil && (strings.Contains(*e.Detail, "Penalty") || strings.Contains(*e.Detail, "Own")) {
 		row += theme.Muted.Render(" · " + theme.Upper(*e.Detail))
 	}
-	return theme.Truncate(row, width)
+	return sideRow(minuteOf(e), row, e.Side, width)
 }
 
-// cardRow is set right, as the web client does — cards read as a column of
-// minutes down the right edge rather than as prose.
 func cardRow(e api.MatchEvent, width int) string {
 	who := ""
 	if e.Player != nil {
 		who = theme.Upper(*e.Player)
 	}
-	mark, col := "▮", theme.Yellow
+	col := theme.Yellow
 	if e.Detail != nil && strings.Contains(strings.ToLower(*e.Detail), "red") {
-		mark, col = "▮", theme.Red
+		col = theme.Red
 	}
-	right := lipgloss.NewStyle().Foreground(col).Render(mark) + " " +
-		theme.Time.Render(theme.Pad(minuteOf(e), 6))
-	who = theme.Truncate(who, max(width-12, 4))
-	pad := max(width-theme.Width(who)-10, 1)
-	return strings.Repeat(" ", pad) + theme.TeamName.Render(who) + " " + right
+	row := lipgloss.NewStyle().Foreground(col).Render("▮ ") + theme.TeamName.Render(who)
+	return sideRow(minuteOf(e), row, e.Side, width)
 }
 
 func subRow(e api.MatchEvent, width int) string {
@@ -346,13 +361,12 @@ func subRow(e api.MatchEvent, width int) string {
 		out = theme.Upper(*e.Assist)
 	}
 	// Arrows as well as colour: which player came on must survive NO_COLOR.
-	row := "  " + theme.Time.Render(theme.Pad(minuteOf(e), 7)) +
-		lipgloss.NewStyle().Foreground(theme.Green).Render("▲ ") + theme.TeamName.Render(in)
+	row := lipgloss.NewStyle().Foreground(theme.Green).Render("▲ ") + theme.TeamName.Render(in)
 	if out != "" {
 		row += theme.Muted.Render("  ·  ") +
 			lipgloss.NewStyle().Foreground(theme.Red).Render("▼ ") + theme.Muted.Render(out)
 	}
-	return theme.Truncate(row, width)
+	return sideRow(minuteOf(e), row, e.Side, width)
 }
 
 // statLines draw each statistic as one bar split between the sides, with both
