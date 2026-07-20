@@ -130,8 +130,8 @@ func (p *competitionsPage) Lines(m *Model, width int) []line {
 		no := string(teletext.CompPageNo(i))
 		slug := c.Slug
 		text := " " + theme.EntryStyle.Render(no) + "  " +
-			theme.TeamName.Render(theme.Pad(theme.Upper(c.Name), width-22)) +
-			theme.Muted.Render(theme.PadLeft(theme.Upper(c.Country), 14))
+			theme.TeamName.Render(theme.Pad(theme.Upper(i18n.Competition(c.Name)), width-22)) +
+			theme.Muted.Render(theme.PadLeft(theme.Upper(i18n.Country(c.Country)), 14))
 		out = append(out, line{
 			text: text,
 			open: func(m *Model) tea.Cmd {
@@ -156,7 +156,7 @@ func (p *competitionPage) Number() teletext.Page {
 
 func (p *competitionPage) Header() (string, string) {
 	if p.data != nil {
-		return p.data.Name, p.data.Country
+		return i18n.Competition(p.data.Name), i18n.Country(p.data.Country)
 	}
 	return "Competition", ""
 }
@@ -174,7 +174,7 @@ func (p *competitionPage) Lines(m *Model, width int) []line {
 		return append(headerLines("Competition", "", width),
 			plainLine(theme.Muted.Render(" "+theme.Upper(i18n.T().Loading))))
 	}
-	out := headerLines(p.data.Name, p.data.Country, width)
+	out := headerLines(i18n.Competition(p.data.Name), i18n.Country(p.data.Country), width)
 
 	for _, g := range p.data.Standings {
 		out = append(out, plainLine(""),

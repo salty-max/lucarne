@@ -101,7 +101,7 @@ func groupByCompetition(matches []api.Match) []group {
 // competitionBar is the section header: the competition left, and its
 // broadcaster right when the whole group shares one.
 func competitionBar(g group, width int) string {
-	name := theme.Upper(g.name)
+	name := theme.Upper(i18n.Competition(g.name))
 	if g.sharedCast == "" {
 		return theme.Band(name, competitionColour(g.name), width)
 	}
@@ -232,11 +232,19 @@ func eventRow(e api.MatchEvent, width int) string {
 		theme.Muted.Render(theme.Upper(kind))
 }
 
+// teamName prefers the short name the API supplies, then translates: the tables
+// are keyed on full national-team names, so the lookup runs on both forms.
 func teamName(t api.Team) string {
 	if t.ShortName != nil && *t.ShortName != "" {
+		if fr := i18n.Team(*t.ShortName); fr != *t.ShortName {
+			return fr
+		}
+		if fr := i18n.Team(t.Name); fr != t.Name {
+			return fr
+		}
 		return *t.ShortName
 	}
-	return t.Name
+	return i18n.Team(t.Name)
 }
 
 func kickoff(iso string) string {

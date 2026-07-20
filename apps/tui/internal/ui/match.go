@@ -22,12 +22,13 @@ func matchLines(d *api.MatchDetail, width int) []line {
 
 	// Breadcrumb, then the competition bar carrying the round.
 	out = append(out, plainLine(""),
-		plainLine(theme.Muted.Render(" ‹ "+theme.Upper(d.Competition.Name))))
+		plainLine(theme.Muted.Render(" ‹ "+theme.Upper(i18n.Competition(d.Competition.Name)))))
 	round := ""
 	if d.Round != nil {
-		round = theme.Upper(*d.Round)
+		round = theme.Upper(i18n.Round(*d.Round))
 	}
-	out = append(out, plainLine(barWithRight(theme.Upper(d.Competition.Name), round, theme.Magenta, width)))
+	out = append(out, plainLine(barWithRight(
+		theme.Upper(i18n.Competition(d.Competition.Name)), round, theme.Magenta, width)))
 
 	out = append(out, scoreboardLines(d, width)...)
 

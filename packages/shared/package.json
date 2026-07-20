@@ -8,7 +8,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "gen:go": "bun run scripts/gen-go.ts"
+    "gen:go": "bun run scripts/gen-go.ts",
+    "gen:go-labels": "bun run scripts/gen-go-labels.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

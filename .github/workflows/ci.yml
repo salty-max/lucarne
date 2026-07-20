@@ -68,11 +68,14 @@ jobs:
           bun-version: 1.3.13
       - run: bun install --frozen-lockfile
       - run: bun run --filter @lucarne/shared gen:go
-      - name: generated types are up to date
+      - run: bun run --filter @lucarne/shared gen:go-labels
+      - name: generated files are up to date
         run: |
-          if ! git diff --quiet -- apps/tui/internal/api/types.go; then
-            echo "apps/tui/internal/api/types.go is stale — run: bun run --filter @lucarne/shared gen:go"
-            git diff -- apps/tui/internal/api/types.go
+          stale=$(git diff --name-only -- apps/tui/internal/api/types.go apps/tui/internal/i18n/labels_gen.go)
+          if [ -n "$stale" ]; then
+            echo "stale generated files:"; echo "$stale"
+            echo "run: bun run --filter @lucarne/shared gen:go && bun run --filter @lucarne/shared gen:go-labels"
+            git diff -- $stale
             exit 1
           fi
 
