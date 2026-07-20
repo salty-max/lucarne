@@ -14,6 +14,7 @@ import {
   runLivePollTick,
   runPredictionsPoll,
 } from "@/lib/poller";
+import { runCatchUp, standardCatchUp } from "@/lib/catchup";
 import { runPushNotify } from "@/lib/pushTrigger";
 import { cleanupWatched } from "@/lib/surveillance";
 import { pickCache } from "@/lib/scheduleCache";
@@ -81,6 +82,19 @@ export default {
           await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
           // Last: drop surveillance for matches whose post-match tail has settled.
           await runJob("unwatch", () => cleanupWatched(), (r) => r > 0);
+          // …and heal any daily/weekly slot a missed trigger skipped.
+          await runJob(
+            "catchup",
+            () =>
+              runCatchUp(
+                standardCatchUp({
+                  sync: () => runFixtureSync(cache),
+                  details: () => runDetailsDrain(40),
+                  resync: () => runFullResync(cache),
+                }),
+              ),
+            (r) => r.length > 0,
+          );
         })(),
       );
     }

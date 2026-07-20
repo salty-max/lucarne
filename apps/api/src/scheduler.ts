@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { runCatchUp, standardCatchUp } from "@/lib/catchup";
 import { runJob } from "@/lib/jobs";
 import { log } from "@/lib/log";
 import {
@@ -24,6 +25,13 @@ import { memoryCache } from "@/lib/scheduleCache";
  *     runLivePollTick(), so idle ticks cost ZERO API-Football requests. The same
  *     tick grabs imminent lineups and eagerly drains freshly-finished games.
  */
+/** Daily/weekly slots that must survive the machine being asleep at the hour. */
+const CATCH_UP = standardCatchUp({
+  sync: () => runFixtureSync(memoryCache),
+  details: () => runDetailsDrain(40),
+  resync: () => runFullResync(memoryCache),
+});
+
 export function startScheduler(): void {
   cron.schedule("0 5 * * *", () => runJob("sync", () => runFixtureSync(memoryCache)));
 
@@ -43,6 +51,8 @@ export function startScheduler(): void {
     await runJob("eager", () => runEagerDrain(), (r) => r.matches > 0);
     // Last: drop surveillance for matches whose post-match tail has settled.
     await runJob("unwatch", () => cleanupWatched(), (r) => r > 0);
+    // …and heal any daily/weekly slot the machine slept through (see runCatchUp).
+    await runJob("catchup", () => runCatchUp(CATCH_UP), (r) => r.length > 0);
   });
 
   // Nightly deep drain — backstop that also stamps matches the API never enriches
