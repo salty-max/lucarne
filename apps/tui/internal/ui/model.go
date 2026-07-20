@@ -221,6 +221,13 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "backspace", "esc":
 		return *m, m.back()
 
+	case "tab":
+		m.jumpSection(1)
+		return *m, nil
+	case "shift+tab":
+		m.jumpSection(-1)
+		return *m, nil
+
 	case "up":
 		m.moveCursor(-1)
 		return *m, nil
@@ -276,11 +283,53 @@ func (m *Model) push(p page) tea.Cmd {
 	return nil
 }
 
+// jumpSection scrolls to the next or previous section heading, wrapping. On a
+// page of a hundred lines this is the difference between navigating and
+// scrolling.
+func (m *Model) jumpSection(delta int) {
+	var heads []int
+	for i, l := range m.lines {
+		if l.section {
+			heads = append(heads, i)
+		}
+	}
+	if len(heads) == 0 {
+		return
+	}
+
+	cur := m.vp.YOffset
+	target := heads[0]
+	if delta > 0 {
+		target = heads[0]
+		for _, h := range heads {
+			if h > cur {
+				target = h
+				break
+			}
+		}
+	} else {
+		target = heads[len(heads)-1]
+		for i := len(heads) - 1; i >= 0; i-- {
+			if heads[i] < cur {
+				target = heads[i]
+				break
+			}
+		}
+	}
+	m.vp.SetYOffset(target)
+}
+
 // moveCursor walks the selectable lines, wrapping as the web client does.
 func (m *Model) moveCursor(delta int) {
 	sel := m.selectableIndexes()
 	if len(sel) == 0 {
-		m.vp.LineDown(delta)
+		// LineDown ignores a negative count, so a page with nothing selectable
+		// — the match detail, for one — could be scrolled down but never up.
+		if delta < 0 {
+			m.vp.LineUp(-delta)
+		} else {
+			m.vp.LineDown(delta)
+		}
 		return
 	}
 	pos := 0

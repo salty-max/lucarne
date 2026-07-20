@@ -38,10 +38,10 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 	label := theme.Upper(i18n.DayLabel(d.Key))
 	pad := max(width-theme.Width(label)-theme.Width(count)-2, 1)
 	out = append(out,
-		plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)))
+		sectionLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)))
 
 	for _, g := range groupByCompetition(d.Matches) {
-		out = append(out, plainLine(""), plainLine(competitionBar(g, width)))
+		out = append(out, plainLine(""), sectionLine(competitionBar(g, width)))
 		for _, f := range g.matches {
 			fixture := f
 			hoisted := g.sharedCast != ""

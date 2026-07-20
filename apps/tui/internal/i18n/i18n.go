@@ -37,6 +37,7 @@ type Messages struct {
 	Draw, Pens, Postponed, FullTime           string
 
 	Page, Move, Open, Sections, Back, Quit string
+	Sections2                              string
 
 	MatchOne, MatchMany string
 
@@ -74,6 +75,7 @@ var fr = Messages{
 
 	Page: "aller à la page", Move: "naviguer", Open: "ouvrir",
 	Sections: "sections", Back: "retour", Quit: "quitter",
+	Sections2: "section suiv.",
 
 	MatchOne: "match", MatchMany: "matchs",
 
@@ -113,6 +115,7 @@ var en = Messages{
 
 	Page: "go to page", Move: "navigate", Open: "open",
 	Sections: "sections", Back: "back", Quit: "quit",
+	Sections2: "next section",
 
 	MatchOne: "match", MatchMany: "matches",
 

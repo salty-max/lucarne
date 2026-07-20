@@ -18,9 +18,15 @@ import (
 type line struct {
 	text string
 	open func(m *Model) tea.Cmd
+	// section marks a section heading, so Tab can jump between them. A detail
+	// page runs to a hundred lines; scrolling a row at a time to reach the
+	// lineups is not navigation.
+	section bool
 }
 
 func plainLine(s string) line { return line{text: s} }
+
+func sectionLine(s string) line { return line{text: s, section: true} }
 
 // page is one screen. Pages own their data and their lines; the shell owns the
 // cursor, the scrolling and the chrome.
@@ -109,6 +115,7 @@ func kbdHint(width int) string {
 	}{
 		{[]string{"###"}, t.Page},
 		{[]string{"↑", "↓"}, t.Move},
+		{[]string{"⇥"}, t.Sections2},
 		{[]string{"↵"}, t.Open},
 		{[]string{"R", "G", "Y", "C"}, t.Sections},
 		{[]string{"⌫"}, t.Back},

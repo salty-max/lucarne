@@ -27,7 +27,7 @@ func matchLines(d *api.MatchDetail, width int) []line {
 	if d.Round != nil {
 		round = theme.Upper(i18n.Round(*d.Round))
 	}
-	out = append(out, plainLine(barWithRight(
+	out = append(out, sectionLine(barWithRight(
 		theme.Upper(i18n.Competition(d.Competition.Name)), round, theme.Magenta, width)))
 
 	out = append(out, scoreboardLines(d, width)...)
@@ -91,7 +91,7 @@ func matchLines(d *api.MatchDetail, width int) []line {
 // section is a cyan bar with a blank line above it, the rhythm the web client
 // gets from its section margins.
 func section(label string, width int) []line {
-	return []line{plainLine(""), plainLine(theme.SectionLabel(label, theme.Cyan, width))}
+	return []line{plainLine(""), sectionLine(theme.SectionLabel(label, theme.Cyan, width))}
 }
 
 // barWithRight is .tt-bar with a .tt-bar-r element pushed to the far end.
