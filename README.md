@@ -203,27 +203,58 @@ bun --filter @lucarne/api test     # one package
 
 ## Deploy — Cloudflare Workers
 
+Cron Triggers start firing the moment the Worker goes live, so the order matters.
+
+**1 — Database.**
 ```bash
 cd apps/api
 bun run wrangler d1 create lucarne                      # paste database_id into wrangler.jsonc
-bun run wrangler d1 migrations apply lucarne --remote   # create tables in D1
+bun run wrangler d1 migrations apply lucarne --remote   # 14 migrations, pure DDL, safe on an empty DB
+```
+
+**2 — Secrets.** The first two are required; the VAPID trio only if you want push.
+```bash
 bun run wrangler secret put API_FOOTBALL_KEY
-bun run wrangler secret put CRON_SECRET                 # if you also hit /api/cron/*
-# For web push, also:
+bun run wrangler secret put CRON_SECRET        # also guards /api/cron/*, /api/admin/*, /api/logs
 bun run wrangler secret put VAPID_PUBLIC_KEY
 bun run wrangler secret put VAPID_PRIVATE_KEY
 bun run wrangler secret put VAPID_SUBJECT
-cd ../.. && bun run deploy                               # builds SPA + wrangler deploy
 ```
 
+**3 — Deploy, then seed immediately.**
+```bash
+cd ../.. && bun run deploy
+curl -X POST https://<your-worker>/api/admin/seed -H "Authorization: Bearer $CRON_SECRET"
+```
+The seed writes the reference data (broadcasters, competitions, rights rules). Until it
+runs, the fixture sync has no competitions to attach fixtures to and **fails loudly** —
+that is deliberate: it used to write nothing and report success, leaving an empty schedule
+for a day. Expect one failed `sync` in the log if a cron fires in the gap; the catch-up
+retries within the minute once the seed has landed.
+
+**4 — Rate limiting.** `/api/watch`, `/api/follows` and `/api/push/subscribe` are
+unauthenticated by design (no accounts, just an anonymous device id). Per-device caps are
+enforced in code, but add Cloudflare rate-limiting rules for the per-IP case:
+
+| Path | Suggested rule |
+|---|---|
+| `/api/watch`, `/api/follows` | 60 requests / minute / IP |
+| `/api/push/subscribe` | 10 requests / minute / IP |
+
+**5 — Verify.**
+```bash
+curl https://<your-worker>/api/schedule | head -c 200        # fixtures present
+curl -H "Authorization: Bearer $CRON_SECRET" https://<your-worker>/api/logs   # jobs green
+```
+
+Notes:
 - SPA (`apps/web/dist`) → Workers Static Assets; `/api/*` runs the Worker.
 - **D1** is the `DB` binding. `wrangler.jsonc` `migrations_dir` points at `drizzle/`, so
   `db:generate` output is what `d1 migrations apply` runs.
-- Seed the reference data into D1 once (broadcasters/competitions/rules):
-  `curl -X POST https://<your-worker>/api/admin/seed -H "Authorization: Bearer $CRON_SECRET"`.
-  The fixture sync fills the matches.
-- **Cron Triggers** drive sync + live + enrichment + drain via the Worker's `scheduled`
-  handler.
+- D1 caps a statement at **100 bound parameters**; every bulk write and `inArray` is split
+  through `lib/d1` to respect it. Keep new ones going through those helpers.
+- Consider setting explicit `limits` (`cpu_ms`) in `wrangler.jsonc` so an overrun shows up
+  as `exceededCpu` in metrics rather than a silent truncation.
 
 **Alt: Bun host** (Koyeb / Oracle Always Free / VM). `bun run build` then, in `apps/api`,
 `bun src/server.ts` — same app with the in-process `node-cron` scheduler serving

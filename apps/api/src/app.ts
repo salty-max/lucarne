@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { competitions, followedTeam, matches, teams, watchedMatch } from "@/db/schema";
+import { competitions, followedTeam, matches, pushSubscription, teams, watchedMatch } from "@/db/schema";
 import { runSeed } from "@/db/seed-data";
 import { authorizeCron } from "@/lib/auth";
 import { COMPETITIONS } from "@/lib/competitions";
@@ -17,6 +17,7 @@ import {
 import { recentRuns } from "@/lib/runlog";
 import {
   ALL_TRIGGERS,
+  isAllowedPushEndpoint,
   removeSubscription,
   saveSubscription,
   sendWelcome,
@@ -169,6 +170,10 @@ app.post("/api/push/subscribe", async (c) => {
     if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
       return c.json({ ok: false, error: "bad subscription" }, 400);
     }
+    // Only real push services — see isAllowedPushEndpoint.
+    if (!isAllowedPushEndpoint(sub.endpoint)) {
+      return c.json({ ok: false, error: "unsupported push endpoint" }, 400);
+    }
     const deviceId =
       typeof body.deviceId === "string" && body.deviceId.trim() ? body.deviceId.trim() : null;
     const triggers = Array.isArray(body.triggers)
@@ -214,6 +219,13 @@ app.post("/api/watch", async (c) => {
   try {
     const v = watchKey(await c.req.json());
     if (!v) return c.json({ ok: false }, 400);
+    // Same reasoning as the followed-teams cap: unauthenticated by design, and
+    // these rows are re-read every tick. Nobody legitimately watches hundreds.
+    const [{ n = 0 } = {}] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(watchedMatch)
+      .where(eq(watchedMatch.deviceId, v.deviceId));
+    if (n >= MAX_WATCHED_MATCHES) return c.json({ ok: false, error: "too many" }, 429);
     await db
       .insert(watchedMatch)
       .values(v)
@@ -265,8 +277,26 @@ app.get("/api/watch", async (c) => {
   }
 });
 
+// --- GDPR: everything we hold for a device is keyed by its anonymous deviceId,
+//     so "forget me" is a single call. Surfaced in Settings. ---
+app.delete("/api/device", async (c) => {
+  try {
+    const deviceId = (c.req.query("deviceId") ?? "").trim();
+    if (!deviceId || deviceId.length > 100) return c.json({ ok: false }, 400);
+    await db.delete(watchedMatch).where(eq(watchedMatch.deviceId, deviceId));
+    await db.delete(followedTeam).where(eq(followedTeam.deviceId, deviceId));
+    await db.delete(pushSubscription).where(eq(pushSubscription.deviceId, deviceId));
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/device DELETE]", err);
+    return c.json({ ok: false }, 500);
+  }
+});
+
 /** No real user follows more than a handful; the cap is purely an abuse bound. */
 const MAX_FOLLOWED_TEAMS = 50;
+/** Likewise: settled matches are purged, so a real device never accumulates many. */
+const MAX_WATCHED_MATCHES = 200;
 
 // --- followed teams: the server-side mirror of the client's favourites, per
 //     device. Drives auto-surveillance (enrich + push) independently of push. ---

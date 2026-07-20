@@ -176,6 +176,11 @@ const en = {
     crtHelp: "Scanlines, phosphor glow and the TV bezel. Turn off for a flat screen.",
     on: "On",
     off: "Off",
+    privacy: "Data & privacy",
+    privacyBody:
+      "Lucarne stores an anonymous device id, the matches you put on the radar, the teams you follow and — only if you enable them — your notification subscription. No account, no name, no email, no tracking.",
+    privacyForget: "Erase my data",
+    privacyDone: "Erased ✓",
     competitions: "Competitions",
     competitionsHelp: "Hide the ones you don't follow — they drop off the match lists and the TV guide.",
     theme: "Theme",
@@ -411,6 +416,11 @@ const fr: Messages = {
     crtHelp: "Scanlines, lueur phosphore et cadre TV. Désactiver pour un écran plat.",
     on: "On",
     off: "Off",
+    privacy: "Données & confidentialité",
+    privacyBody:
+      "Lucarne stocke un identifiant d'appareil anonyme, les matchs mis sur le radar, les équipes suivies et — uniquement si tu les actives — ton abonnement aux notifications. Pas de compte, pas de nom, pas d'e-mail, aucun pistage.",
+    privacyForget: "Effacer mes données",
+    privacyDone: "Effacées ✓",
     competitions: "Compétitions",
     competitionsHelp: "Masquez celles que vous ne suivez pas — elles disparaissent des listes de matchs et de la page diffuseurs.",
     theme: "Thème",

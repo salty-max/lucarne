@@ -53,6 +53,16 @@ export async function setWatch(deviceId: string, matchId: number, state: "on" | 
   });
 }
 
+/** Erase everything the server holds for this device: surveillance, followed
+ *  teams and any push subscription. Everything is keyed by the anonymous
+ *  deviceId, so this is the whole of it. */
+export async function forgetDevice(deviceId: string): Promise<boolean> {
+  const res = await fetch(`/api/device?deviceId=${encodeURIComponent(deviceId)}`, {
+    method: "DELETE",
+  });
+  return res.ok;
+}
+
 export async function fetchCompetitions(): Promise<CompetitionInfo[]> {
   const res = await fetch("/api/competitions");
   if (!res.ok) throw new Error(`competitions ${res.status}`);

@@ -42,6 +42,34 @@ export function vapidPublicKey(): string | null {
   return process.env.VAPID_PUBLIC_KEY ?? null;
 }
 
+/**
+ * Hosts the browser push services actually hand out. `/api/push/subscribe` is
+ * unauthenticated by design, and whatever endpoint it stores is later POSTed to
+ * on every match event — so without this the service would happily be pointed at
+ * any URL and turned into an outbound request engine.
+ */
+const PUSH_HOSTS = [
+  "fcm.googleapis.com", // Chrome / Chromium
+  "android.googleapis.com", // legacy GCM
+  ".push.apple.com", // Safari, iOS
+  "updates.push.services.mozilla.com", // Firefox
+  ".notify.windows.com", // Edge / Windows
+  ".push.microsoft.com",
+];
+
+/** True if `endpoint` is an https URL belonging to a known push service. */
+export function isAllowedPushEndpoint(endpoint: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  const host = url.hostname.toLowerCase();
+  return PUSH_HOSTS.some((h) => (h.startsWith(".") ? host.endsWith(h) : host === h));
+}
+
 /** Store (or refresh) a browser's subscription, linked to its device. Push now
  *  targets the matches a device surveils (watched_match ∪ followed_team), so the
  *  legacy `teams` column is left empty. */

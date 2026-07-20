@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
 import { disablePush, enablePush, pushPermission, pushSupport } from "@/lib/notifications";
 import { openInstallGuide } from "@/lib/install";
+import { forgetDevice } from "@/api";
+import { getDeviceId } from "@/lib/device";
 import { setPrefs, usePrefs } from "@/lib/prefs";
 import {
   setSettings,
@@ -87,6 +89,27 @@ export default function Settings() {
   const [notifBusy, setNotifBusy] = useState(false);
   const support = pushSupport();
   const notifSupported = support === "ok";
+
+  const [forgetBusy, setForgetBusy] = useState(false);
+  const [forgotten, setForgotten] = useState(false);
+
+  /** GDPR erasure: drop the server-side rows, then the local push subscription
+   *  and followed teams, so nothing is left to re-create them on the next load. */
+  async function forgetMe() {
+    if (forgetBusy) return;
+    setForgetBusy(true);
+    try {
+      await forgetDevice(getDeviceId());
+      if (prefs.notifications) {
+        await disablePush().catch(() => {});
+        setPrefs({ notifications: false });
+      }
+      setPrefs({ favorites: [] });
+      setForgotten(true);
+    } finally {
+      setForgetBusy(false);
+    }
+  }
 
   async function toggleNotifs() {
     if (notifBusy) return;
@@ -241,6 +264,19 @@ export default function Settings() {
         ) : prefs.favorites.length === 0 ? (
           <p className="mt-2 text-muted-foreground">{t.settings.notificationsNoTeams}</p>
         ) : null}
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.settings.privacy}</SectionLabel>
+        <p className="mb-1 text-muted-foreground">{t.settings.privacyBody}</p>
+        <button
+          data-nav
+          disabled={forgetBusy}
+          onClick={forgetMe}
+          className="tt-tag mt-1 bg-[hsl(var(--tt-red))] py-1 text-[hsl(var(--tt-red-on))] disabled:opacity-50"
+        >
+          {forgotten ? t.settings.privacyDone : t.settings.privacyForget}
+        </button>
       </div>
 
       <div className="mt-5">
