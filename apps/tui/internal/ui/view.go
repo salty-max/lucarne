@@ -66,7 +66,7 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 func fixtureLine(f api.Match, width int) string {
 	var b strings.Builder
 
-	b.WriteString(theme.Muted.Render(" ▢  "))
+	b.WriteString(theme.Muted.Render("  ▢  "))
 
 	switch f.Status {
 	case api.MatchStatusLive:
@@ -93,7 +93,7 @@ func fixtureLine(f api.Match, width int) string {
 		castW = min(theme.Width(cast)+2, max(width/3, 8))
 	}
 
-	room := width - 14 - castW - 1
+	room := width - 14 - castW - 2
 	tie = theme.Truncate(tie, room)
 	lead := max(room-theme.Width(tie)-2, 0)
 

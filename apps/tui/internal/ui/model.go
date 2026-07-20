@@ -339,14 +339,12 @@ func (m *Model) refresh() {
 	}
 	rows := make([]string, len(m.lines))
 	for i, l := range m.lines {
-		// The cursor is a marker in the margin, not a fill. Painting the row
-		// solid meant flattening everything on it — the live tag, the score
-		// colour, the broadcaster — into one block, and the web client's
-		// .tt-cur is an outline over a faint tint for the same reason.
+		// The selected row is filled across its full width. That flattens the
+		// tags and colours it carries into one block, which is the trade: a
+		// terminal has no outline, so the only unmissable highlight is a solid
+		// one.
 		if i == m.cur && l.open != nil {
-			rows[i] = theme.CursorMark.Render("▌") + l.text
-		} else if l.open != nil {
-			rows[i] = " " + l.text
+			rows[i] = theme.Cursor.Render(theme.Pad(theme.Plain(l.text), m.width))
 		} else {
 			rows[i] = l.text
 		}
