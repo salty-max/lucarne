@@ -31,23 +31,52 @@ func loadDays(t *testing.T) []api.Day {
 	return res.Days
 }
 
-func renderDay(d *api.Day, scroll int) *render.Screen {
-	s := render.NewScreen()
+// The page is sized by the caller now, so anything layout-related is checked at
+// both ends of the range: the teletext floor and the widescreen cap.
+var widths = []int{render.MinCols, 56, render.MaxCols}
+
+func renderDayAt(d *api.Day, scroll, cols int) *render.Screen {
+	s := render.NewScreen(cols, 24)
 	(&Schedule{Day: d, Scroll: scroll}).Render(s)
 	return s
+}
+
+func renderDay(d *api.Day, scroll int) *render.Screen {
+	return renderDayAt(d, scroll, render.MinCols)
 }
 
 // Nothing may exceed the 40-column grid: an over-long broadcaster name that
 // wrapped would push the whole page out of alignment.
 func TestEveryRowFitsTheGrid(t *testing.T) {
-	for _, d := range loadDays(t) {
-		day := d
-		s := renderDay(&day, 0)
-		for i, line := range strings.Split(s.Text(), "\n") {
-			if w := render.Width(line); w > render.Cols {
-				t.Errorf("day %s row %d is %d columns: %q", day.Key, i, w, line)
+	for _, cols := range widths {
+		for _, d := range loadDays(t) {
+			day := d
+			s := renderDayAt(&day, 0, cols)
+			for i, line := range strings.Split(s.Text(), "\n") {
+				if w := render.Width(line); w > cols {
+					t.Errorf("width %d: day %s row %d is %d columns: %q", cols, day.Key, i, w, line)
+				}
 			}
 		}
+	}
+}
+
+// The point of widening the page is that names stop being cut. At the cap,
+// nothing in a real day's fixtures should need an ellipsis.
+func TestWideningRemovesTruncation(t *testing.T) {
+	days := loadDays(t)
+	narrow, wide := 0, 0
+	for _, d := range days {
+		day := d
+		narrow += strings.Count(renderDayAt(&day, 0, render.MinCols).Text(), "…")
+		wide += strings.Count(renderDayAt(&day, 0, render.MaxCols).Text(), "…")
+	}
+	if narrow == 0 {
+		t.Skip("nothing is truncated even at the floor")
+	}
+	if wide >= narrow {
+		t.Errorf("widening did not help: %d ellipses at %d cols, %d at %d",
+			narrow, render.MinCols, wide, render.MaxCols)
 	}
 }
 
@@ -137,7 +166,7 @@ func TestScrollClampsAndMoves(t *testing.T) {
 }
 
 func TestEmptyDayIsExplained(t *testing.T) {
-	s := render.NewScreen()
+	s := render.NewScreen(render.MinCols, 24)
 	(&Schedule{Day: &api.Day{Key: "2026-01-01", Label: "x"}}).Render(s)
 	if !strings.Contains(s.Text(), "NO MATCHES") {
 		t.Errorf("empty day not explained:\n%s", s.Text())
@@ -145,7 +174,7 @@ func TestEmptyDayIsExplained(t *testing.T) {
 }
 
 func TestAPIErrorIsShown(t *testing.T) {
-	s := render.NewScreen()
+	s := render.NewScreen(render.MinCols, 24)
 	(&Schedule{Err: errFake{}}).Render(s)
 	text := s.Text()
 	if !strings.Contains(text, "NO RESPONSE") {

@@ -5,13 +5,27 @@ import (
 	"strings"
 )
 
-// A teletext page is 40 columns by 24 rows. Holding to that exactly — rather
-// than filling whatever terminal it lands in — is the point: the constraint is
-// what makes the layout read as teletext. Wider terminals get it centred.
+// A teletext page was 40x24. That grid is kept as the floor — the layout is
+// designed against it and never breaks below it — but the page grows into the
+// window above that, because holding to 40 columns costs real information: a
+// quarter of European club names do not fit in the resulting name column.
+//
+// MaxCols stops the page becoming a single sprawling line on an ultrawide
+// display, where the eye has to travel too far between kickoff and broadcaster.
 const (
-	Cols = 40
-	Rows = 24
+	MinCols = 40
+	MaxCols = 80
+	MinRows = 12
 )
+
+// FitCols clamps a terminal width to the page's usable range.
+func FitCols(termCols int) int {
+	return min(max(termCols, MinCols), MaxCols)
+}
+
+// FitRows clamps a terminal height. There is no upper bound: more rows just
+// means less scrolling.
+func FitRows(termRows int) int { return max(termRows, MinRows) }
 
 type cell struct {
 	ch rune
@@ -19,22 +33,41 @@ type cell struct {
 	bg Color
 }
 
-var blank = cell{ch: ' ', fg: White, bg: Black}
-
 // Screen is a cell grid that paints itself to ANSI, emitting only what moved
 // since the last frame.
 type Screen struct {
-	cells []cell
+	cols, rows int
+	cells      []cell
 	// prev is the last painted frame. nil forces a full repaint, used on the
 	// first draw and after a resize.
 	prev []cell
 }
 
-// NewScreen returns a blank page.
-func NewScreen() *Screen {
-	s := &Screen{cells: make([]cell, Cols*Rows)}
+// NewScreen returns a blank page of the given size.
+func NewScreen(cols, rows int) *Screen {
+	s := &Screen{cols: max(cols, 1), rows: max(rows, 1)}
+	s.cells = make([]cell, s.cols*s.rows)
 	s.Clear(White, Black)
 	return s
+}
+
+// Cols is the page width in columns.
+func (s *Screen) Cols() int { return s.cols }
+
+// Rows is the page height in rows.
+func (s *Screen) Rows() int { return s.rows }
+
+// Resize reallocates the grid. The previous frame is discarded: at a new size
+// it describes different cells, so diffing against it would leave debris.
+func (s *Screen) Resize(cols, rows int) {
+	cols, rows = max(cols, 1), max(rows, 1)
+	if cols == s.cols && rows == s.rows {
+		return
+	}
+	s.cols, s.rows = cols, rows
+	s.cells = make([]cell, cols*rows)
+	s.prev = nil
+	s.Clear(White, Black)
 }
 
 // Clear resets every cell to a space in the given colours.
@@ -48,64 +81,63 @@ func (s *Screen) Clear(fg, bg Color) {
 // rather than wrapping: a string one column too long should lose its tail, not
 // reappear on the next line.
 func (s *Screen) Put(x, y int, text string, fg, bg Color) {
-	if y < 0 || y >= Rows || x >= Cols {
+	if y < 0 || y >= s.rows || x >= s.cols {
 		return
 	}
 	cx := x
-	for _, r := range Truncate(text, Cols-x) {
-		if cx >= Cols {
+	for _, r := range Truncate(text, s.cols-x) {
+		if cx >= s.cols {
 			break
 		}
 		if cx >= 0 {
-			s.cells[y*Cols+cx] = cell{ch: r, fg: fg, bg: bg}
+			s.cells[y*s.cols+cx] = cell{ch: r, fg: fg, bg: bg}
 		}
 		cx += runeCols(r)
 	}
 }
 
 func runeCols(r rune) int {
-	w := Width(string(r))
-	if w < 1 {
-		return 1 // a zero-width mark still advances no column of its own
+	if w := Width(string(r)); w > 1 {
+		return w
 	}
-	return w
+	return 1
 }
 
 // Fill paints a rectangle, clipped to the grid.
 func (s *Screen) Fill(x, y, w, h int, bg Color) {
 	for row := y; row < y+h; row++ {
-		if row < 0 || row >= Rows {
+		if row < 0 || row >= s.rows {
 			continue
 		}
 		for col := x; col < x+w; col++ {
-			if col < 0 || col >= Cols {
+			if col < 0 || col >= s.cols {
 				continue
 			}
-			s.cells[row*Cols+col] = cell{ch: ' ', fg: bg, bg: bg}
+			s.cells[row*s.cols+col] = cell{ch: ' ', fg: bg, bg: bg}
 		}
 	}
 }
 
 // Band paints a full-width solid row — the teletext section header.
-func (s *Screen) Band(y int, bg Color) { s.Fill(0, y, Cols, 1, bg) }
+func (s *Screen) Band(y int, bg Color) { s.Fill(0, y, s.cols, 1, bg) }
 
 // Invalidate forces the next Render to repaint everything.
 func (s *Screen) Invalidate() { s.prev = nil }
 
 // Render returns the ANSI needed to bring the terminal from the last frame to
 // this one. Only changed runs are emitted, so a live score ticking over
-// repaints two cells rather than nine hundred — without that the page tears
+// repaints two cells rather than the whole page — without that it tears
 // visibly on every poll.
 func (s *Screen) Render(termCols, termRows int) string {
-	offX := max(0, (termCols-Cols)/2)
-	offY := max(0, (termRows-Rows)/2)
+	offX := max(0, (termCols-s.cols)/2)
+	offY := max(0, (termRows-s.rows)/2)
 	full := s.prev == nil
 
 	var b strings.Builder
-	for y := 0; y < Rows; y++ {
+	for y := 0; y < s.rows; y++ {
 		x := 0
-		for x < Cols {
-			i := y*Cols + x
+		for x < s.cols {
+			i := y*s.cols + x
 			if !full && s.prev[i] == s.cells[i] {
 				x++
 				continue
@@ -115,8 +147,8 @@ func (s *Screen) Render(termCols, termRows int) string {
 			fmt.Fprintf(&b, "\x1b[%d;%dH", offY+y+1, offX+x+1)
 			var curFG, curBG Color
 			first := true
-			for x < Cols {
-				j := y*Cols + x
+			for x < s.cols {
+				j := y*s.cols + x
 				if !full && s.prev[j] == s.cells[j] {
 					break
 				}
@@ -140,11 +172,11 @@ func (s *Screen) Render(termCols, termRows int) string {
 
 // Text renders the grid as plain text, for tests and snapshots.
 func (s *Screen) Text() string {
-	lines := make([]string, 0, Rows)
-	for y := 0; y < Rows; y++ {
+	lines := make([]string, 0, s.rows)
+	for y := 0; y < s.rows; y++ {
 		var line strings.Builder
-		for x := 0; x < Cols; x++ {
-			line.WriteRune(s.cells[y*Cols+x].ch)
+		for x := 0; x < s.cols; x++ {
+			line.WriteRune(s.cells[y*s.cols+x].ch)
 		}
 		lines = append(lines, strings.TrimRight(line.String(), " "))
 	}
@@ -153,6 +185,6 @@ func (s *Screen) Text() string {
 
 // At exposes one cell, for tests.
 func (s *Screen) At(x, y int) (ch rune, fg, bg Color) {
-	c := s.cells[y*Cols+x]
+	c := s.cells[y*s.cols+x]
 	return c.ch, c.fg, c.bg
 }

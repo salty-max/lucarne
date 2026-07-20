@@ -38,9 +38,10 @@ type App struct {
 
 // New wires an app around an already-open terminal.
 func New(t *tui.Terminal) *App {
+	cols, rows := t.Size()
 	return &App{
 		term:  t,
-		scr:   render.NewScreen(),
+		scr:   render.NewScreen(render.FitCols(cols), render.FitRows(rows)),
 		cl:    api.New(),
 		page:  &pages.Schedule{},
 		apply: make(chan func(), 8),
@@ -69,8 +70,11 @@ func (a *App) Run(ctx context.Context) error {
 			a.draw()
 
 		case <-a.term.Resize:
-			// The page size is fixed; only its position moves, so the previous
-			// frame is meaningless and every cell must be repainted.
+			// Clear before repainting: the page may now be smaller than the one
+			// on screen, and the old frame's edges would otherwise survive
+			// around it as debris.
+			cols, rows := a.term.Size()
+			a.scr.Resize(render.FitCols(cols), render.FitRows(rows))
 			a.scr.Invalidate()
 			a.term.WriteString("\x1b[2J")
 			a.draw()
