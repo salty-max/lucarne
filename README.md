@@ -297,6 +297,26 @@ those and every user has to re-enable notifications by hand.
 **Three secrets live in your password manager. Everything else is recoverable:** the R2
 access key pair, the backup passphrase, and the VAPID keypair.
 
+### Moving to a new development machine
+
+Production doesn't care: the app runs on the VM, and the VM restores itself from R2. Only
+the working copy needs rebuilding.
+
+```bash
+git clone https://github.com/salty-max/lucarne.git && cd lucarne && bun install
+rclone config                                   # r2, keys from your password manager
+printf '%s\n' '<backup passphrase>' > ~/.lucarne-backup.pass && chmod 600 ~/.lucarne-backup.pass
+APP_DIR="$PWD" DB="$PWD/apps/api/local.db" PASS_FILE=~/.lucarne-backup.pass \
+  bash scripts/restore-vm.sh                    # brings back .env.local and a prod snapshot
+bun run dev
+```
+
+**The SSH key is the gap R2 does not cover.** The backup bundle restores the box; the
+private key is what lets you *reach* it. Keep it in your password manager (1Password and
+Bitwarden both store SSH keys and can act as an agent), or add a second key to the
+instance while you still have access. Losing it isn't fatal — Oracle can attach the boot
+volume to a rescue instance — but it is a bad afternoon.
+
 ### Recovering a reclaimed instance
 
 Oracle reclaims **Always Free** instances idling under 20% CPU across 7 days, and Lucarne
