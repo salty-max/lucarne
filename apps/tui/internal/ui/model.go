@@ -49,19 +49,18 @@ type Model struct {
 	days  []api.Day
 	comps []api.CompetitionInfo
 
-	entry     string
-	entrySeq  int // bumped per keystroke, so a stale timeout cannot clear a fresh entry
-	clock     string
-	date      string
-	loading   bool
-	err       error
-	liveNow   int
-	vp        viewport.Model
-	width     int
-	height    int
-	ready     bool
-	dayIdx    int
-	lastMatch *api.MatchDetail
+	entry    string
+	entrySeq int // bumped per keystroke, so a stale timeout cannot clear a fresh entry
+	clock    string
+	date     string
+	loading  bool
+	err      error
+	liveNow  int
+	vp       viewport.Model
+	width    int
+	height   int
+	ready    bool
+	dayIdx   int
 }
 
 // New returns a model showing page 100.
@@ -135,7 +134,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		return m.handleKey(msg)
+		next, cmd := m.handleKey(msg)
+		return next, cmd
 
 	case clockMsg:
 		t := time.Time(msg)
@@ -168,11 +168,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refresh()
 		return m, nil
 
-	case matchMsg:
-		m.lastMatch = msg.match
-		m.refresh()
-		return m, nil
-
 	case errMsg:
 		m.loading, m.err = false, msg.err
 		m.refresh()
@@ -182,6 +177,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.fetchLive(), livePollCmd())
 	}
 
+	// Anything the shell does not own belongs to the page — matchMsg and
+	// competitionMsg among them. An earlier version answered matchMsg here and
+	// returned, so the page never saw its own data and sat on "loading".
 	if cmd, handled := m.current().Update(&m, msg); handled {
 		m.refresh()
 		return m, cmd
@@ -203,50 +201,50 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.entry) == 3 {
 			no := m.entry
 			m.entry = ""
-			return m, m.goToNumber(no)
+			return *m, m.goToNumber(no)
 		}
 		m.entrySeq++
 		seq := m.entrySeq
-		return m, tea.Tick(entryTimeout, func(time.Time) tea.Msg { return entryMsg(seq) })
+		return *m, tea.Tick(entryTimeout, func(time.Time) tea.Msg { return entryMsg(seq) })
 	}
 
 	// Give the page first refusal, so a page with its own keys can claim them.
 	if cmd, handled := m.current().Update(m, msg); handled {
 		m.refresh()
-		return m, cmd
+		return *m, cmd
 	}
 
 	switch key {
 	case "q", "ctrl+c":
-		return m, tea.Quit
+		return *m, tea.Quit
 
 	case "backspace", "esc":
-		return m, m.back()
+		return *m, m.back()
 
 	case "up":
 		m.moveCursor(-1)
-		return m, nil
+		return *m, nil
 	case "down":
 		m.moveCursor(1)
-		return m, nil
+		return *m, nil
 
 	case "enter":
 		if i := m.selected(); i >= 0 && m.lines[i].open != nil {
-			return m, m.lines[i].open(m)
+			return *m, m.lines[i].open(m)
 		}
-		return m, nil
+		return *m, nil
 	}
 
 	// The four colour keys.
 	for _, k := range teletext.FastText {
 		if key == k.Key {
-			return m, m.goToPage(k.No, "")
+			return *m, m.goToPage(k.No, "")
 		}
 	}
 
 	var cmd tea.Cmd
 	m.vp, cmd = m.vp.Update(msg)
-	return m, cmd
+	return *m, cmd
 }
 
 // goToNumber resolves a typed number. An unassigned one does nothing, as on a
