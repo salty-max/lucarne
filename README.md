@@ -297,6 +297,34 @@ those and every user has to re-enable notifications by hand.
 **Three secrets live in your password manager. Everything else is recoverable:** the R2
 access key pair, the backup passphrase, and the VAPID keypair.
 
+### Continuous deployment, pulled not pushed
+
+`scripts/self-update.sh` runs from a systemd timer every 5 minutes: it asks GitHub whether
+`main` moved and, if so, deploys it. The direction matters — GitHub never holds a key to
+the box, so a compromised Actions token cannot reach production. `bootstrap-vm.sh` installs
+the timer along with a sudoers rule granting exactly one privileged command,
+`systemctl restart lucarne`, and nothing else.
+
+The order is snapshot → build → migrate → restart → verify, and each failure mode leaves
+you on the version that was working:
+
+| Fails at | What happens |
+|---|---|
+| dirty working tree | refuses to start; your local edits are never clobbered |
+| `bun install` / `build` | checkout reverted; the old process was never restarted |
+| `db:migrate` | database restored from the pre-deploy snapshot, code reverted |
+| doesn't serve within 30 s | full rollback — code, database, restart |
+
+Drizzle migrations have no down path, which is why the snapshot is taken before anything
+else; it is the only way back from a half-applied migration. Verification after restart is
+deliberately narrower than `healthcheck.sh` — that one fails on an empty backup bucket,
+which must never trigger a rollback.
+
+Two things it does not do: the SPA is rebuilt in place, so `apps/web/dist` is briefly
+incomplete and a page load during those seconds can 404 on assets; and it will happily
+restart mid-match, costing one polling tick. Neither is worth the complexity of a
+blue/green swap at this size, but both are real.
+
 ### Moving to a new development machine
 
 Production doesn't care: the app runs on the VM, and the VM restores itself from R2. Only

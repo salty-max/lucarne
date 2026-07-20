@@ -181,6 +181,52 @@ else
   say "Backups NOT configured (no rclone / no /etc/lucarne-backup.pass) — see README"
 fi
 
+# --- 7. Self-update timer ----------------------------------------------------
+# Pull-based: the box asks GitHub for new commits. Nothing on GitHub holds a key
+# to this machine, which is the whole point of doing it this way.
+say "Installing the self-update timer"
+
+# Restarting the service is the one privileged thing the deploy needs. Grant
+# exactly that, nothing else — and validate before installing, because a
+# malformed sudoers file locks you out of sudo entirely.
+sudo_tmp="$(mktemp)"
+cat > "$sudo_tmp" <<EOF
+$APP_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart lucarne
+EOF
+if sudo visudo -cqf "$sudo_tmp"; then
+  sudo install -m 440 "$sudo_tmp" /etc/sudoers.d/lucarne-deploy
+else
+  die "generated sudoers rule is invalid — not installing it"
+fi
+rm -f "$sudo_tmp"
+
+sudo tee /etc/systemd/system/lucarne-update.service >/dev/null <<EOF
+[Unit]
+Description=Lucarne self-update from origin/main
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=$APP_USER
+Environment=APP_DIR=$APP_DIR
+Environment=BUN=$BUN
+ExecStart=/bin/bash $APP_DIR/scripts/self-update.sh
+EOF
+sudo tee /etc/systemd/system/lucarne-update.timer >/dev/null <<'EOF'
+[Unit]
+Description=Check for new commits every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now lucarne-update.timer
+
 say "Up. Checking it answers locally:"
 curl -fsS -o /dev/null -w '  GET /api/schedule -> %{http_code}\n' http://localhost:3000/api/schedule
 curl -fsS -o /dev/null -w '  GET /              -> %{http_code}\n' http://localhost:3000/
