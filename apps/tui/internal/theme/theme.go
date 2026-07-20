@@ -244,3 +244,7 @@ func Truncate(s string, max int) string {
 	}
 	return runewidth.Truncate(s, max, "…")
 }
+
+// Rule is the dotted separator drawn under a row — the web client's .tt-dotted
+// bottom border. Quiet enough to separate without competing with the content.
+var Rule = lipgloss.NewStyle().Foreground(Blue)

@@ -287,11 +287,14 @@ func (p *stubPage) Lines(m *Model, width int) []line {
 // headerLines is the web client's PageHeader: a cyan title, an optional
 // subtitle, and the seven-colour rule under both.
 func headerLines(title, subtitle string, width int) []line {
-	out := []line{plainLine(" " + theme.PageTitle.Render(theme.Upper(title)))}
+	out := []line{
+		plainLine(""),
+		plainLine(" " + theme.PageTitle.Render(theme.Upper(title))),
+	}
 	if subtitle != "" {
 		out = append(out, plainLine(" "+theme.Muted.Render(theme.Upper(subtitle))))
 	}
-	return append(out, plainLine(theme.Rainbow(width)))
+	return append(out, plainLine(theme.Rainbow(width)), plainLine(""))
 }
 
 func (m Model) dayAt(i int) *api.Day {

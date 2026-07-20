@@ -37,7 +37,9 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 	count := strconv.Itoa(len(d.Matches))
 	label := theme.Upper(i18n.DayLabel(d.Key))
 	pad := max(width-theme.Width(label)-theme.Width(count)-2, 1)
-	out = append(out, plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)))
+	out = append(out,
+		plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)),
+		plainLine(""))
 
 	for _, f := range d.Matches {
 		fixture := f
@@ -48,12 +50,16 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 				return tea.Batch(cmd, m.fetchMatch(fixture.ID))
 			},
 		})
+		out = append(out, plainLine(rule(width)))
 	}
 	return out
 }
 
-// fixtureLine is one row: surveillance box, kickoff, the tie, a dotted leader,
-// then the broadcaster.
+// fixtureLine is one row: surveillance box, kickoff, the tie, then the
+// broadcaster set flush right.
+//
+// The dots belong under the row, not inside it: the web client's .tt-dotted is
+// a bottom border, and reading it as a leader glued every row to the next.
 //
 // Status is carried by a glyph as well as by colour — a live match reads as
 // live under NO_COLOR, in a monochrome capture, and for anyone who cannot rely
@@ -61,7 +67,7 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 func fixtureLine(f api.Match, width int) string {
 	var b strings.Builder
 
-	b.WriteString(theme.Muted.Render(" ▢ "))
+	b.WriteString(theme.Muted.Render("  ▢  "))
 
 	switch f.Status {
 	case api.MatchStatusLive:
@@ -75,11 +81,11 @@ func fixtureLine(f api.Match, width int) string {
 	default:
 		b.WriteString(theme.Time.Render(theme.Pad(kickoff(f.Kickoff), 6)))
 	}
-	b.WriteString(" ")
+	b.WriteString("   ")
 
 	tie := theme.Upper(teamName(f.Home)) + " – " + theme.Upper(teamName(f.Away))
-	if sc := score(f); strings.TrimSpace(sc) != "-" {
-		tie = theme.Upper(teamName(f.Home)) + " " + strings.TrimSpace(sc) + " " + theme.Upper(teamName(f.Away))
+	if sc := strings.TrimSpace(score(f)); sc != "-" {
+		tie = theme.Upper(teamName(f.Home)) + "  " + sc + "  " + theme.Upper(teamName(f.Away))
 	}
 
 	cast := broadcasters(f)
@@ -88,19 +94,19 @@ func fixtureLine(f api.Match, width int) string {
 		castW = min(theme.Width(cast)+2, max(width/3, 8))
 	}
 
-	// Everything left over becomes the leader, so the tag always lands flush right.
-	room := width - 10 - castW - 1
+	room := width - 14 - castW - 2
 	tie = theme.Truncate(tie, room)
-	lead := max(room-theme.Width(tie), 0)
 
-	b.WriteString(theme.TeamName.Render(tie))
-	if lead > 0 {
-		b.WriteString(theme.Muted.Render(" " + strings.Repeat("·", max(lead-1, 0))))
-	}
+	b.WriteString(theme.TeamName.Render(theme.Pad(tie, room)))
 	if cast != "" {
 		b.WriteString(theme.Tag(theme.Truncate(cast, castW-2), theme.Green))
 	}
 	return b.String()
+}
+
+// rule is the dotted separator the web client draws under each row.
+func rule(width int) string {
+	return theme.Rule.Render(" " + strings.Repeat("·", max(width-2, 0)))
 }
 
 // scoreboard is the match page's headline: both sides and the result, with the
