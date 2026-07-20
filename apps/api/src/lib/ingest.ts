@@ -1,6 +1,7 @@
-import { and, eq, lte, sql } from "drizzle-orm";
+import { and, eq, gt, lte, sql } from "drizzle-orm";
 import type { TeamStats, TopPlayerEntry } from "@lucarne/shared";
 import { db } from "@/db";
+import { chunkRows } from "@/lib/d1";
 import { competitions, teams, matches, matchEvents, matchLineups, standings, topPlayers } from "@/db/schema";
 import {
   getFixtures,
@@ -41,22 +42,28 @@ async function upsertTeams(fixtures: ApiFixture[]): Promise<Map<number, number>>
   }
   if (seen.size === 0) return new Map();
 
-  const returned = await db
-    .insert(teams)
-    .values([...seen.values()])
-    .onConflictDoUpdate({
-      target: teams.apiFootballId,
-      set: { name: sql`excluded.name`, logo: sql`excluded.logo` },
-    })
-    .returning({ id: teams.id, apiFootballId: teams.apiFootballId });
-
-  return new Map(returned.map((r) => [r.apiFootballId, r.id]));
+  // 3 bound columns per row → chunked so the statement stays under D1's ceiling.
+  const out = new Map<number, number>();
+  for (const part of chunkRows([...seen.values()], 3)) {
+    const returned = await db
+      .insert(teams)
+      .values(part)
+      .onConflictDoUpdate({
+        target: teams.apiFootballId,
+        set: { name: sql`excluded.name`, logo: sql`excluded.logo` },
+      })
+      .returning({ id: teams.id, apiFootballId: teams.apiFootballId });
+    for (const r of returned) out.set(r.apiFootballId, r.id);
+  }
+  return out;
 }
 
 export type SyncResult = {
   competitions: number;
   fixtures: number;
   requestsUsed: number;
+  /** How many competitions threw — surfaced so a partial sync isn't read as clean. */
+  failed?: number;
 };
 
 /** Upsert a batch of fixtures (teams + matches) in batched statements. */
@@ -64,6 +71,13 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
   if (all.length === 0) return 0;
 
   const compMap = await competitionIdMap();
+  // A fresh D1 has no competitions until POST /api/admin/seed runs. Without this
+  // every fixture would be silently dropped below and the sync would report
+  // "0 fixtures, ok" — then not consider itself due again for 25 hours, serving
+  // an empty schedule for a day. Fail loudly so the job is retried instead.
+  if (compMap.size === 0) {
+    throw new Error("no competitions in the database — run the reference-data seed first");
+  }
   const teamMap = await upsertTeams(all);
 
   const rows = all
@@ -94,10 +108,12 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
-  if (rows.length > 0) {
+  // 17 bound columns per row: a full-season resync is ~37,000 parameters in one
+  // statement on D1 without this split.
+  for (const part of chunkRows(rows, 17)) {
     await db
       .insert(matches)
-      .values(rows)
+      .values(part)
       .onConflictDoUpdate({
         target: matches.apiFootballId,
         set: {
@@ -164,15 +180,20 @@ export async function storeStandings(
   for (const r of flat) {
     teamSeen.set(r.team.id, { apiFootballId: r.team.id, name: r.team.name, logo: r.team.logo });
   }
-  const returned = await db
-    .insert(teams)
-    .values([...teamSeen.values()])
-    .onConflictDoUpdate({
-      target: teams.apiFootballId,
-      set: { name: sql`excluded.name`, logo: sql`excluded.logo` },
-    })
-    .returning({ id: teams.id, apiFootballId: teams.apiFootballId });
-  const teamMap = new Map(returned.map((t) => [t.apiFootballId, t.id]));
+  // 3 columns per row, and a Champions League phase table is 36 teams (108
+  // parameters) — over D1's ceiling without the split.
+  const teamMap = new Map<number, number>();
+  for (const part of chunkRows([...teamSeen.values()], 3)) {
+    const returned = await db
+      .insert(teams)
+      .values(part)
+      .onConflictDoUpdate({
+        target: teams.apiFootballId,
+        set: { name: sql`excluded.name`, logo: sql`excluded.logo` },
+      })
+      .returning({ id: teams.id, apiFootballId: teams.apiFootballId });
+    for (const t of returned) teamMap.set(t.apiFootballId, t.id);
+  }
 
   let order = 0;
   const rows = groups.flatMap((group) =>
@@ -202,10 +223,22 @@ export async function storeStandings(
       .filter((x): x is NonNullable<typeof x> => x !== null),
   );
 
-  await db
-    .delete(standings)
+  const [tableMark] = await db
+    .select({ id: sql<number>`coalesce(max(${standings.id}), 0)` })
+    .from(standings)
     .where(and(eq(standings.competitionId, competitionId), eq(standings.season, season)));
-  if (rows.length > 0) await db.insert(standings).values(rows);
+  const tableWatermark = tableMark?.id ?? 0;
+  const scope = and(eq(standings.competitionId, competitionId), eq(standings.season, season));
+
+  // Insert-then-drop (see storeMatchEvents): a 20-row table is 320 bound
+  // parameters, and a failed rewrite must not leave the league table empty.
+  try {
+    for (const part of chunkRows(rows, 16)) await db.insert(standings).values(part);
+  } catch (err) {
+    await db.delete(standings).where(and(scope, gt(standings.id, tableWatermark)));
+    throw err;
+  }
+  await db.delete(standings).where(and(scope, lte(standings.id, tableWatermark)));
   return rows.length;
 }
 
@@ -214,21 +247,28 @@ export async function syncAllStandings(): Promise<{
   competitions: number;
   rows: number;
   requestsUsed: number;
+  failed: number;
 }> {
   const compMap = await competitionIdMap();
   let rows = 0;
   let requestsUsed = 0;
+  let failed = 0;
   for (const comp of COMPETITIONS) {
     const competitionId = compMap.get(comp.apiFootballId);
     if (!competitionId) continue;
     try {
       rows += await storeStandings(competitionId, comp.apiFootballId, comp.season ?? currentSeason());
     } catch (err) {
+      failed += 1;
       console.error("[standings]", comp.slug, err);
     }
     requestsUsed += 1;
   }
-  return { competitions: COMPETITIONS.length, rows, requestsUsed };
+  // Don't let a total wipe-out pass as a successful daily sync.
+  if (requestsUsed > 0 && failed === requestsUsed) {
+    throw new Error(`standings failed for all ${failed} competitions`);
+  }
+  return { competitions: COMPETITIONS.length, rows, requestsUsed, failed };
 }
 
 const TOP_PLAYERS_N = 20;
@@ -404,24 +444,41 @@ export async function storeMatchEvents(
     [m.awayApiId, m.awayTeamId],
   ]);
 
-  await db.delete(matchEvents).where(eq(matchEvents.matchId, m.id));
+  // Write the new rows BEFORE dropping the old ones. D1 has no transactions, so a
+  // delete-then-insert that fails half way leaves the match showing zero events —
+  // and since the drain only stamps on success, it would just repeat. Old rows are
+  // identified by an id watermark taken first; if a chunk fails we remove what we
+  // wrote and rethrow, leaving the previous snapshot untouched.
+  const [mark] = await db
+    .select({ id: sql<number>`coalesce(max(${matchEvents.id}), 0)` })
+    .from(matchEvents)
+    .where(eq(matchEvents.matchId, m.id));
+  const watermark = mark?.id ?? 0;
 
-  if (events.length > 0) {
-    await db.insert(matchEvents).values(
-      events.map((e, i) => ({
-        matchId: m.id,
-        teamId: teamMap.get(e.team.id) ?? null,
-        minute: e.time.elapsed,
-        extraMinute: e.time.extra,
-        type: e.type,
-        detail: e.detail,
-        player: e.player?.name ?? null,
-        assist: e.assist?.name ?? null,
-        comments: e.comments ?? null,
-        sortOrder: i,
-      })),
-    );
+  const rows = events.map((e, i) => ({
+    matchId: m.id,
+    teamId: teamMap.get(e.team.id) ?? null,
+    minute: e.time.elapsed,
+    extraMinute: e.time.extra,
+    type: e.type,
+    detail: e.detail,
+    player: e.player?.name ?? null,
+    assist: e.assist?.name ?? null,
+    comments: e.comments ?? null,
+    sortOrder: i,
+  }));
+
+  try {
+    for (const part of chunkRows(rows, 10)) await db.insert(matchEvents).values(part);
+  } catch (err) {
+    await db
+      .delete(matchEvents)
+      .where(and(eq(matchEvents.matchId, m.id), gt(matchEvents.id, watermark)));
+    throw err;
   }
+  await db
+    .delete(matchEvents)
+    .where(and(eq(matchEvents.matchId, m.id), lte(matchEvents.id, watermark)));
 
   // Live enrichment (stamp:false) stores the running snapshot without stamping, so
   // the post-match drain still does the final authoritative fetch at full-time.
@@ -479,8 +536,24 @@ export async function storeMatchLineups(
   // Not published yet (pre-match): don't touch the DB, so a later tick retries.
   if (rows.length === 0 && !stampWhenEmpty) return 0;
 
-  await db.delete(matchLineups).where(eq(matchLineups.matchId, m.id));
-  if (rows.length > 0) await db.insert(matchLineups).values(rows);
+  // Insert-then-drop with an id watermark (see storeMatchEvents): a 52-row lineup
+  // is 416 bound parameters, and a failed rewrite must not blank the pitch.
+  const [lineupMark] = await db
+    .select({ id: sql<number>`coalesce(max(${matchLineups.id}), 0)` })
+    .from(matchLineups)
+    .where(eq(matchLineups.matchId, m.id));
+  const lineupWatermark = lineupMark?.id ?? 0;
+  try {
+    for (const part of chunkRows(rows, 8)) await db.insert(matchLineups).values(part);
+  } catch (err) {
+    await db
+      .delete(matchLineups)
+      .where(and(eq(matchLineups.matchId, m.id), gt(matchLineups.id, lineupWatermark)));
+    throw err;
+  }
+  await db
+    .delete(matchLineups)
+    .where(and(eq(matchLineups.matchId, m.id), lte(matchLineups.id, lineupWatermark)));
 
   await db
     .update(matches)

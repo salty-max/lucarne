@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
+import { chunkIds } from "@/lib/d1";
 import type {
   Day,
   Match,
@@ -110,29 +111,44 @@ export async function getSchedule(opts: ScheduleOptions = {}): Promise<ScheduleD
   // Load the events the UI actually renders — goals + cards only (subs/VAR are
   // stored but never shown), and NOT penalty-shootout kicks (the shootout result
   // is carried by home/awayPenalties, so listing each kick as a "goal" is wrong).
+  // One bound parameter per id, and D1 caps a statement at 100 — a normal in-season
+  // week is well past that, so the id list is queried in slices (3 reserved for the
+  // type filter + the shootout check). Slices are disjoint by match, so each match's
+  // sortOrder ordering still holds after concatenation.
   const matchIds = rows.map((r) => r.id);
-  const eventRows = matchIds.length
-    ? await db
-        .select({
-          matchId: matchEvents.matchId,
-          teamId: matchEvents.teamId,
-          type: matchEvents.type,
-          detail: matchEvents.detail,
-          minute: matchEvents.minute,
-          extraMinute: matchEvents.extraMinute,
-          player: matchEvents.player,
-          assist: matchEvents.assist,
-        })
-        .from(matchEvents)
-        .where(
-          and(
-            inArray(matchEvents.matchId, matchIds),
-            inArray(matchEvents.type, ["Goal", "Card"]),
-            or(isNull(matchEvents.comments), ne(matchEvents.comments, "Penalty Shootout")),
-          ),
-        )
-        .orderBy(asc(matchEvents.matchId), asc(matchEvents.sortOrder))
-    : [];
+  const eventRows: {
+    matchId: number;
+    teamId: number | null;
+    type: string;
+    detail: string | null;
+    minute: number | null;
+    extraMinute: number | null;
+    player: string | null;
+    assist: string | null;
+  }[] = [];
+  for (const idSlice of chunkIds(matchIds, 3)) {
+    const part = await db
+      .select({
+        matchId: matchEvents.matchId,
+        teamId: matchEvents.teamId,
+        type: matchEvents.type,
+        detail: matchEvents.detail,
+        minute: matchEvents.minute,
+        extraMinute: matchEvents.extraMinute,
+        player: matchEvents.player,
+        assist: matchEvents.assist,
+      })
+      .from(matchEvents)
+      .where(
+        and(
+          inArray(matchEvents.matchId, idSlice),
+          inArray(matchEvents.type, ["Goal", "Card"]),
+          or(isNull(matchEvents.comments), ne(matchEvents.comments, "Penalty Shootout")),
+        ),
+      )
+      .orderBy(asc(matchEvents.matchId), asc(matchEvents.sortOrder));
+    eventRows.push(...part);
+  }
 
   const sides = new Map(rows.map((r) => [r.id, { home: r.homeTeamId, away: r.awayTeamId }]));
   const eventsByMatch = new Map<number, ScheduleEvent[]>();

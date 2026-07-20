@@ -154,10 +154,12 @@ export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> 
 
   let fixtures = 0;
   let requestsUsed = 0;
+  let failed = 0;
   for (const comp of COMPETITIONS) {
     try {
       fixtures += await backfillFixtures(comp.apiFootballId, comp.season ?? season, from, to);
     } catch (err) {
+      failed += 1;
       log.warn("resync.competition.fail", { slug: comp.slug, err: String(err) });
     }
     requestsUsed += 1; // one request per competition, success or not
@@ -166,7 +168,12 @@ export async function runFullResync(cache?: ScheduleCache): Promise<SyncResult> 
   const state = await loadBudget(Date.now());
   await saveBudget({ ...state, requestsToday: state.requestsToday + requestsUsed });
   if (cache) await refreshWindowCache(cache);
-  return { competitions: COMPETITIONS.length, fixtures, requestsUsed };
+  // Every competition failing used to return "0 fixtures, ok" — which the catch-up
+  // reads as done, so it wouldn't look again for 8 days. Surface it instead.
+  if (failed === COMPETITIONS.length) {
+    throw new Error(`full resync failed for all ${failed} competitions`);
+  }
+  return { competitions: COMPETITIONS.length, fixtures, requestsUsed, failed };
 }
 
 /** Recompute the upcoming live windows and store them for the gate. */

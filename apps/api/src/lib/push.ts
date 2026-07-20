@@ -1,5 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { db } from "@/db";
+import { chunkIds } from "@/lib/d1";
 import { pushSubscription } from "@/db/schema";
 import { log } from "@/lib/log";
 import { sendPush, type PushSub, type Vapid } from "@/lib/webpush";
@@ -122,8 +123,8 @@ export async function deliver(
       log.warn("push.send.error", { err: String(err) });
     }
   }
-  if (dead.length > 0) {
-    await db.delete(pushSubscription).where(inArray(pushSubscription.endpoint, dead));
+  for (const slice of chunkIds(dead)) {
+    await db.delete(pushSubscription).where(inArray(pushSubscription.endpoint, slice));
   }
   return sent;
 }

@@ -2,6 +2,7 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db } from "@/db";
 import { matchEvents, matches, pushNotified, teams } from "@/db/schema";
+import { chunkRows } from "@/lib/d1";
 import { deliver, getVapid, type PushTrigger } from "@/lib/push";
 import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 
@@ -201,10 +202,12 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       await fire("MOTM", "motm", `⭐ Homme du match · ${m.motmName}${r}`);
     }
 
-    if (fresh.length > 0) {
+    // 2 columns per row — chunked like every other bulk write (D1 caps a
+    // statement at 100 bound parameters).
+    for (const part of chunkRows(fresh, 2)) {
       await db
         .insert(pushNotified)
-        .values(fresh.map((key) => ({ matchId: m.id, key })))
+        .values(part.map((key) => ({ matchId: m.id, key })))
         .onConflictDoNothing();
     }
   }

@@ -2,6 +2,7 @@ import { desc, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { runLog } from "@/db/schema";
 import { runJob } from "@/lib/jobs";
+import { recordRun } from "@/lib/runlog";
 
 /** A scheduled job that must not silently skip its slot. */
 export type CatchUpJob = {
@@ -64,13 +65,23 @@ export async function runCatchUp(jobs: CatchUpJob[], now = new Date()): Promise<
   const lastAttempt = new Map<string, Date>();
   for (const r of rows) if (!lastAttempt.has(r.job)) lastAttempt.set(r.job, r.at);
 
-  const fired: string[] = [];
   for (const j of jobs) {
     const at = lastAttempt.get(j.job);
     if (at && now.getTime() - at.getTime() < j.maxAgeMs) continue;
-    fired.push(j.job);
-    // Runs under its own name so run_log records it and the next tick sees it.
+
+    // Claim the slot BEFORE running. runJob only records once fn() settles, so a
+    // Worker killed mid-job (CPU limit, eviction, the 15-min cron cap) leaves no
+    // trace at all — and since overlapping cron invocations are never deduplicated,
+    // the next tick 60s later would start the same job again, and again. This row
+    // is the lease; runJob's own entry follows and supersedes it.
+    await recordRun({ job: j.job, ok: false, detail: { started: true } });
     await runJob(j.job, j.run);
+
+    // One per tick, deliberately. On a fresh database all three are overdue at
+    // once, and running them back to back is ~210 sequential upstream fetches —
+    // past the Workers Free subrequest cap, and well past 60s, which would
+    // guarantee the overlap described above.
+    return [j.job];
   }
-  return fired;
+  return [];
 }

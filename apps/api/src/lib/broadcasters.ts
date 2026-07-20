@@ -1,6 +1,7 @@
 import { inArray } from "drizzle-orm";
 import type { Broadcaster } from "@lucarne/shared";
 import { db } from "@/db";
+import { chunkIds } from "@/lib/d1";
 import { broadcasters, broadcastOverrides, broadcastRules } from "@/db/schema";
 import type { Broadcaster as DbBroadcaster, Match } from "@/db/schema";
 import { parisDayKey } from "@/lib/time";
@@ -66,14 +67,17 @@ export async function resolveBroadcastersForMatches(
   const result = new Map<number, ResolvedBroadcaster[]>();
   if (matchList.length === 0) return result;
 
-  const [allBroadcasters, rules, overrides] = await Promise.all([
+  // Match ids are one bound parameter each; D1 caps a statement at 100.
+  const overrideSlices = await Promise.all(
+    chunkIds(matchList.map((m) => m.id)).map((ids) =>
+      db.select().from(broadcastOverrides).where(inArray(broadcastOverrides.matchId, ids)),
+    ),
+  );
+  const [allBroadcasters, rules] = await Promise.all([
     db.select().from(broadcasters),
     db.select().from(broadcastRules),
-    db
-      .select()
-      .from(broadcastOverrides)
-      .where(inArray(broadcastOverrides.matchId, matchList.map((m) => m.id))),
   ]);
+  const overrides = overrideSlices.flat();
 
   const byId = new Map<number, DbBroadcaster>(allBroadcasters.map((b) => [b.id, b]));
 

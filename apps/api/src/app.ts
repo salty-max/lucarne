@@ -265,6 +265,9 @@ app.get("/api/watch", async (c) => {
   }
 });
 
+/** No real user follows more than a handful; the cap is purely an abuse bound. */
+const MAX_FOLLOWED_TEAMS = 50;
+
 // --- followed teams: the server-side mirror of the client's favourites, per
 //     device. Drives auto-surveillance (enrich + push) independently of push. ---
 app.put("/api/follows", async (c) => {
@@ -272,8 +275,15 @@ app.put("/api/follows", async (c) => {
     const body = (await c.req.json()) as { deviceId?: unknown; teams?: unknown };
     const deviceId = typeof body.deviceId === "string" ? body.deviceId.trim() : "";
     if (!deviceId || deviceId.length > 100) return c.json({ ok: false }, 400);
+    // Capped: this endpoint is unauthenticated by design (no accounts), and the
+    // rows it writes are re-read on every tick, so an unbounded array is a cheap
+    // way to bloat the table and slow the whole cadence down.
     const teamList = Array.isArray(body.teams)
-      ? [...new Set(body.teams.filter((t): t is string => typeof t === "string" && t.trim().length > 0))]
+      ? [
+          ...new Set(
+            body.teams.filter((t): t is string => typeof t === "string" && t.trim().length > 0),
+          ),
+        ].slice(0, MAX_FOLLOWED_TEAMS)
       : [];
     await db.delete(followedTeam).where(eq(followedTeam.deviceId, deviceId));
     if (teamList.length > 0) {
@@ -335,7 +345,10 @@ app.get("/api/cron/details", async (c) => {
 // audit trail behind the P800 logs page. Read-only, so public like the other
 // read endpoints (no side effects, no secrets — detail is job counts + errors).
 // `?limit=N` (default 100, capped at 200).
+// Ops endpoint: it exposes the cron cadence, the remaining API budget and raw
+// error strings, so it's authed like the other /api/cron/* routes.
 app.get("/api/logs", async (c) => {
+  if (!authorizeCron(c.req.raw)) return c.text("Unauthorized", 401);
   try {
     const limit = Math.min(200, Math.max(1, Number(c.req.query("limit")) || 100));
     const runs: RunLogEntry[] = (await recentRuns(limit)).map((r) => ({

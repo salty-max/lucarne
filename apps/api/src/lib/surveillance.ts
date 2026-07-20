@@ -1,5 +1,6 @@
 import { and, eq, inArray, lt, or } from "drizzle-orm";
 import { db } from "@/db";
+import { chunkIds } from "@/lib/d1";
 import { followedTeam, matches, watchedMatch } from "@/db/schema";
 
 /**
@@ -61,12 +62,9 @@ export async function cleanupWatched(now = new Date()): Promise<number> {
       ),
     );
   if (rows.length === 0) return 0;
-  await db.delete(watchedMatch).where(
-    inArray(
-      watchedMatch.id,
-      rows.map((r) => r.id),
-    ),
-  );
+  for (const slice of chunkIds(rows.map((r) => r.id))) {
+    await db.delete(watchedMatch).where(inArray(watchedMatch.id, slice));
+  }
   return rows.length;
 }
 
