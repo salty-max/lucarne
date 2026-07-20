@@ -208,6 +208,12 @@ the same origin — so there is no separate front-end host, no API base URL to c
 and no CORS to open. Any always-on box works; Oracle Cloud's Always Free ARM instance
 keeps the total cost at just the API subscription.
 
+> Oracle halved the Always Free Ampere allowance to **2 OCPU / 12 GB** in June 2026.
+> Lucarne is one Bun process over a 1.5 MB SQLite file — `VM.Standard.A1.Flex` at
+> **1 OCPU / 6 GB** runs it comfortably and leaves half the quota spare, which is the
+> margin that stops an accidental second instance from becoming a bill. Nothing in the
+> runtime is architecture-specific: no native modules, and SQLite is built into Bun.
+
 **1 — Box.** Install Bun, clone, build.
 ```bash
 curl -fsSL https://bun.sh/install | bash
@@ -274,13 +280,42 @@ Then add rate-limiting rules in the Cloudflare dashboard — `/api/watch` and
 `/api/follows` at 60 req/min/IP, `/api/push/subscribe` at 10 — since those endpoints are
 unauthenticated by design (per-device caps are already enforced in code).
 
-**5 — Back up the database.** This is the real trade-off of self-hosting: the database is
-a single SQLite file (`apps/api/local.db`), not a replicated service. Either replicate it
-continuously with [Litestream](https://litestream.io) to an S3-compatible bucket
-(Cloudflare R2's free tier fits), or at minimum snapshot it nightly:
+**5 — Back up.** This is the real trade-off of self-hosting: the database is a single
+SQLite file, not a replicated service. `scripts/backup.sh` snapshots it to Cloudflare R2
+every 15 minutes, alongside an AES-256 bundle of `.env.local` and the tunnel credentials.
+`bootstrap-vm.sh` wires up the systemd timer once rclone and the passphrase exist:
 ```bash
-sqlite3 /opt/lucarne/apps/api/local.db ".backup '/var/backups/lucarne-$(date +%F).db'"
+sudo apt-get install -y rclone && rclone config       # remote "r2", type s3, Cloudflare
+sudo install -o "$USER" -m 600 /dev/null /etc/lucarne-backup.pass
+sudo vi /etc/lucarne-backup.pass                      # one long random line
 ```
+The database is ~1.5 MB, so full snapshots stay well inside R2's free tier — no WAL
+replication needed. Most of it *is* re-fetchable from API-Football, at a serious cost in
+daily quota; `push_subscription`, `followed_team` and `watched_match` are **not**. Lose
+those and every user has to re-enable notifications by hand.
+
+**Three secrets live in your password manager. Everything else is recoverable:** the R2
+access key pair, the backup passphrase, and the VAPID keypair.
+
+### Recovering a reclaimed instance
+
+Oracle reclaims **Always Free** instances idling under 20% CPU across 7 days, and Lucarne
+sits near 1%. Assume the box will disappear one day; the recovery is roughly ten minutes,
+most of it waiting on the build.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/salty-max/lucarne/main/scripts/bootstrap-vm.sh | bash
+sudo apt-get install -y rclone && rclone config        # R2 keys from your password manager
+sudo install -o "$USER" -m 600 /dev/null /etc/lucarne-backup.pass && sudo vi /etc/lucarne-backup.pass
+cd /opt/lucarne && bash scripts/restore-vm.sh          # database + secrets
+bash scripts/bootstrap-vm.sh                           # migrate, service, timer
+sudo cloudflared service install                       # credentials restored → DNS unchanged
+```
+Restoring the secrets bundle is what makes this invisible to users: the same VAPID keypair
+means installed PWAs keep receiving pushes, and the same tunnel credentials mean the
+hostname never moves. `restore-vm.sh` refuses a snapshot that fails `integrity_check`, and
+moves any existing database aside rather than overwriting it. The job catch-up then
+backfills whatever sync slots were missed while the box was gone.
 
 **6 — Verify.**
 ```bash
