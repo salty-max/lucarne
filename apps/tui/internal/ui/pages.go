@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/salty-max/lucarne/apps/tui/internal/api"
+	"github.com/salty-max/lucarne/apps/tui/internal/i18n"
 	"github.com/salty-max/lucarne/apps/tui/internal/teletext"
 	"github.com/salty-max/lucarne/apps/tui/internal/theme"
 )
@@ -55,11 +56,11 @@ func (m *Model) goToPage(p teletext.Page, slug string) tea.Cmd {
 type todayPage struct{}
 
 func (p *todayPage) Number() teletext.Page                  { return teletext.PageToday }
-func (p *todayPage) Header() (string, string)               { return "Today", "Fixtures and where to watch" }
+func (p *todayPage) Header() (string, string)               { return i18n.T().Today, i18n.T().TodaySub }
 func (p *todayPage) Update(*Model, tea.Msg) (tea.Cmd, bool) { return nil, false }
 
 func (p *todayPage) Lines(m *Model, width int) []line {
-	return fixtureLines(m, m.dayAt(m.dayIdx), width, "Today", "Fixtures and where to watch")
+	return fixtureLines(m, m.dayAt(m.dayIdx), width, i18n.T().Today, i18n.T().TodaySub)
 }
 
 // ── 300 · Calendar ──────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ func (p *todayPage) Lines(m *Model, width int) []line {
 type calendarPage struct{}
 
 func (p *calendarPage) Number() teletext.Page    { return teletext.PageCalendar }
-func (p *calendarPage) Header() (string, string) { return "Calendar", "Pick a day" }
+func (p *calendarPage) Header() (string, string) { return i18n.T().Calendar, i18n.T().CalendarSub }
 
 // Left and right step through days here, which is what the web client's
 // calendar arrows do.
@@ -88,12 +89,12 @@ func (p *calendarPage) Update(m *Model, msg tea.Msg) (tea.Cmd, bool) {
 }
 
 func (p *calendarPage) Lines(m *Model, width int) []line {
-	out := headerLines("Calendar", "Pick a day", width)
+	out := headerLines(i18n.T().Calendar, i18n.T().CalendarSub, width)
 	for i := range m.days {
 		d := m.days[i]
 		idx := i
-		label := theme.Pad(theme.Upper(d.Label), width-14)
-		count := theme.PadLeft(plural(len(d.Matches), "match", "matches"), 12)
+		label := theme.Pad(theme.Upper(i18n.DayLabel(d.Key)), width-14)
+		count := theme.PadLeft(plural(len(d.Matches), i18n.T().MatchOne, i18n.T().MatchMany), 12)
 		style := theme.TeamName
 		if i == m.dayIdx {
 			style = theme.MastheadName
@@ -113,14 +114,16 @@ func (p *calendarPage) Lines(m *Model, width int) []line {
 
 type competitionsPage struct{}
 
-func (p *competitionsPage) Number() teletext.Page                  { return teletext.PageCompetitions }
-func (p *competitionsPage) Header() (string, string)               { return "Competitions", "Tables and results" }
+func (p *competitionsPage) Number() teletext.Page { return teletext.PageCompetitions }
+func (p *competitionsPage) Header() (string, string) {
+	return i18n.T().Competitions, i18n.T().CompetitionsSub
+}
 func (p *competitionsPage) Update(*Model, tea.Msg) (tea.Cmd, bool) { return nil, false }
 
 func (p *competitionsPage) Lines(m *Model, width int) []line {
-	out := headerLines("Competitions", "Tables and results", width)
+	out := headerLines(i18n.T().Competitions, i18n.T().CompetitionsSub, width)
 	if len(m.comps) == 0 {
-		return append(out, plainLine(theme.Muted.Render(" LOADING…")))
+		return append(out, plainLine(theme.Muted.Render(" "+theme.Upper(i18n.T().Loading))))
 	}
 	for i := range m.comps {
 		c := m.comps[i]
@@ -169,7 +172,7 @@ func (p *competitionPage) Update(m *Model, msg tea.Msg) (tea.Cmd, bool) {
 func (p *competitionPage) Lines(m *Model, width int) []line {
 	if p.data == nil {
 		return append(headerLines("Competition", "", width),
-			plainLine(theme.Muted.Render(" LOADING…")))
+			plainLine(theme.Muted.Render(" "+theme.Upper(i18n.T().Loading))))
 	}
 	out := headerLines(p.data.Name, p.data.Country, width)
 
@@ -226,7 +229,7 @@ func (p *matchPage) Update(m *Model, msg tea.Msg) (tea.Cmd, bool) {
 func (p *matchPage) Lines(m *Model, width int) []line {
 	if p.data == nil {
 		return append(headerLines("Match", "", width),
-			plainLine(theme.Muted.Render(" LOADING…")))
+			plainLine(theme.Muted.Render(" "+theme.Upper(i18n.T().Loading))))
 	}
 	d := p.data
 	out := headerLines(teamName(d.Home)+" v "+teamName(d.Away), d.Competition.Name, width)
@@ -275,7 +278,7 @@ func (p *stubPage) Lines(m *Model, width int) []line {
 		plainLine(""),
 		plainLine(theme.Muted.Render(" "+theme.Upper(p.note))),
 		plainLine(""),
-		plainLine(theme.Alert.Render(" NOT IN THE TERMINAL CLIENT YET.")),
+		plainLine(theme.Alert.Render(" "+theme.Upper(i18n.T().NotYet))),
 	)
 }
 

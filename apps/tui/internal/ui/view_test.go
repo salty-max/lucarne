@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/salty-max/lucarne/apps/tui/internal/api"
+	"github.com/salty-max/lucarne/apps/tui/internal/i18n"
 	"github.com/salty-max/lucarne/apps/tui/internal/teletext"
 	"github.com/salty-max/lucarne/apps/tui/internal/theme"
 )
@@ -101,33 +103,31 @@ func TestWideningRemovesTruncation(t *testing.T) {
 	}
 }
 
-// Once there is room, the broadcaster shares the fixture row instead of taking
-// one of its own, which halves the rows a busy day needs.
-func TestBroadcasterMovesInline(t *testing.T) {
+// The broadcaster tag is set flush right, joined to the tie by a dotted leader,
+// as the web client does. It must land at the same column on every row so the
+// list reads as a table rather than as ragged text.
+func TestBroadcasterTagIsFlushRight(t *testing.T) {
 	days := loadDays(t)
 	i := busiest(days)
 	if len(days[i].Matches) == 0 {
 		t.Skip("fixture has no matches")
 	}
-	// Find the width at which inlining actually engages, rather than assuming
-	// one: the layout decides from the space left after the name columns.
-	threshold := 0
-	for w := 40; w <= 120; w++ {
-		if layout(w).inlineCast {
-			threshold = w
-			break
+	for _, w := range widths {
+		var ends []int
+		for _, l := range strings.Split(plain(bodyOf(modelAt(days, i, w))), "\n") {
+			if strings.Contains(l, "·") {
+				ends = append(ends, theme.Width(strings.TrimRight(l, " ")))
+			}
 		}
-	}
-	if threshold == 0 {
-		t.Fatal("the broadcaster never inlines at any width up to 120")
-	}
-	t.Logf("broadcaster gains its own column at %d columns", threshold)
-
-	narrow := len(strings.Split(plain(bodyOf(modelAt(days, i, threshold-1))), "\n"))
-	wide := len(strings.Split(plain(bodyOf(modelAt(days, i, threshold))), "\n"))
-	if wide >= narrow {
-		t.Errorf("inlining did not reduce the rows: %d at %d columns, %d at %d",
-			narrow, threshold-1, wide, threshold)
+		if len(ends) < 2 {
+			continue
+		}
+		for _, e := range ends[1:] {
+			if e != ends[0] {
+				t.Errorf("width %d: tags end at differing columns (%d vs %d)", w, ends[0], e)
+				break
+			}
+		}
 	}
 }
 
@@ -147,9 +147,20 @@ func TestFixtureShowsTimeTeamsAndBroadcaster(t *testing.T) {
 	if !strings.Contains(text, theme.Upper(name)) {
 		t.Errorf("home team %q missing from the page", name)
 	}
-	if !strings.Contains(text, f.Competition.Name) &&
-		!strings.Contains(text, theme.Upper(f.Competition.Name)) {
-		t.Errorf("competition band %q missing", f.Competition.Name)
+	// The day is the grouping here, not the competition — the web client's
+	// Today page lists one day's fixtures under a single dated bar.
+	// The bar carries our own localised date, not the API's English label:
+	// otherwise a French page shows an English day.
+	want := theme.Upper(i18n.DayLabel(days[i].Key))
+	if !strings.Contains(text, want) {
+		t.Errorf("day bar %q missing", want)
+	}
+	if days[i].Label != "" && strings.Contains(text, theme.Upper(days[i].Label)) &&
+		want != theme.Upper(days[i].Label) {
+		t.Errorf("the API's own label leaked through: %q", days[i].Label)
+	}
+	if !strings.Contains(text, strconv.Itoa(len(days[i].Matches))) {
+		t.Error("the day bar does not carry its match count")
 	}
 	if len(f.Broadcasters) > 0 && !strings.Contains(text, f.Broadcasters[0].Name) {
 		t.Errorf("broadcaster %q missing", f.Broadcasters[0].Name)
@@ -177,14 +188,14 @@ func TestLiveMatchShowsMinuteAndScore(t *testing.T) {
 
 func TestEmptyDayAndErrorAreExplained(t *testing.T) {
 	empty := modelAt([]api.Day{{Key: "2026-01-01", Label: "x"}}, 0, 40)
-	if !strings.Contains(plain(bodyOf(empty)), "NO MATCHES") {
+	if !strings.Contains(plain(bodyOf(empty)), theme.Upper(i18n.T().NoMatches)) {
 		t.Error("an empty day is not explained")
 	}
 
 	failed := modelAt(nil, 0, 40)
 	failed.err = errFake{}
 	body := plain(bodyOf(failed))
-	if !strings.Contains(body, "NO RESPONSE") {
+	if !strings.Contains(body, theme.Upper(i18n.T().NoResponse)) {
 		t.Errorf("the error state is not shown:\n%s", body)
 	}
 	if !strings.Contains(body, "connection refused") {
@@ -204,8 +215,13 @@ func TestFastTextDropsNumbersWhenNarrow(t *testing.T) {
 	if strings.Contains(narrow, "100") {
 		t.Errorf("narrow bar kept the numbers at the cost of the labels: %q", narrow)
 	}
-	for _, want := range []string{"LIVE", "CALEND", "BROAD"} {
-		if !strings.Contains(narrow, want) {
+	// The words survive even when cut; only the numbers are sacrificed.
+	for _, want := range []string{i18n.T().Today, i18n.T().Calendar} {
+		head := theme.Upper(want)
+		if len(head) > 5 {
+			head = head[:5]
+		}
+		if !strings.Contains(narrow, head) {
 			t.Errorf("narrow bar lost %q: %q", want, narrow)
 		}
 	}
@@ -221,8 +237,8 @@ func TestKeyBarAlwaysPresent(t *testing.T) {
 	for _, m := range []Model{modelAt(days, 0, 100), errM, loadingM} {
 		_ = m.current() // the state differs; the bar must not
 		bar := plain(fastRow(teletext.FastText, 100))
-		for _, want := range []string{"LIVE", "CALENDAR", "BROADCASTERS"} {
-			if !strings.Contains(bar, want) {
+		for _, want := range []string{i18n.T().Today, i18n.T().Calendar, i18n.T().Broadcasters} {
+			if !strings.Contains(bar, theme.Upper(want)) {
 				t.Errorf("FastText bar missing %q: %q", want, bar)
 			}
 		}
@@ -236,18 +252,6 @@ func TestServiceLineFillsTheWidth(t *testing.T) {
 		got := theme.Width(plain(m.serviceLine(w)))
 		if got != w {
 			t.Errorf("service line is %d columns, want %d", got, w)
-		}
-	}
-}
-
-func TestLayoutColumnsStayInsideThePage(t *testing.T) {
-	for _, w := range widths {
-		c := layout(w)
-		if end := c.away + c.awayW; end > w {
-			t.Errorf("width %d: away column ends at %d", w, end)
-		}
-		if c.inlineCast && c.cast+c.castW > w {
-			t.Errorf("width %d: broadcaster column ends at %d", w, c.cast+c.castW)
 		}
 	}
 }

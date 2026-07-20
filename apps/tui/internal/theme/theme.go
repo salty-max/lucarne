@@ -226,3 +226,21 @@ func Plain(s string) string { return ansiRe.ReplaceAllString(s, "") }
 // PageTitle is the web client's PageHeader h1: cyan, and set in the single size
 // step teletext actually had.
 var PageTitle = lipgloss.NewStyle().Foreground(Cyan).Bold(true)
+
+// BarRow paints an already-laid-out string as a full-width solid bar, for
+// headers that carry something on each side (the web client's .tt-bar with a
+// .tt-bar-r element pushed right).
+func BarRow(content string, bg lipgloss.Color) string {
+	return lipgloss.NewStyle().Background(bg).Foreground(Black).Bold(true).Render(content)
+}
+
+// Truncate cuts to a column budget, marking the cut.
+func Truncate(s string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	if runewidth.StringWidth(s) <= max {
+		return s
+	}
+	return runewidth.Truncate(s, max, "…")
+}

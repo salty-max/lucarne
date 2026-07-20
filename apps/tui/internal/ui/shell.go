@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/salty-max/lucarne/apps/tui/internal/i18n"
 	"github.com/salty-max/lucarne/apps/tui/internal/teletext"
 	"github.com/salty-max/lucarne/apps/tui/internal/theme"
 )
@@ -74,7 +75,7 @@ func fastRow(keys []teletext.Key, width int) string {
 	// breakpoint. A number is useless if it costs you the word beside it.
 	withNumbers := true
 	for _, k := range keys {
-		if theme.Width(string(k.No)+" "+k.Label) > cell {
+		if theme.Width(string(k.No)+" "+pageLabel(k.No)) > cell {
 			withNumbers = false
 			break
 		}
@@ -86,7 +87,7 @@ func fastRow(keys []teletext.Key, width int) string {
 		if i == len(keys)-1 {
 			w = width - cell*(len(keys)-1) // absorb the rounding in the last cell
 		}
-		label := theme.Upper(k.Label)
+		label := theme.Upper(pageLabel(k.No))
 		if withNumbers {
 			label = string(k.No) + " " + label
 		}
@@ -99,14 +100,39 @@ func fastRow(keys []teletext.Key, width int) string {
 // same four things out; a terminal user has no other way to discover that
 // typing three digits jumps to a page.
 func kbdHint() string {
-	k := theme.Key
+	k, t := theme.Key, i18n.T()
 	return theme.Muted.Render(" ") +
-		k("###") + theme.Muted.Render(" page  ") +
-		k("↑") + k("↓") + theme.Muted.Render(" move  ") +
-		k("↵") + theme.Muted.Render(" open  ") +
-		k("R") + k("G") + k("Y") + k("C") + theme.Muted.Render(" sections  ") +
-		k("⌫") + theme.Muted.Render(" back  ") +
-		k("q") + theme.Muted.Render(" quit")
+		k("###") + theme.Muted.Render(" "+t.Page+"  ") +
+		k("↑") + k("↓") + theme.Muted.Render(" "+t.Move+"  ") +
+		k("↵") + theme.Muted.Render(" "+t.Open+"  ") +
+		k("R") + k("G") + k("Y") + k("C") + theme.Muted.Render(" "+t.Sections+"  ") +
+		k("⌫") + theme.Muted.Render(" "+t.Back+"  ") +
+		k("q") + theme.Muted.Render(" "+t.Quit)
+}
+
+// pageLabel is the localised name of a section.
+func pageLabel(p teletext.Page) string {
+	t := i18n.T()
+	switch p {
+	case teletext.PageToday:
+		return t.Today
+	case teletext.PageCalendar:
+		return t.Calendar
+	case teletext.PageCompetitions:
+		return t.Competitions
+	case teletext.PageBroadcasters:
+		return t.Broadcasters
+	case teletext.PageFavorites:
+		return t.MyTeams
+	case teletext.PageRadar:
+		return t.Radar
+	case teletext.PageSettings:
+		return t.Settings
+	case teletext.PageLogs:
+		return t.Logs
+	default:
+		return t.Match
+	}
 }
 
 // chromeHeight is what the shell takes: service line, the two footer rows and

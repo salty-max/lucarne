@@ -10,120 +10,95 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/salty-max/lucarne/apps/tui/internal/api"
+	"github.com/salty-max/lucarne/apps/tui/internal/i18n"
 	"github.com/salty-max/lucarne/apps/tui/internal/theme"
 )
 
-// Fixed columns, derived from the page width. Teletext aligns: a score that
-// drifts left when a club name happens to be short reads as two unrelated
-// columns rather than as one fixture.
-type cols struct {
-	total                 int
-	time, home            int
-	score, away           int
-	homeW, awayW          int
-	cast, castW           int
-	inlineCast            bool
-	timeW, scoreW, gutter int
-}
-
-// nameCap is one past the longest club name in the tracked competitions. More
-// width beyond it only pushes the score away from the name it belongs to.
-const nameCap = 24
-
-// minCastW is the narrowest broadcaster column worth having beside the fixture.
-// There is deliberately no width threshold constant: an earlier one was a guess,
-// and at 64 columns the two capped name fields left a single column for the
-// broadcaster, so it silently never inlined. The condition is the space left.
-const minCastW = 10
-
-func layout(total int) cols {
-	c := cols{total: total, timeW: 5, scoreW: 5, gutter: 1}
-	c.home = c.timeW + c.gutter
-	chrome := c.home + c.scoreW + c.gutter
-	c.homeW = min(max(total-chrome, 8)/2, nameCap)
-	c.score = c.home + c.homeW
-	c.away = c.score + c.scoreW + c.gutter
-	c.awayW = min(max(total-c.away, 4), nameCap)
-	c.cast = c.away + c.awayW + 2
-	c.castW = total - c.cast - 1
-	c.inlineCast = c.castW >= minCastW
-	return c
-}
-
-// fixtureLines renders a day grouped by competition. Each fixture is selectable
-// and opens its detail page, which is what the web client's match links do.
+// fixtureLines renders a day the way the web client does: a coloured bar
+// carrying the day and its match count, then one row per fixture with the
+// broadcaster set right as a solid tag, joined by a dotted leader.
 func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []line {
+	t := i18n.T()
 	out := headerLines(title, subtitle, width)
-	c := layout(width)
 
 	switch {
 	case m.err != nil:
 		return append(out, plainLine(""),
-			plainLine(theme.Alert.Render(" NO RESPONSE FROM THE API")),
+			plainLine(theme.Alert.Render(" "+theme.Upper(t.NoResponse))),
 			plainLine(" "+theme.TeamName.Render(m.err.Error())),
-			plainLine(theme.Muted.Render(" CHECK THAT THE API IS RUNNING.")))
+			plainLine(theme.Muted.Render(" "+theme.Upper(t.CheckAPI))))
 	case m.loading:
-		return append(out, plainLine(""), plainLine(theme.Muted.Render(" LOADING…")))
+		return append(out, plainLine(""), plainLine(theme.Muted.Render(" "+theme.Upper(t.Loading))))
 	case d == nil || len(d.Matches) == 0:
-		return append(out, plainLine(""), plainLine(theme.Muted.Render(" NO MATCHES ON THIS DAY.")))
+		return append(out, plainLine(""), plainLine(theme.Muted.Render(" "+theme.Upper(t.NoMatches))))
 	}
 
-	var order []string
-	groups := map[string][]api.Match{}
+	// Day bar: label left, count right, as .tt-bar with .tt-bar-r.
+	count := strconv.Itoa(len(d.Matches))
+	label := theme.Upper(i18n.DayLabel(d.Key))
+	pad := max(width-theme.Width(label)-theme.Width(count)-2, 1)
+	out = append(out, plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)))
+
 	for _, f := range d.Matches {
-		k := f.Competition.Name
-		if _, seen := groups[k]; !seen {
-			order = append(order, k)
-		}
-		groups[k] = append(groups[k], f)
-	}
-
-	for _, name := range order {
-		out = append(out, plainLine(""),
-			plainLine(theme.SectionLabel(name, competitionColour(name), width)))
-		for _, f := range groups[name] {
-			fixture := f
-			out = append(out, line{
-				text: fixtureLine(fixture, c),
-				open: func(m *Model) tea.Cmd {
-					cmd := m.push(&matchPage{id: fixture.ID})
-					return tea.Batch(cmd, m.fetchMatch(fixture.ID))
-				},
-			})
-			if !c.inlineCast {
-				if cast := broadcasters(fixture); cast != "" {
-					out = append(out, plainLine(strings.Repeat(" ", c.home)+
-						theme.Broadcaster.Render(theme.Pad(cast, width-c.home-1))))
-				}
-			}
-		}
+		fixture := f
+		out = append(out, line{
+			text: fixtureLine(fixture, width),
+			open: func(m *Model) tea.Cmd {
+				cmd := m.push(&matchPage{id: fixture.ID})
+				return tea.Batch(cmd, m.fetchMatch(fixture.ID))
+			},
+		})
 	}
 	return out
 }
 
-func fixtureLine(f api.Match, c cols) string {
+// fixtureLine is one row: surveillance box, kickoff, the tie, a dotted leader,
+// then the broadcaster.
+//
+// Status is carried by a glyph as well as by colour — a live match reads as
+// live under NO_COLOR, in a monochrome capture, and for anyone who cannot rely
+// on a red/green distinction.
+func fixtureLine(f api.Match, width int) string {
 	var b strings.Builder
+
+	b.WriteString(theme.Muted.Render(" ▢ "))
+
 	switch f.Status {
 	case api.MatchStatusLive:
-		lbl := "LIVE"
+		lbl := "●LIVE"
 		if f.Elapsed != nil {
-			lbl = strconv.Itoa(*f.Elapsed) + "'"
+			lbl = "●" + strconv.Itoa(*f.Elapsed) + "'"
 		}
-		b.WriteString(theme.LiveTag.Render(theme.Pad(lbl, c.timeW)))
+		b.WriteString(theme.LiveTag.Render(theme.Pad(lbl, 6)))
 	case api.MatchStatusPostponed:
-		b.WriteString(theme.PostponedTag.Render(theme.Pad("PPD", c.timeW)))
+		b.WriteString(theme.PostponedTag.Render(theme.Pad("✕ RPT", 6)))
 	default:
-		b.WriteString(theme.Time.Render(theme.Pad(kickoff(f.Kickoff), c.timeW)))
+		b.WriteString(theme.Time.Render(theme.Pad(kickoff(f.Kickoff), 6)))
 	}
-	b.WriteString(strings.Repeat(" ", c.gutter))
-	b.WriteString(theme.TeamName.Render(theme.Pad(theme.Upper(teamName(f.Home)), c.homeW)))
-	b.WriteString(scoreStyle(f).Render(theme.Pad(score(f), c.scoreW)))
-	b.WriteString(strings.Repeat(" ", c.gutter))
-	b.WriteString(theme.TeamName.Render(theme.Pad(theme.Upper(teamName(f.Away)), c.awayW)))
-	if c.inlineCast {
-		if cast := broadcasters(f); cast != "" {
-			b.WriteString("  " + theme.Broadcaster.Render(theme.Pad(cast, c.castW)))
-		}
+	b.WriteString(" ")
+
+	tie := theme.Upper(teamName(f.Home)) + " – " + theme.Upper(teamName(f.Away))
+	if sc := score(f); strings.TrimSpace(sc) != "-" {
+		tie = theme.Upper(teamName(f.Home)) + " " + strings.TrimSpace(sc) + " " + theme.Upper(teamName(f.Away))
+	}
+
+	cast := broadcasters(f)
+	castW := 0
+	if cast != "" {
+		castW = min(theme.Width(cast)+2, max(width/3, 8))
+	}
+
+	// Everything left over becomes the leader, so the tag always lands flush right.
+	room := width - 10 - castW - 1
+	tie = theme.Truncate(tie, room)
+	lead := max(room-theme.Width(tie), 0)
+
+	b.WriteString(theme.TeamName.Render(tie))
+	if lead > 0 {
+		b.WriteString(theme.Muted.Render(" " + strings.Repeat("·", max(lead-1, 0))))
+	}
+	if cast != "" {
+		b.WriteString(theme.Tag(theme.Truncate(cast, castW-2), theme.Green))
 	}
 	return b.String()
 }

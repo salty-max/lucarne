@@ -46,29 +46,29 @@ const (
 	White   Colour = "white"
 )
 
-// Key is one entry in a FastText bar.
+// Key is one entry in a FastText bar. It deliberately carries no label: the
+// wording is the UI language's business, and lives in the i18n table.
 type Key struct {
 	Key    string // the keyboard shortcut, empty for the secondary row
 	No     Page
-	Label  string
 	Colour Colour
 }
 
 // FastText is the four colour keys, matching the web client's row exactly.
 var FastText = []Key{
-	{Key: "r", No: PageToday, Label: "Live", Colour: Red},
-	{Key: "g", No: PageCalendar, Label: "Calendar", Colour: Green},
-	{Key: "y", No: PageCompetitions, Label: "Competitions", Colour: Yellow},
-	{Key: "c", No: PageBroadcasters, Label: "Broadcasters", Colour: Cyan},
+	{Key: "r", No: PageToday, Colour: Red},
+	{Key: "g", No: PageCalendar, Colour: Green},
+	{Key: "y", No: PageCompetitions, Colour: Yellow},
+	{Key: "c", No: PageBroadcasters, Colour: Cyan},
 }
 
 // More is the secondary row: personal and utility pages, reachable by number
 // rather than by colour key.
 var More = []Key{
-	{No: PageFavorites, Label: "My teams", Colour: Blue},
-	{No: PageRadar, Label: "Radar", Colour: Cyan},
-	{No: PageSettings, Label: "Settings", Colour: Magenta},
-	{No: PageLogs, Label: "Logs", Colour: White},
+	{No: PageFavorites, Colour: Blue},
+	{No: PageRadar, Colour: Cyan},
+	{No: PageSettings, Colour: Magenta},
+	{No: PageLogs, Colour: White},
 }
 
 // CompPageNo is the page number for the nth tracked competition.
