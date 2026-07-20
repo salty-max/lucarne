@@ -8,6 +8,7 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:match": "caffeinate -is turbo run dev",
     "dev:pwa": "bun run --filter @lucarne/web build && bun run --filter @lucarne/api start",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",

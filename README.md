@@ -151,6 +151,7 @@ the same Wi-Fi to test the installable PWA.
 | Command | Does |
 |---|---|
 | `bun run dev` | API (`bun --watch`) + SPA (Vite), both, via Turbo |
+| `bun run dev:match` | Same, wrapped in `caffeinate` (macOS) — a sleeping laptop silently stalls the per-minute poller, so live scores and push just stop. Use it when following a live match. Keep the lid **open**: macOS sleeps on lid close regardless. |
 | `bun run typecheck` | tsc across api + web + shared |
 | `bun run lint` / `lint:fix` | ESLint (flat config) across the repo |
 | `bun run build` | build the SPA |
