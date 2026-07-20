@@ -45,7 +45,7 @@ func TestMatchSectionsFollowTheData(t *testing.T) {
 	tr := i18n.T()
 
 	for _, want := range []string{tr.Prediction, tr.Scorers, tr.Cards, tr.Substitutions,
-		tr.Statistics, tr.Motm, tr.Lineups} {
+		tr.Statistics, tr.Motm, tr.Lineups, tr.WhereToWatch, tr.Info} {
 		if !strings.Contains(text, theme.Upper(want)) {
 			t.Errorf("section %q missing though the fixture has its data", want)
 		}
@@ -54,10 +54,11 @@ func TestMatchSectionsFollowTheData(t *testing.T) {
 	// Strip every section the fixture supplies; the page must then carry none.
 	bare := *d
 	bare.Predictions, bare.Statistics, bare.Motm, bare.Lineups = nil, nil, nil, nil
-	bare.Events = nil
+	bare.Events, bare.Broadcasters = nil, nil
 	bareText := theme.Upper(matchText(&bare, 90))
+	// Info always shows: a match always has a date, a competition and a kick-off.
 	for _, gone := range []string{tr.Prediction, tr.Scorers, tr.Cards, tr.Substitutions,
-		tr.Statistics, tr.Motm, tr.Lineups} {
+		tr.Statistics, tr.Motm, tr.Lineups, tr.WhereToWatch} {
 		if strings.Contains(bareText, theme.Upper(gone)) {
 			t.Errorf("section %q shown with no data behind it", gone)
 		}
@@ -111,11 +112,11 @@ func TestEveryEventIsRendered(t *testing.T) {
 // terrible; printing it would invent a judgement.
 func TestZeroRatingsAreNotShown(t *testing.T) {
 	zero, good := 0.0, 7.4
-	row := plain(playerRow(api.LineupPlayer{Name: "Nobody", Rating: &zero}, 60))
+	row := plain(playerCell(api.LineupPlayer{Name: "Nobody", Rating: &zero}, 30))
 	if strings.Contains(row, "0.0") {
 		t.Errorf("an unrated player was given a rating: %q", row)
 	}
-	row = plain(playerRow(api.LineupPlayer{Name: "Somebody", Rating: &good}, 60))
+	row = plain(playerCell(api.LineupPlayer{Name: "Somebody", Rating: &good}, 30))
 	if !strings.Contains(row, "7.4") {
 		t.Errorf("a real rating was dropped: %q", row)
 	}

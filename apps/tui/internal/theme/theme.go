@@ -290,3 +290,14 @@ func blackBG() string {
 	}
 	return ""
 }
+
+// Centre centres s in exactly w columns, biasing left on odd slack.
+func Centre(s string, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	t := Truncate(s, w)
+	slack := w - runewidth.StringWidth(t)
+	left := slack / 2
+	return strings.Repeat(" ", left) + t + strings.Repeat(" ", slack-left)
+}

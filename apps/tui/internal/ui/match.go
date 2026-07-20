@@ -66,7 +66,7 @@ func matchLines(d *api.MatchDetail, width int) []line {
 	if d.Motm != nil {
 		out = append(out, section(t.Motm, width)...)
 		out = append(out, plainLine(theme.Truncate(
-			" "+theme.MastheadName.Render(theme.Upper(d.Motm.Name))+
+			"  ★ "+theme.MastheadName.Render(theme.Upper(d.Motm.Name))+
 				theme.Muted.Render(fmt.Sprintf("   %.1f", d.Motm.Rating)), width)))
 	}
 
@@ -74,6 +74,15 @@ func matchLines(d *api.MatchDetail, width int) []line {
 		out = append(out, section(t.Lineups, width)...)
 		out = append(out, lineupLines(d, width)...)
 	}
+
+	// Where to watch is the reason the app exists; it had no section at all.
+	if len(d.Broadcasters) > 0 {
+		out = append(out, section(t.WhereToWatch, width)...)
+		out = append(out, broadcastLines(d.Broadcasters, width)...)
+	}
+
+	out = append(out, section(t.Info, width)...)
+	out = append(out, infoLines(d, width)...)
 
 	// Detail pages are long; a blank tail keeps the last row clear of the footer.
 	return append(out, plainLine(""))
@@ -135,16 +144,9 @@ func scoreboardLines(d *api.MatchDetail, width int) []line {
 	if d.Elapsed != nil && *d.Elapsed > 90 {
 		note = append(note, fmt.Sprintf("%s · %d'", theme.Upper(i18n.T().AfterExtraTime), *d.Elapsed))
 	}
-	if d.Venue != nil && *d.Venue != "" {
-		note = append(note, theme.Upper(*d.Venue))
-	}
 	if len(note) > 0 {
 		out = append(out, plainLine("  "+theme.Muted.Render(
 			theme.Truncate(strings.Join(note, "  ·  "), width-3))))
-	}
-	if d.Referee != nil && *d.Referee != "" {
-		out = append(out, plainLine("  "+theme.Muted.Render(theme.Truncate(
-			theme.Upper(i18n.T().Referee)+" "+theme.Upper(*d.Referee), width-3))))
 	}
 	return out
 }
@@ -263,13 +265,17 @@ func statLines(s api.MatchStatistics, width int) []line {
 		{t.Possession, s.Home.Possession, s.Away.Possession, "%"},
 		{t.Shots, s.Home.Shots, s.Away.Shots, ""},
 		{t.OnTarget, s.Home.ShotsOnTarget, s.Away.ShotsOnTarget, ""},
+		{t.ShotsOff, s.Home.ShotsOffTarget, s.Away.ShotsOffTarget, ""},
+		{t.ShotsBlocked, s.Home.BlockedShots, s.Away.BlockedShots, ""},
+		{t.ShotsIn, s.Home.ShotsInsideBox, s.Away.ShotsInsideBox, ""},
+		{t.ShotsOut, s.Home.ShotsOutsideBox, s.Away.ShotsOutsideBox, ""},
 		{t.Corners, s.Home.Corners, s.Away.Corners, ""},
 		{t.Fouls, s.Home.Fouls, s.Away.Fouls, ""},
+		{t.YellowCards, s.Home.YellowCards, s.Away.YellowCards, ""},
+		{t.RedCards, s.Home.RedCards, s.Away.RedCards, ""},
 		{t.Offsides, s.Home.Offsides, s.Away.Offsides, ""},
 		{t.Saves, s.Home.Saves, s.Away.Saves, ""},
 		{t.PassAccuracy, s.Home.PassAccuracy, s.Away.PassAccuracy, "%"},
-		{t.YellowCards, s.Home.YellowCards, s.Away.YellowCards, ""},
-		{t.RedCards, s.Home.RedCards, s.Away.RedCards, ""},
 	}
 
 	var out []line
@@ -277,100 +283,188 @@ func statLines(s api.MatchStatistics, width int) []line {
 		if r.h == nil && r.a == nil {
 			continue
 		}
-		out = append(out, plainLine(statRow(r.label, r.h, r.a, r.unit, width)))
+		out = append(out, statRow(r.label,
+			valueOf(r.h)+r.unit, valueOf(r.a)+r.unit, deref(r.h), deref(r.a), width)...)
 	}
 	if s.Home.XG != nil || s.Away.XG != nil {
-		out = append(out, plainLine(floatStatRow(t.XG, s.Home.XG, s.Away.XG, width)))
+		h, a := derefF(s.Home.XG), derefF(s.Away.XG)
+		out = append(out, statRow(t.XG,
+			fmt.Sprintf("%.2f", h), fmt.Sprintf("%.2f", a),
+			int(h*100), int(a*100), width)...)
 	}
 	return out
 }
 
-func statRow(label string, h, a *int, unit string, width int) string {
-	hv, av := 0, 0
-	if h != nil {
-		hv = *h
+func deref(v *int) int {
+	if v == nil {
+		return 0
 	}
-	if a != nil {
-		av = *a
-	}
-	span := max(width-34, 6)
-	left := hv * span / max(hv+av, 1)
-
-	return "  " + theme.Muted.Render(theme.PadLeft(strconv.Itoa(hv)+unit, 5)) + " " +
-		lipgloss.NewStyle().Foreground(theme.Cyan).Render(strings.Repeat("█", left)) +
-		lipgloss.NewStyle().Foreground(theme.Magenta).Render(strings.Repeat("█", span-left)) +
-		" " + theme.Muted.Render(theme.Pad(strconv.Itoa(av)+unit, 5)) +
-		theme.TeamName.Render(theme.Upper(label))
+	return *v
 }
 
-func floatStatRow(label string, h, a *float64, width int) string {
-	hv, av := 0.0, 0.0
-	if h != nil {
-		hv = *h
+func derefF(v *float64) float64 {
+	if v == nil {
+		return 0
 	}
-	if a != nil {
-		av = *a
-	}
-	span := max(width-34, 6)
-	left := span / 2
-	if hv+av > 0 {
-		left = int(hv * float64(span) / (hv + av))
-	}
-	return "  " + theme.Muted.Render(theme.PadLeft(fmt.Sprintf("%.2f", hv), 5)) + " " +
-		lipgloss.NewStyle().Foreground(theme.Cyan).Render(strings.Repeat("█", left)) +
-		lipgloss.NewStyle().Foreground(theme.Magenta).Render(strings.Repeat("█", span-left)) +
-		" " + theme.Muted.Render(theme.Pad(fmt.Sprintf("%.2f", av), 5)) +
-		theme.TeamName.Render(theme.Upper(label))
+	return *v
 }
 
+func valueOf(v *int) string {
+	if v == nil {
+		return "-"
+	}
+	return strconv.Itoa(*v)
+}
+
+// statRow sets the figures on either side of a centred label, as the web client
+// does, with a bar under it carrying the ratio. The figures are what is read;
+// the bar is the shape of the difference.
+//
+// It returns two lines rather than one string with a newline in it: a line is a
+// row, and packing two into one breaks the cursor, the scrolling and the width
+// check all at once.
+func statRow(label, hs, as string, h, a, width int) []line {
+	side := 6
+	mid := max(width-2*side-6, 6)
+
+	head := "  " + theme.MastheadName.Render(theme.PadLeft(hs, side)) + "  " +
+		theme.Muted.Render(theme.Centre(theme.Upper(label), mid)) + "  " +
+		theme.MastheadName.Render(theme.Pad(as, side))
+	out := []line{plainLine(theme.Truncate(head, width))}
+
+	if h+a > 0 {
+		left := h * mid / (h + a)
+		bar := lipgloss.NewStyle().Foreground(theme.Cyan).Render(strings.Repeat("▔", left)) +
+			lipgloss.NewStyle().Foreground(theme.Magenta).Render(strings.Repeat("▔", mid-left))
+		out = append(out, plainLine(theme.Truncate("  "+strings.Repeat(" ", side+2)+bar, width)))
+	}
+	return out
+}
+
+// lineupLines set the two sides side by side, as the web client does, with the
+// formations over them and the coaches under.
 func lineupLines(d *api.MatchDetail, width int) []line {
 	t := i18n.T()
-	var out []line
-	for _, side := range []struct {
-		name string
-		l    api.TeamLineup
-	}{
-		{teamName(d.Home), d.Lineups.Home},
-		{teamName(d.Away), d.Lineups.Away},
-	} {
-		head := theme.Upper(side.name)
-		if side.l.Formation != nil && *side.l.Formation != "" {
-			head += "   " + *side.l.Formation
+	h, a := d.Lineups.Home, d.Lineups.Away
+	col := max((width-3)/2, 12)
+
+	form := func(l api.TeamLineup) string {
+		if l.Formation != nil {
+			return *l.Formation
 		}
-		out = append(out, plainLine(""),
-			plainLine(" "+theme.MastheadName.Render(theme.Truncate(head, width-2))))
-		if side.l.Coach != nil && *side.l.Coach != "" {
-			out = append(out, plainLine(" "+theme.Muted.Render(theme.Truncate(
-				theme.Upper(t.Coach)+" "+theme.Upper(*side.l.Coach), width-2))))
-		}
-		for _, p := range side.l.StartXI {
-			out = append(out, plainLine(playerRow(p, width)))
-		}
-		if len(side.l.Substitutes) > 0 {
-			out = append(out, plainLine(" "+theme.Muted.Render(theme.Upper(t.Bench))))
-			for _, p := range side.l.Substitutes {
-				out = append(out, plainLine(playerRow(p, width)))
+		return ""
+	}
+	out := []line{plainLine("  " +
+		theme.MastheadName.Render(theme.Pad(form(h), col)) + " " +
+		theme.MastheadName.Render(theme.Pad(form(a), col)))}
+
+	pair := func(left, right []api.LineupPlayer) {
+		n := max(len(left), len(right))
+		for i := 0; i < n; i++ {
+			var l, r string
+			if i < len(left) {
+				l = playerCell(left[i], col)
 			}
+			if i < len(right) {
+				r = playerCell(right[i], col)
+			}
+			out = append(out, plainLine("  "+theme.Pad(l, col)+" "+theme.Pad(r, col)))
 		}
+	}
+	pair(h.StartXI, a.StartXI)
+
+	if len(h.Substitutes) > 0 || len(a.Substitutes) > 0 {
+		out = append(out, plainLine(""),
+			plainLine("  "+theme.Muted.Render(theme.Upper(t.Bench))))
+		pair(h.Substitutes, a.Substitutes)
+	}
+
+	coach := func(l api.TeamLineup) string {
+		if l.Coach == nil || *l.Coach == "" {
+			return ""
+		}
+		return theme.Upper(t.Coach) + " " + theme.Upper(*l.Coach)
+	}
+	if coach(h) != "" || coach(a) != "" {
+		out = append(out, plainLine(""),
+			plainLine("  "+theme.Muted.Render(theme.Pad(coach(h), col))+" "+
+				theme.Muted.Render(theme.Pad(coach(a), col))))
 	}
 	return out
 }
 
-func playerRow(p api.LineupPlayer, width int) string {
+// playerCell is one side's entry: shirt number, name, rating.
+func playerCell(p api.LineupPlayer, w int) string {
 	num := "  "
 	if p.Number != nil {
 		num = strconv.Itoa(*p.Number)
 	}
-	pos := "  "
-	if p.Pos != nil {
-		pos = *p.Pos
-	}
-	row := "  " + theme.Muted.Render(theme.PadLeft(num, 3)+" "+theme.Pad(pos, 2)) + " " +
-		theme.TeamName.Render(theme.Upper(p.Name))
-	// A rating of zero means unrated, not terrible — the API sends 0 for players
-	// it has no opinion on, and printing it would invent a judgement.
+	rating := ""
+	// Zero means the API had no opinion, not a bad game; printing it would
+	// invent a judgement.
 	if p.Rating != nil && *p.Rating > 0 {
-		row = theme.Pad(row, width-6) + theme.MastheadName.Render(fmt.Sprintf("%.1f", *p.Rating))
+		rating = fmt.Sprintf("%.1f", *p.Rating)
 	}
-	return theme.Truncate(row, width)
+	// 3 for the number, 4 for the rating, 2 for the gaps between them.
+	nameW := max(w-9, 4)
+	return theme.Muted.Render(theme.PadLeft(num, 3)) + " " +
+		theme.TeamName.Render(theme.Pad(theme.Upper(p.Name), nameW)) + " " +
+		theme.MastheadName.Render(theme.PadLeft(rating, 4))
+}
+
+// broadcastLines list who carries the match, with the coverage and any note —
+// "partial" and its note are the difference between watching the game and
+// finding out you cannot.
+func broadcastLines(bs []api.Broadcaster, width int) []line {
+	t := i18n.T()
+	var out []line
+	for _, b := range bs {
+		cover := t.Full
+		col := theme.Green
+		if b.Coverage == "partial" {
+			cover, col = t.Partial, theme.Yellow
+		}
+		row := "  " + theme.Tag(b.Name, col) + "  " + theme.Muted.Render(theme.Upper(cover))
+		if b.Note != nil && *b.Note != "" {
+			row += theme.Muted.Render(" · " + theme.Upper(i18n.Note(*b.Note)))
+		}
+		out = append(out, plainLine(theme.Truncate(row, width)))
+	}
+	return out
+}
+
+// infoLines are the labelled facts the web client lists last.
+func infoLines(d *api.MatchDetail, width int) []line {
+	t := i18n.T()
+	rows := [][2]string{
+		{t.Date, i18n.DayLabel(kickoffDay(d.Kickoff))},
+		{t.KickOff, kickoff(d.Kickoff) + " · Europe/Paris"},
+	}
+	if d.Venue != nil && *d.Venue != "" {
+		rows = append(rows, [2]string{t.Venue, *d.Venue})
+	}
+	if d.Referee != nil && *d.Referee != "" {
+		rows = append(rows, [2]string{t.Referee, *d.Referee})
+	}
+	rows = append(rows, [2]string{t.Competition, i18n.Competition(d.Competition.Name)})
+	if d.Round != nil && *d.Round != "" {
+		rows = append(rows, [2]string{t.Round, i18n.Round(*d.Round)})
+	}
+
+	label := 16
+	var out []line
+	for _, r := range rows {
+		out = append(out, plainLine(theme.Truncate(
+			"  "+theme.Muted.Render(theme.Pad(theme.Upper(r[0]), label))+
+				theme.TeamName.Render(theme.Upper(r[1])), width)))
+	}
+	return out
+}
+
+// kickoffDay is the ISO date part, for the localised day label.
+func kickoffDay(iso string) string {
+	if len(iso) >= 10 {
+		return iso[:10]
+	}
+	return iso
 }

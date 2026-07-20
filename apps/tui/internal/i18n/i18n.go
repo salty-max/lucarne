@@ -40,11 +40,14 @@ type Messages struct {
 
 	MatchOne, MatchMany string
 
-	Motm, Formation, Coach, Bench, Starters string
-	AfterExtraTime, AfterPens               string
-	Possession, Shots, OnTarget, Corners    string
-	Fouls, Offsides, Saves, PassAccuracy    string
-	XG, YellowCards, RedCards               string
+	Motm, Formation, Coach, Bench, Starters   string
+	AfterExtraTime, AfterPens                 string
+	Possession, Shots, OnTarget, Corners      string
+	Fouls, Offsides, Saves, PassAccuracy      string
+	XG, YellowCards, RedCards                 string
+	ShotsOff, ShotsBlocked, ShotsIn, ShotsOut string
+	WhereToWatch, Info, Date, KickOff         string
+	Competition, Round, Full, Partial         string
 }
 
 var fr = Messages{
@@ -77,9 +80,13 @@ var fr = Messages{
 	Motm: "Homme du match", Formation: "Formation", Coach: "Entraîneur",
 	Bench: "Remplaçants", Starters: "Titulaires",
 	AfterExtraTime: "Après prolongation", AfterPens: "Après t.a.b.",
-	Possession: "Possession", Shots: "Tirs", OnTarget: "Cadrés", Corners: "Corners",
+	Possession: "Possession", Shots: "Tirs", OnTarget: "Tirs cadrés", Corners: "Corners",
 	Fouls: "Fautes", Offsides: "Hors-jeu", Saves: "Arrêts", PassAccuracy: "Passes réussies",
 	XG: "Buts attendus", YellowCards: "Cartons jaunes", RedCards: "Cartons rouges",
+	ShotsOff: "Tirs non cadrés", ShotsBlocked: "Tirs contrés",
+	ShotsIn: "Tirs dans la surface", ShotsOut: "Tirs hors surface",
+	WhereToWatch: "Où regarder", Info: "Infos", Date: "Date", KickOff: "Coup d'envoi",
+	Competition: "Compétition", Round: "Tour", Full: "Intégralité", Partial: "Partiel",
 }
 
 var en = Messages{
@@ -115,6 +122,10 @@ var en = Messages{
 	Possession: "Possession", Shots: "Shots", OnTarget: "On target", Corners: "Corners",
 	Fouls: "Fouls", Offsides: "Offsides", Saves: "Saves", PassAccuracy: "Pass accuracy",
 	XG: "Expected goals", YellowCards: "Yellow cards", RedCards: "Red cards",
+	ShotsOff: "Shots off target", ShotsBlocked: "Blocked shots",
+	ShotsIn: "Shots inside box", ShotsOut: "Shots outside box",
+	WhereToWatch: "Where to watch", Info: "Info", Date: "Date", KickOff: "Kick-off",
+	Competition: "Competition", Round: "Round", Full: "Full", Partial: "Partial",
 }
 
 var active = detect()
