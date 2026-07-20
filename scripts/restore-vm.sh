@@ -24,6 +24,9 @@ WANT="${1:-latest}"
 say() { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
 die() { printf '\n\033[1;31mx\033[0m %s\n' "$*" >&2; exit 1; }
 
+# Matches backup.sh: a bucket-scoped R2 token rejects rclone's bucket probe.
+rc() { rclone --s3-no-check-bucket "$@"; }
+
 command -v rclone  >/dev/null || die "rclone is not installed (apt install rclone, then: rclone config)"
 command -v sqlite3 >/dev/null || die "sqlite3 is not installed"
 [ -r "$PASS_FILE" ] || die "cannot read $PASS_FILE — create it with the passphrase from your password manager"
@@ -34,7 +37,7 @@ trap 'rm -rf "$tmp"' EXIT
 # --- database ---------------------------------------------------------------
 if [ "$WANT" = latest ]; then src="$REMOTE/db/latest.db"; else src="$REMOTE/db/lucarne-$WANT.db"; fi
 say "Fetching $src"
-rclone copyto "$src" "$tmp/lucarne.db" || die "no such snapshot — rclone lsf $REMOTE/db/"
+rc copyto "$src" "$tmp/lucarne.db" || die "no such snapshot — rclone lsf $REMOTE/db/"
 
 sqlite3 "$tmp/lucarne.db" "pragma integrity_check;" | grep -qx ok \
   || die "downloaded snapshot is corrupt — try an older one"
@@ -53,7 +56,7 @@ cp "$tmp/lucarne.db" "$DB"
 
 # --- secrets ----------------------------------------------------------------
 say "Fetching secrets bundle"
-if rclone copyto "$REMOTE/secrets.tar.gz.enc" "$tmp/secrets.tar.gz.enc" 2>/dev/null; then
+if rc copyto "$REMOTE/secrets.tar.gz.enc" "$tmp/secrets.tar.gz.enc" 2>/dev/null; then
   openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
     -in "$tmp/secrets.tar.gz.enc" -out "$tmp/secrets.tar.gz" \
     -pass "file:$PASS_FILE" || die "decryption failed — wrong passphrase in $PASS_FILE"

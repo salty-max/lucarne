@@ -153,6 +153,10 @@ After=network-online.target
 Type=oneshot
 User=$APP_USER
 Environment=APP_DIR=$APP_DIR
+# Pin the rclone config explicitly. Under systemd, HOME is not always what an
+# interactive shell would give you, and rclone silently has no remotes without
+# it — the backup would then fail every 15 minutes into the journal.
+Environment=RCLONE_CONFIG=$HOME/.config/rclone/rclone.conf
 ExecStart=/bin/bash $APP_DIR/scripts/backup.sh
 EOF
   sudo tee /etc/systemd/system/lucarne-backup.timer >/dev/null <<'EOF'

@@ -33,6 +33,11 @@ KEEP="${KEEP:-48}"          # snapshots to retain; 48 x 15 min = 12 h of history
 
 die() { printf 'backup: %s\n' "$*" >&2; exit 1; }
 
+# --s3-no-check-bucket: rclone otherwise probes (and tries to create) the bucket
+# before every upload, which an R2 token scoped to a single bucket refuses with
+# a 403 — scoping the token is the right call, so the flag lives here instead.
+rc() { rclone --s3-no-check-bucket "$@"; }
+
 [ -f "$DB" ]        || die "no database at $DB"
 [ -r "$PASS_FILE" ] || die "cannot read $PASS_FILE"
 command -v rclone   >/dev/null || die "rclone is not installed"
@@ -49,8 +54,8 @@ sqlite3 "$DB" ".backup '$tmp/lucarne.db'"
 sqlite3 "$tmp/lucarne.db" "pragma integrity_check;" | grep -qx ok \
   || die "snapshot failed integrity_check — not uploading"
 
-rclone copyto "$tmp/lucarne.db" "$REMOTE/db/lucarne-$stamp.db"
-rclone copyto "$tmp/lucarne.db" "$REMOTE/db/latest.db"
+rc copyto "$tmp/lucarne.db" "$REMOTE/db/lucarne-$stamp.db"
+rc copyto "$tmp/lucarne.db" "$REMOTE/db/latest.db"
 
 # --- secrets ----------------------------------------------------------------
 # Small and near-static, but they are the difference between a 10-minute
@@ -66,7 +71,7 @@ if [ -n "$(ls -A "$stage")" ]; then
   openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
     -in "$tmp/secrets.tar.gz" -out "$tmp/secrets.tar.gz.enc" \
     -pass "file:$PASS_FILE"
-  rclone copyto "$tmp/secrets.tar.gz.enc" "$REMOTE/secrets.tar.gz.enc"
+  rc copyto "$tmp/secrets.tar.gz.enc" "$REMOTE/secrets.tar.gz.enc"
 else
   printf 'backup: warning — no secrets found to back up\n' >&2
 fi
@@ -74,11 +79,11 @@ fi
 # --- rotation ---------------------------------------------------------------
 # A plain read loop rather than mapfile: bash 3.2 (stock macOS) lacks it, and a
 # backup script failing on the operator's laptop is a bad way to learn that.
-rclone lsf "$REMOTE/db/" --include 'lucarne-*.db' | sort -r | tail -n "+$((KEEP + 1))" \
+rc lsf "$REMOTE/db/" --include 'lucarne-*.db' | sort -r | tail -n "+$((KEEP + 1))" \
   | while IFS= read -r f; do
-      [ -n "$f" ] && rclone deletefile "$REMOTE/db/$f"
+      [ -n "$f" ] && rc deletefile "$REMOTE/db/$f"
     done
 
 printf 'backup: ok — db/lucarne-%s.db (%s), %d snapshots retained\n' \
   "$stamp" "$(du -h "$tmp/lucarne.db" | cut -f1)" \
-  "$(rclone lsf "$REMOTE/db/" --include 'lucarne-*.db' | wc -l)"
+  "$(rc lsf "$REMOTE/db/" --include 'lucarne-*.db' | wc -l)"
