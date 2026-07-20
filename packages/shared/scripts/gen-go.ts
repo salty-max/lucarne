@@ -195,4 +195,14 @@ for (const stmt of src.statements) {
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, parts.join("\n"));
+
+// gofmt here, not by hand afterwards. Emitting unaligned Go and formatting it
+// separately makes the output differ from the committed file on every run,
+// which would make the CI drift check fail permanently and for the wrong reason.
+const fmt = Bun.spawnSync(["gofmt", "-w", OUT]);
+if (!fmt.success) {
+  console.error(new TextDecoder().decode(fmt.stderr));
+  throw new Error("gofmt failed on the generated file");
+}
+
 console.log(`wrote ${OUT}`);
