@@ -317,11 +317,12 @@ hostname never moves. `restore-vm.sh` refuses a snapshot that fails `integrity_c
 moves any existing database aside rather than overwriting it. The job catch-up then
 backfills whatever sync slots were missed while the box was gone.
 
-**6 — Verify.**
+**6 — Verify.** `scripts/healthcheck.sh` turns "it responds" into "it works" — fixtures
+served, SPA fallback intact, `/api/logs` still refusing anonymous callers, scheduler ran
+recently, backup timer alive. Exits non-zero on any failure, so it doubles as a cron probe.
 ```bash
-curl https://lucarne.example.com/api/schedule | head -c 200            # fixtures present
-curl https://lucarne.example.com/match/1 -o /dev/null -w '%{http_code}\n'  # 200 = SPA fallback
-curl -H "Authorization: Bearer $CRON_SECRET" https://lucarne.example.com/api/logs
+bash scripts/healthcheck.sh                       # on the box
+bash scripts/healthcheck.sh https://lucarne.fr    # from anywhere
 ```
 
 ### Alternative: Cloudflare Workers + D1
