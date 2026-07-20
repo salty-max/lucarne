@@ -59,7 +59,27 @@ for _ in $(seq 1 40); do
 done
 [ -n "$url" ] || { sed 's/^/  /' "$log" >&2; die "no tunnel URL after 20s"; }
 
-printf '\n  \033[1;33m%s\033[0m\n\n' "$url"
+printf '\n  \033[1;33m%s\033[0m\n' "$url"
+
+# Copy it, so the URL can be pasted into a browser or a message without being
+# selected out of a terminal. Falls through the tools each platform has; a
+# missing one is not worth failing over, since the URL is on screen anyway.
+copied=""
+if command -v pbcopy >/dev/null; then
+  printf '%s' "$url" | pbcopy && copied="pbcopy"
+elif command -v wl-copy >/dev/null; then
+  printf '%s' "$url" | wl-copy && copied="wl-copy"
+elif command -v xclip >/dev/null; then
+  printf '%s' "$url" | xclip -selection clipboard && copied="xclip"
+elif command -v xsel >/dev/null; then
+  printf '%s' "$url" | xsel --clipboard --input && copied="xsel"
+fi
+if [ -n "$copied" ]; then
+  printf '  \033[2mcopied to the clipboard (%s)\033[0m\n\n' "$copied"
+else
+  printf '\n'
+fi
+
 if command -v qrencode >/dev/null; then
   qrencode -t ANSIUTF8 -m 1 "$url"
 else
