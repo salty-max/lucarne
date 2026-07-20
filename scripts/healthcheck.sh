@@ -29,12 +29,13 @@ code() {
 printf '\n\033[1mHTTP — %s\033[0m\n' "$BASE"
 
 c=$(code "$BASE/")
-[ "$c" = 200 ] && ok "index responds" || no "index responds (HTTP $c)"
+if [ "$c" = 200 ]; then ok "index responds"; else no "index responds (HTTP $c)"; fi
 
 # The SPA fallback is what makes a deep link survive a cold load; a 404 here
 # means every shared match URL is broken even though the app "works".
 c=$(code "$BASE/match/1")
-[ "$c" = 200 ] && ok "deep link falls back to the SPA" || no "deep link (HTTP $c — SPA fallback broken)"
+if [ "$c" = 200 ]; then ok "deep link falls back to the SPA"
+else no "deep link (HTTP $c — SPA fallback broken)"; fi
 
 body=$(curl -fsS --max-time 10 "$BASE/api/schedule" 2>/dev/null || true)
 days=$(printf '%s' "$body" | grep -o '"key"' | wc -l | tr -d ' ')
@@ -44,14 +45,14 @@ elif [ "${days:-0}" -gt 0 ]; then ok "/api/schedule returns $days empty day(s) �
 else no "/api/schedule returned nothing at all"; fi
 
 comps=$(curl -fsS --max-time 10 "$BASE/api/competitions" 2>/dev/null | grep -o '"slug"' | wc -l | tr -d ' ')
-[ "${comps:-0}" -ge 10 ] && ok "/api/competitions returns $comps" \
-  || no "/api/competitions returned ${comps:-0}, expected >= 10 (seed missing?)"
+if [ "${comps:-0}" -ge 10 ]; then ok "/api/competitions returns $comps"
+else no "/api/competitions returned ${comps:-0}, expected >= 10 (seed missing?)"; fi
 
 # Regression guard: /api/logs leaked the whole run history before it was put
 # behind authorizeCron. Unauthenticated access must stay refused.
 c=$(code "$BASE/api/logs")
-[ "$c" = 401 ] && ok "/api/logs refuses unauthenticated access" \
-  || no "/api/logs returned $c, expected 401 — run history is exposed"
+if [ "$c" = 401 ]; then ok "/api/logs refuses unauthenticated access"
+else no "/api/logs returned $c, expected 401 — run history is exposed"; fi
 
 printf '\n\033[1mBox\033[0m\n'
 
@@ -69,10 +70,11 @@ else
 fi
 
 if command -v systemctl >/dev/null; then
-  systemctl is-active --quiet lucarne && ok "lucarne.service active" || no "lucarne.service is not active"
+  if systemctl is-active --quiet lucarne; then ok "lucarne.service active"
+  else no "lucarne.service is not active"; fi
   if systemctl list-timers lucarne-backup.timer --all >/dev/null 2>&1; then
-    systemctl is-active --quiet lucarne-backup.timer \
-      && ok "backup timer active" || no "backup timer is not active — no snapshots being taken"
+    if systemctl is-active --quiet lucarne-backup.timer; then ok "backup timer active"
+    else no "backup timer is not active — no snapshots being taken"; fi
   else
     no "backup timer not installed — the database is not being backed up"
   fi
@@ -82,7 +84,7 @@ fi
 
 if command -v rclone >/dev/null && rclone listremotes 2>/dev/null | grep -q '^r2:'; then
   last=$(rclone lsf "${REMOTE:-r2:lucarne-backup}/db/" --include 'lucarne-*.db' 2>/dev/null | sort -r | head -1)
-  [ -n "$last" ] && ok "most recent snapshot: $last" || no "no snapshots in R2"
+  if [ -n "$last" ]; then ok "most recent snapshot: $last"; else no "no snapshots in R2"; fi
 else
   skip "R2 checks (no r2 remote configured)"
 fi

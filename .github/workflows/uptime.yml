@@ -1,0 +1,81 @@
+name: Uptime
+
+# Oracle reclaims idle Always Free instances, so the box can disappear without
+# anyone telling you. This runs the HTTP half of scripts/healthcheck.sh against
+# production and opens an issue when it breaks — free monitoring for a public repo.
+#
+# Set the repository variable PROD_URL (Settings → Secrets and variables →
+# Actions → Variables) to e.g. https://lucarne.example.com. Without it, this
+# skips rather than failing noisily.
+#
+# Two honest caveats:
+#   - GitHub disables scheduled workflows after 60 days without repo activity,
+#     and does so quietly. Monitoring that stops without saying so is worse than
+#     none, so re-check this if the project goes dormant.
+#   - Cron schedules are best-effort and get delayed under load. This tells you
+#     the box died; it is not a latency SLA.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe production
+        id: probe
+        env:
+          PROD_URL: ${{ vars.PROD_URL }}
+        run: |
+          if [ -z "${PROD_URL:-}" ]; then
+            echo "PROD_URL is not set — nothing to probe yet."
+            echo "state=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if bash scripts/healthcheck.sh "$PROD_URL" 2>&1 | tee out.txt; then
+            echo "state=up" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=down" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            echo 'report<<REPORT'
+            sed 's/\x1b\[[0-9;]*m//g' out.txt
+            echo 'REPORT'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the outage issue
+        if: steps.probe.outputs.state == 'down'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT: ${{ steps.probe.outputs.report }}
+          URL: ${{ vars.PROD_URL }}
+        run: |
+          existing=$(gh issue list --label outage --state open --limit 1 --json number -q '.[0].number')
+          body=$(printf 'Probe of %s failed at %s (UTC).\n\n```\n%s\n```\n' \
+                   "$URL" "$(date -u '+%Y-%m-%d %H:%M')" "$REPORT")
+          if [ -n "$existing" ]; then
+            # Comment rather than open a second issue: a 30-minute schedule would
+            # otherwise file 48 duplicates a day while the box is down.
+            gh issue comment "$existing" --body "$body"
+          else
+            gh label create outage --color b60205 --description "Production probe failing" 2>/dev/null || true
+            gh issue create --title "Production probe failing" --label outage --body "$body"
+          fi
+
+      - name: Close the outage issue on recovery
+        if: steps.probe.outputs.state == 'up'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existing=$(gh issue list --label outage --state open --limit 1 --json number -q '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Probe is green again — closing automatically."
+          fi
