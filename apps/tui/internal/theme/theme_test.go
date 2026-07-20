@@ -142,3 +142,36 @@ func TestScreenPaintsBlackToTheEdge(t *testing.T) {
 		t.Errorf("background is not black: %q", out)
 	}
 }
+
+// The previous version of this test only checked that *a* black background
+// appeared somewhere. That passed while every fixture row still showed a
+// lighter band, because each inner style ends with a reset and the rest of the
+// row fell back to the terminal's own background from there. What matters is
+// that no span of the line is left unbacked.
+func TestScreenLeavesNoUnbackedSpan(t *testing.T) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+
+	// A line built the way a fixture row is: several styles, each resetting.
+	row := Time.Render("18:00") + " " + TeamName.Render("SABURTALO – SLOVAN") +
+		" " + Rule.Render("····") + " " + Tag("CANAL+", Green)
+	out := Screen(row, 60)
+
+	// Walk the string; after every reset the very next escape must re-establish
+	// a background before any printable character appears.
+	for i := 0; i < len(out); {
+		j := strings.Index(out[i:], ansiReset)
+		if j < 0 {
+			break
+		}
+		rest := out[i+j+len(ansiReset):]
+		if rest == "" {
+			break
+		}
+		if !strings.HasPrefix(rest, "\x1b[") {
+			t.Fatalf("printable text follows a reset with no background re-asserted: %q", rest[:min(20, len(rest))])
+		}
+		i += j + len(ansiReset)
+	}
+}

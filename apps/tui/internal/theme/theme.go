@@ -260,10 +260,35 @@ func Screen(line string, width int) string {
 	// Truncate as well as pad: a line one column too long wraps, and a wrapped
 	// line shifts everything below it for the rest of the page.
 	if w := lipgloss.Width(line); w > width {
-		return lipgloss.NewStyle().Background(Black).MaxWidth(width).Render(line)
+		line = lipgloss.NewStyle().MaxWidth(width).Render(line)
 	} else {
-		return lipgloss.NewStyle().Background(Black).Render(line + strings.Repeat(" ", width-w))
+		line += strings.Repeat(" ", width-w)
 	}
+
+	// Re-assert black after every reset the line already contains.
+	//
+	// Wrapping the whole string in a Background does NOT work: each inner style
+	// ends with \x1b[0m, and from there the rest of the row falls back to the
+	// terminal's own background. That is what left a lighter band across every
+	// fixture row while the blank lines — which carry no resets — stayed black.
+	bg := blackBG()
+	if bg == "" {
+		return line // colour is off; nothing to re-assert
+	}
+	return bg + strings.ReplaceAll(line, ansiReset, ansiReset+bg) + ansiReset
+}
+
+const ansiReset = "\x1b[0m"
+
+// blackBG is the escape that sets the background to black in whatever colour
+// profile lipgloss resolved, or "" when colour is disabled. Derived from
+// lipgloss rather than hardcoded so NO_COLOR and dumb terminals still work.
+func blackBG() string {
+	rendered := lipgloss.NewStyle().Background(Black).Render(" ")
+	if i := strings.Index(rendered, " "); i > 0 {
+		return rendered[:i]
+	}
+	return ""
 }
 
 // CursorMark flags the selected row in the margin. A marker rather than a fill:
