@@ -194,14 +194,14 @@ func standingsRow(r api.StandingRow, width int) string {
 			theme.PadLeft(strconv.Itoa(r.Draw), 4)+
 			theme.PadLeft(strconv.Itoa(r.Lose), 4)+
 			theme.PadLeft(strconv.Itoa(r.GoalsDiff), 5)) +
-		theme.MastheadName.Render(theme.PadLeft(strconv.Itoa(r.Points), 5))
+		theme.Strong.Render(theme.PadLeft(strconv.Itoa(r.Points), 5))
 }
 
 func topPlayerRow(e api.TopPlayerEntry, width int) string {
 	return " " + theme.Muted.Render(theme.Pad(strconv.Itoa(e.Rank), 3)) +
 		theme.TeamName.Render(theme.Pad(theme.Upper(e.Player), max(width-28, 10))) +
 		theme.Muted.Render(theme.Pad(theme.Upper(e.Team), 18)) +
-		theme.MastheadName.Render(theme.PadLeft(strconv.Itoa(e.Value), 4))
+		theme.Strong.Render(theme.PadLeft(strconv.Itoa(e.Value), 4))
 }
 
 func eventRow(e api.MatchEvent, width int) string {

@@ -66,7 +66,7 @@ func matchLines(d *api.MatchDetail, width int) []line {
 	if d.Motm != nil {
 		out = append(out, section(t.Motm, width)...)
 		out = append(out, plainLine(theme.Truncate(
-			"  ★ "+theme.MastheadName.Render(theme.Upper(d.Motm.Name))+
+			"  ★ "+theme.Strong.Render(theme.Upper(d.Motm.Name))+
 				theme.Muted.Render(fmt.Sprintf("   %.1f", d.Motm.Rating)), width)))
 	}
 
@@ -118,9 +118,9 @@ func scoreboardLines(d *api.MatchDetail, width int) []line {
 	if d.HomeGoals != nil && d.AwayGoals != nil {
 		switch {
 		case *d.HomeGoals > *d.AwayGoals:
-			hs = theme.MastheadName
+			hs = theme.Strong
 		case *d.AwayGoals > *d.HomeGoals:
-			as = theme.MastheadName
+			as = theme.Strong
 		}
 	}
 
@@ -327,9 +327,9 @@ func statRow(label, hs, as string, h, a, width int) []line {
 	side := 6
 	mid := max(width-2*side-6, 6)
 
-	head := "  " + theme.MastheadName.Render(theme.PadLeft(hs, side)) + "  " +
+	head := "  " + theme.Strong.Render(theme.PadLeft(hs, side)) + "  " +
 		theme.Muted.Render(theme.Centre(theme.Upper(label), mid)) + "  " +
-		theme.MastheadName.Render(theme.Pad(as, side))
+		theme.Strong.Render(theme.Pad(as, side))
 	out := []line{plainLine(theme.Truncate(head, width))}
 
 	if h+a > 0 {
@@ -355,8 +355,8 @@ func lineupLines(d *api.MatchDetail, width int) []line {
 		return ""
 	}
 	out := []line{plainLine("  " +
-		theme.MastheadName.Render(theme.Pad(form(h), col)) + " " +
-		theme.MastheadName.Render(theme.Pad(form(a), col)))}
+		theme.Strong.Render(theme.Pad(form(h), col)) + " " +
+		theme.Strong.Render(theme.Pad(form(a), col)))}
 
 	pair := func(left, right []api.LineupPlayer) {
 		n := max(len(left), len(right))
@@ -409,7 +409,7 @@ func playerCell(p api.LineupPlayer, w int) string {
 	nameW := max(w-9, 4)
 	return theme.Muted.Render(theme.PadLeft(num, 3)) + " " +
 		theme.TeamName.Render(theme.Pad(theme.Upper(p.Name), nameW)) + " " +
-		theme.MastheadName.Render(theme.PadLeft(rating, 4))
+		theme.Strong.Render(theme.PadLeft(rating, 4))
 }
 
 // broadcastLines list who carries the match, with the coverage and any note —

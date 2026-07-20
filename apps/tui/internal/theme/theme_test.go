@@ -175,3 +175,66 @@ func TestScreenLeavesNoUnbackedSpan(t *testing.T) {
 		i += j + len(ansiReset)
 	}
 }
+
+// The helpers are applied to fragments that are already styled, because rows are
+// assembled from styled pieces. Measuring those with runewidth counted every
+// escape byte as a character: "UNAI SIMÓN" in white measured 31 instead of 10,
+// so padding it to 30 gave 11 visible columns and truncating cut it to nothing.
+// Every row on the match page was mangled and every test still passed, because
+// the tests measured the stripped text rather than what the terminal receives.
+func TestHelpersMeasureVisibleColumnsOnStyledInput(t *testing.T) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+
+	styled := TeamName.Render("UNAI SIMÓN")
+	if got := Width(styled); got != 10 {
+		t.Errorf("Width of a styled string = %d, want 10", got)
+	}
+
+	for _, w := range []int{4, 10, 30} {
+		for name, got := range map[string]string{
+			"Pad":     Pad(styled, w),
+			"PadLeft": PadLeft(styled, w),
+			"Centre":  Centre(styled, w),
+		} {
+			if Width(got) != w {
+				t.Errorf("%s(styled, %d) is %d visible columns", name, w, Width(got))
+			}
+		}
+	}
+}
+
+// Truncating a styled string must keep its styling and terminate it, or the
+// colour bleeds into whatever follows on the row.
+func TestTruncateKeepsStylingAndTerminatesIt(t *testing.T) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+
+	got := Truncate(TeamName.Render("MANCHESTER CITY"), 8)
+	if Width(got) != 8 {
+		t.Errorf("truncated to %d visible columns, want 8", Width(got))
+	}
+	if !strings.Contains(got, "\x1b[") {
+		t.Error("styling was stripped by truncation")
+	}
+	if !strings.HasSuffix(got, ansiReset) {
+		t.Errorf("truncated styled string does not end in a reset: %q", got)
+	}
+	if !strings.Contains(stripANSI(got), "…") {
+		t.Error("the cut is not marked")
+	}
+}
+
+// Emphasis must not carry a background: MastheadName does, for the header band,
+// and using it for ratings and formations painted blue blocks across the page.
+func TestStrongHasNoBackground(t *testing.T) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+
+	if strings.Contains(Strong.Render("7.4"), "48;2;") {
+		t.Errorf("Strong paints a background: %q", Strong.Render("7.4"))
+	}
+}

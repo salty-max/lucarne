@@ -97,7 +97,7 @@ func (p *calendarPage) Lines(m *Model, width int) []line {
 		count := theme.PadLeft(plural(len(d.Matches), i18n.T().MatchOne, i18n.T().MatchMany), 12)
 		style := theme.TeamName
 		if i == m.dayIdx {
-			style = theme.MastheadName
+			style = theme.Strong
 		}
 		out = append(out, line{
 			text: " " + style.Render(label) + theme.Muted.Render(count),

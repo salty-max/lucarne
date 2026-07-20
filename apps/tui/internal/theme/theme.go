@@ -13,6 +13,7 @@ package theme
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
@@ -55,6 +56,10 @@ var (
 	// Muted is de-emphasised text. Teletext has no dim attribute; the quiet
 	// colour is the only way down.
 	Muted = lipgloss.NewStyle().Foreground(Cyan)
+	// Strong is emphasis with no background. MastheadName carries a blue one for
+	// the header band, and using it as generic emphasis painted blue blocks
+	// behind every rating, formation and points figure.
+	Strong = lipgloss.NewStyle().Foreground(Yellow).Bold(true)
 	// Alert is an error or a warning.
 	Alert = lipgloss.NewStyle().Foreground(Red).Bold(true)
 
@@ -84,31 +89,87 @@ func FastTextKey(label string, c lipgloss.Color) string {
 	return flash + text
 }
 
-// Pad left-aligns s in exactly w display columns, truncating with an ellipsis
-// rather than letting a long club name push the column beside it out of line.
+// The helpers below all measure *visible* columns, skipping escape sequences.
+//
+// They used to measure with runewidth alone, which counts an escape's bytes as
+// characters: a styled "UNAI SIMÓN" measured 31 instead of 10, so padding it to
+// 30 produced 11 visible columns and truncating it cut the name to nothing.
+// Since rows are assembled from already-styled fragments, that was every row.
+
+// Pad left-aligns s in exactly w visible columns.
 func Pad(s string, w int) string {
 	if w <= 0 {
 		return ""
 	}
-	if runewidth.StringWidth(s) > w {
-		s = runewidth.Truncate(s, w, "…")
-	}
-	return s + strings.Repeat(" ", w-runewidth.StringWidth(s))
+	s = Truncate(s, w)
+	return s + strings.Repeat(" ", w-Width(s))
 }
 
-// PadLeft right-aligns s in exactly w display columns.
+// PadLeft right-aligns s in exactly w visible columns.
 func PadLeft(s string, w int) string {
 	if w <= 0 {
 		return ""
 	}
-	if runewidth.StringWidth(s) > w {
-		s = runewidth.Truncate(s, w, "…")
-	}
-	return strings.Repeat(" ", w-runewidth.StringWidth(s)) + s
+	s = Truncate(s, w)
+	return strings.Repeat(" ", w-Width(s)) + s
 }
 
-// Width is the display width of s, honouring combining marks and wide runes.
-func Width(s string) int { return runewidth.StringWidth(s) }
+// Centre centres s in exactly w visible columns, biasing left on odd slack.
+func Centre(s string, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	s = Truncate(s, w)
+	slack := w - Width(s)
+	left := slack / 2
+	return strings.Repeat(" ", left) + s + strings.Repeat(" ", slack-left)
+}
+
+// Truncate cuts s to at most max visible columns, marking the cut. Escape
+// sequences are copied through and cost nothing, so styling survives and a
+// truncated styled string is still terminated properly.
+func Truncate(s string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	if Width(s) <= max {
+		return s
+	}
+
+	var b strings.Builder
+	w, styled := 0, false
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b {
+			j := i
+			for j < len(s) && s[j] != 'm' {
+				j++
+			}
+			if j < len(s) {
+				j++
+			}
+			b.WriteString(s[i:j])
+			styled = true
+			i = j
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		rw := runewidth.RuneWidth(r)
+		if w+rw > max-1 { // leave a column for the ellipsis
+			break
+		}
+		b.WriteRune(r)
+		w += rw
+		i += size
+	}
+	b.WriteString("…")
+	if styled {
+		b.WriteString(ansiReset)
+	}
+	return b.String()
+}
+
+// Width is the number of visible columns s occupies, ignoring escape sequences.
+func Width(s string) int { return lipgloss.Width(s) }
 
 // Upper uppercases for display. Teletext is upper case throughout, and
 // strings.ToUpper is Unicode-correct for French.
@@ -234,17 +295,6 @@ func BarRow(content string, bg lipgloss.Color) string {
 	return lipgloss.NewStyle().Background(bg).Foreground(Black).Bold(true).Render(content)
 }
 
-// Truncate cuts to a column budget, marking the cut.
-func Truncate(s string, max int) string {
-	if max <= 0 {
-		return ""
-	}
-	if runewidth.StringWidth(s) <= max {
-		return s
-	}
-	return runewidth.Truncate(s, max, "…")
-}
-
 // Rule is the dotted separator drawn under a row — the web client's .tt-dotted
 // bottom border. Quiet enough to separate without competing with the content.
 var Rule = lipgloss.NewStyle().Foreground(Blue)
@@ -289,15 +339,4 @@ func blackBG() string {
 		return rendered[:i]
 	}
 	return ""
-}
-
-// Centre centres s in exactly w columns, biasing left on odd slack.
-func Centre(s string, w int) string {
-	if w <= 0 {
-		return ""
-	}
-	t := Truncate(s, w)
-	slack := w - runewidth.StringWidth(t)
-	left := slack / 2
-	return strings.Repeat(" ", left) + t + strings.Repeat(" ", slack-left)
 }
