@@ -40,17 +40,74 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 	out = append(out,
 		plainLine(theme.BarRow(" "+label+strings.Repeat(" ", pad)+count+" ", theme.Yellow)))
 
-	for _, f := range d.Matches {
-		fixture := f
-		out = append(out, line{
-			text: fixtureLine(fixture, width),
-			open: func(m *Model) tea.Cmd {
-				cmd := m.push(&matchPage{id: fixture.ID})
-				return tea.Batch(cmd, m.fetchMatch(fixture.ID))
-			},
-		})
+	for _, g := range groupByCompetition(d.Matches) {
+		out = append(out, plainLine(""), plainLine(competitionBar(g, width)))
+		for _, f := range g.matches {
+			fixture := f
+			hoisted := g.sharedCast != ""
+			out = append(out, line{
+				text: fixtureLine(fixture, width, hoisted),
+				open: func(m *Model) tea.Cmd {
+					cmd := m.push(&matchPage{id: fixture.ID})
+					return tea.Batch(cmd, m.fetchMatch(fixture.ID))
+				},
+			})
+		}
 	}
 	return out
+}
+
+// group is one competition's fixtures within a day.
+type group struct {
+	name    string
+	matches []api.Match
+	// sharedCast is the broadcaster line when every fixture in the group has
+	// the same one, and empty otherwise. Rights are split within a competition
+	// often enough that hoisting a partial one would state something false —
+	// and where to watch is the whole point of the page.
+	sharedCast string
+}
+
+func groupByCompetition(matches []api.Match) []group {
+	var order []string
+	byName := map[string][]api.Match{}
+	for _, f := range matches {
+		n := f.Competition.Name
+		if _, seen := byName[n]; !seen {
+			order = append(order, n)
+		}
+		byName[n] = append(byName[n], f)
+	}
+
+	out := make([]group, 0, len(order))
+	for _, n := range order {
+		g := group{name: n, matches: byName[n]}
+		first := broadcasters(g.matches[0])
+		same := first != ""
+		for _, f := range g.matches[1:] {
+			if broadcasters(f) != first {
+				same = false
+				break
+			}
+		}
+		if same {
+			g.sharedCast = first
+		}
+		out = append(out, g)
+	}
+	return out
+}
+
+// competitionBar is the section header: the competition left, and its
+// broadcaster right when the whole group shares one.
+func competitionBar(g group, width int) string {
+	name := theme.Upper(g.name)
+	if g.sharedCast == "" {
+		return theme.Band(name, competitionColour(g.name), width)
+	}
+	cast := theme.Upper(g.sharedCast)
+	pad := max(width-theme.Width(name)-theme.Width(cast)-2, 1)
+	return theme.BarRow(" "+name+strings.Repeat(" ", pad)+cast+" ", competitionColour(g.name))
 }
 
 // fixtureLine is one row: surveillance box, kickoff, the tie, then the
@@ -63,7 +120,7 @@ func fixtureLines(m *Model, d *api.Day, width int, title, subtitle string) []lin
 // Status is carried by a glyph as well as by colour — a live match reads as
 // live under NO_COLOR, in a monochrome capture, and for anyone who cannot rely
 // on a red/green distinction.
-func fixtureLine(f api.Match, width int) string {
+func fixtureLine(f api.Match, width int, castHoisted bool) string {
 	var b strings.Builder
 
 	b.WriteString(theme.Muted.Render("  ▢  "))
@@ -88,6 +145,9 @@ func fixtureLine(f api.Match, width int) string {
 	}
 
 	cast := broadcasters(f)
+	if castHoisted {
+		cast = "" // already stated on the competition bar
+	}
 	castW := 0
 	if cast != "" {
 		castW = min(theme.Width(cast)+2, max(width/3, 8))
@@ -98,8 +158,11 @@ func fixtureLine(f api.Match, width int) string {
 	lead := max(room-theme.Width(tie)-2, 0)
 
 	b.WriteString(theme.TeamName.Render(tie))
-	b.WriteString(theme.Rule.Render(" " + strings.Repeat("·", lead) + " "))
+	// The leader only exists to carry the eye to the tag. With the broadcaster
+	// stated on the competition bar there is nothing to lead to, and a run of
+	// dots ending in blank space reads as a missing value.
 	if cast != "" {
+		b.WriteString(theme.Rule.Render(" " + strings.Repeat("·", lead) + " "))
 		b.WriteString(theme.Tag(theme.Truncate(cast, castW-2), theme.Green))
 	}
 	return b.String()
