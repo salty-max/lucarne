@@ -11,6 +11,7 @@
 package theme
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -112,3 +113,116 @@ func Width(s string) int { return runewidth.StringWidth(s) }
 // Upper uppercases for display. Teletext is upper case throughout, and
 // strings.ToUpper is Unicode-correct for French.
 func Upper(s string) string { return strings.ToUpper(s) }
+
+// ── Primitives ported from the web client's components ──────────────────────
+//
+// Same names, same structure: PageHeader is a cyan title over the seven-colour
+// rule, SectionLabel is a full-width colour bar, Tag is a solid colour block.
+// Matching them keeps the two clients recognisably the same product.
+
+// ByName maps the palette names the navigation table uses to colours, so that
+// table stays free of styling.
+func ByName(name string) lipgloss.Color {
+	switch name {
+	case "red":
+		return Red
+	case "green":
+		return Green
+	case "yellow":
+		return Yellow
+	case "blue":
+		return Blue
+	case "magenta":
+		return Magenta
+	case "cyan":
+		return Cyan
+	default:
+		return White
+	}
+}
+
+// Rainbow is the signature seven-colour rule under a heading. The web client
+// draws it as a 7-column grid; here each colour takes an equal run of blocks.
+func Rainbow(width int) string {
+	order := []lipgloss.Color{Red, Green, Yellow, Blue, Magenta, Cyan, White}
+	var b strings.Builder
+	for i, c := range order {
+		// Distribute the remainder across the first colours so the rule fills
+		// the row exactly rather than stopping short.
+		w := width / 7
+		if i < width%7 {
+			w++
+		}
+		b.WriteString(lipgloss.NewStyle().Background(c).Render(strings.Repeat(" ", w)))
+	}
+	return b.String()
+}
+
+// PageHeader is a page title over the rainbow rule: the web client's
+// PageHeader, whose title is cyan and set in the one size step teletext had.
+func PageHeader(title, subtitle string, width int) string {
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(Cyan).Bold(true).Render(Upper(title)))
+	b.WriteString("\n")
+	if subtitle != "" {
+		b.WriteString(Muted.Render(Upper(subtitle)))
+		b.WriteString("\n")
+	}
+	b.WriteString(Rainbow(width))
+	return b.String()
+}
+
+// SectionLabel is the full-width colour bar the web client uses for section
+// headings — cyan by default, red while a section is live.
+func SectionLabel(label string, c lipgloss.Color, width int) string {
+	return Band(label, c, width)
+}
+
+// Tag is a solid colour block: a broadcaster pill or a status flag.
+func Tag(label string, c lipgloss.Color) string {
+	return lipgloss.NewStyle().Background(c).Foreground(Black).Bold(true).
+		Render(" " + Upper(label) + " ")
+}
+
+// Key renders a keyboard hint the way the web client's .k class does: reversed
+// out of white, so the instruction line reads as keys rather than as prose.
+func Key(label string) string {
+	return lipgloss.NewStyle().Background(White).Foreground(Black).Bold(true).Render(label)
+}
+
+// EntryStyle echoes the page number being typed, as the web client's .entry
+// does — magenta, so it reads as input rather than as content.
+var EntryStyle = lipgloss.NewStyle().Foreground(Magenta).Bold(true)
+
+// Rendered is the display width of a string that already contains escape
+// sequences. Width measures raw text and would count the escapes.
+func Rendered(s string) int { return lipgloss.Width(s) }
+
+// FastCell is one cell of the FastText footer: a fixed-width block of colour
+// with its label centred, matching the web client's equal-column grid.
+func FastCell(label string, c lipgloss.Color, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if runewidth.StringWidth(label) > width {
+		label = runewidth.Truncate(label, width, "…")
+	}
+	slack := width - runewidth.StringWidth(label)
+	left := slack / 2
+	return lipgloss.NewStyle().Background(c).Foreground(Black).Bold(true).
+		Render(strings.Repeat(" ", left) + label + strings.Repeat(" ", slack-left))
+}
+
+// Cursor highlights the selected row, standing in for the web client's .tt-cur
+// outline. A terminal has no outline, so the row is reversed into cyan.
+var Cursor = lipgloss.NewStyle().Background(Cyan).Foreground(Black)
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// Plain strips escape sequences. The cursor row is repainted as a single block
+// of colour, so its text has to be recovered from the already-styled line.
+func Plain(s string) string { return ansiRe.ReplaceAllString(s, "") }
+
+// PageTitle is the web client's PageHeader h1: cyan, and set in the single size
+// step teletext actually had.
+var PageTitle = lipgloss.NewStyle().Foreground(Cyan).Bold(true)

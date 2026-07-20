@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/salty-max/lucarne/apps/tui/internal/api"
+	"github.com/salty-max/lucarne/apps/tui/internal/teletext"
 	"github.com/salty-max/lucarne/apps/tui/internal/theme"
 )
 
@@ -42,8 +43,21 @@ func busiest(days []api.Day) int {
 	return best
 }
 
+// modelAt builds a model showing one day at a given width, without a terminal.
 func modelAt(days []api.Day, idx, width int) Model {
-	return Model{days: days, idx: idx, width: width, height: 30}
+	m := Model{days: days, dayIdx: idx, width: width, height: 30}
+	m.stack = []page{&todayPage{}}
+	return m
+}
+
+// bodyOf renders the current page's lines as plain text, which is what the
+// viewport would scroll.
+func bodyOf(m Model) string {
+	var rows []string
+	for _, l := range m.current().Lines(&m, m.width) {
+		rows = append(rows, l.text)
+	}
+	return strings.Join(rows, "\n")
 }
 
 var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
@@ -61,7 +75,7 @@ func TestNoLineOverflows(t *testing.T) {
 	for _, w := range widths {
 		for i := range days {
 			m := modelAt(days, i, w)
-			for n, line := range strings.Split(plain(m.body()), "\n") {
+			for n, line := range strings.Split(plain(bodyOf(m)), "\n") {
 				if got := theme.Width(line); got > w {
 					t.Errorf("width %d, day %s, line %d is %d columns: %q",
 						w, days[i].Key, n, got, line)
@@ -76,8 +90,8 @@ func TestWideningRemovesTruncation(t *testing.T) {
 	days := loadDays(t)
 	narrow, wide := 0, 0
 	for i := range days {
-		narrow += strings.Count(plain(modelAt(days, i, 40).body()), "…")
-		wide += strings.Count(plain(modelAt(days, i, 100).body()), "…")
+		narrow += strings.Count(plain(bodyOf(modelAt(days, i, 40))), "…")
+		wide += strings.Count(plain(bodyOf(modelAt(days, i, 100))), "…")
 	}
 	if narrow == 0 {
 		t.Skip("nothing is truncated even at the floor")
@@ -109,8 +123,8 @@ func TestBroadcasterMovesInline(t *testing.T) {
 	}
 	t.Logf("broadcaster gains its own column at %d columns", threshold)
 
-	narrow := len(strings.Split(plain(modelAt(days, i, threshold-1).body()), "\n"))
-	wide := len(strings.Split(plain(modelAt(days, i, threshold).body()), "\n"))
+	narrow := len(strings.Split(plain(bodyOf(modelAt(days, i, threshold-1))), "\n"))
+	wide := len(strings.Split(plain(bodyOf(modelAt(days, i, threshold))), "\n"))
 	if wide >= narrow {
 		t.Errorf("inlining did not reduce the rows: %d at %d columns, %d at %d",
 			narrow, threshold-1, wide, threshold)
@@ -123,7 +137,7 @@ func TestFixtureShowsTimeTeamsAndBroadcaster(t *testing.T) {
 	if len(days[i].Matches) == 0 {
 		t.Skip("fixture has no matches")
 	}
-	text := plain(modelAt(days, i, 100).body())
+	text := plain(bodyOf(modelAt(days, i, 100)))
 	f := days[i].Matches[0]
 
 	name := f.Home.Name
@@ -153,7 +167,7 @@ func TestLiveMatchShowsMinuteAndScore(t *testing.T) {
 	}}}
 	day.Matches[0].Competition.Name = "Ligue 1"
 
-	text := plain(modelAt([]api.Day{day}, 0, 80).body())
+	text := plain(bodyOf(modelAt([]api.Day{day}, 0, 80)))
 	for _, want := range []string{"72'", "2 - 1", "PSG", "MARSEILLE"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("live fixture missing %q:\n%s", want, text)
@@ -163,12 +177,13 @@ func TestLiveMatchShowsMinuteAndScore(t *testing.T) {
 
 func TestEmptyDayAndErrorAreExplained(t *testing.T) {
 	empty := modelAt([]api.Day{{Key: "2026-01-01", Label: "x"}}, 0, 40)
-	if !strings.Contains(plain(empty.body()), "NO MATCHES") {
+	if !strings.Contains(plain(bodyOf(empty)), "NO MATCHES") {
 		t.Error("an empty day is not explained")
 	}
 
-	failed := Model{width: 40, height: 30, err: errFake{}}
-	body := plain(failed.body())
+	failed := modelAt(nil, 0, 40)
+	failed.err = errFake{}
+	body := plain(bodyOf(failed))
 	if !strings.Contains(body, "NO RESPONSE") {
 		t.Errorf("the error state is not shown:\n%s", body)
 	}
@@ -178,28 +193,49 @@ func TestEmptyDayAndErrorAreExplained(t *testing.T) {
 }
 
 // The key bar has to survive every state, or there is no visible way to quit.
+// Narrow pages drop the page numbers rather than the words, as the web client
+// does below its sm breakpoint.
+func TestFastTextDropsNumbersWhenNarrow(t *testing.T) {
+	wide := plain(fastRow(teletext.FastText, 100))
+	if !strings.Contains(wide, "100") || !strings.Contains(wide, "600") {
+		t.Errorf("wide bar lost its page numbers: %q", wide)
+	}
+	narrow := plain(fastRow(teletext.FastText, 40))
+	if strings.Contains(narrow, "100") {
+		t.Errorf("narrow bar kept the numbers at the cost of the labels: %q", narrow)
+	}
+	for _, want := range []string{"LIVE", "CALEND", "BROAD"} {
+		if !strings.Contains(narrow, want) {
+			t.Errorf("narrow bar lost %q: %q", want, narrow)
+		}
+	}
+}
+
 func TestKeyBarAlwaysPresent(t *testing.T) {
 	days := loadDays(t)
-	for _, m := range []Model{
-		modelAt(days, 0, 40),
-		{width: 40, height: 30, err: errFake{}},
-		{width: 40, height: 30, loading: true},
-	} {
-		bar := plain(m.keyBar())
-		for _, want := range []string{"PREV", "NEXT", "QUIT"} {
+	loadingM := modelAt(days, 0, 40)
+	loadingM.loading = true
+	errM := modelAt(days, 0, 40)
+	errM.err = errFake{}
+	// The bar is chrome, so it must not depend on the page's state at all.
+	for _, m := range []Model{modelAt(days, 0, 100), errM, loadingM} {
+		_ = m.current() // the state differs; the bar must not
+		bar := plain(fastRow(teletext.FastText, 100))
+		for _, want := range []string{"LIVE", "CALENDAR", "BROADCASTERS"} {
 			if !strings.Contains(bar, want) {
-				t.Errorf("key bar missing %q: %q", want, bar)
+				t.Errorf("FastText bar missing %q: %q", want, bar)
 			}
 		}
 	}
 }
 
-func TestMastheadFillsTheWidth(t *testing.T) {
+func TestServiceLineFillsTheWidth(t *testing.T) {
 	days := loadDays(t)
 	for _, w := range widths {
-		got := theme.Width(plain(modelAt(days, 0, w).masthead()))
+		m := modelAt(days, 0, w)
+		got := theme.Width(plain(m.serviceLine(w)))
 		if got != w {
-			t.Errorf("masthead is %d columns, want %d", got, w)
+			t.Errorf("service line is %d columns, want %d", got, w)
 		}
 	}
 }

@@ -1,58 +1,90 @@
-// Package ui is the Bubble Tea program: one model, one update, one view.
+// Package ui is the Bubble Tea program: a teletext shell around a stack of
+// pages, laid out to match the web client screen for screen.
 package ui
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/salty-max/lucarne/apps/tui/internal/api"
+	"github.com/salty-max/lucarne/apps/tui/internal/teletext"
+	"github.com/salty-max/lucarne/apps/tui/internal/theme"
 )
 
-// The API costs one request per competition regardless of range, so fetching a
-// wide window up front is nearly free and makes day navigation instant.
 const (
 	windowBefore = 3
 	windowAfter  = 10
 	livePoll     = 15 * time.Second
+	clockTick    = time.Second
+	// entryTimeout matches the web client: a partial page number is forgotten
+	// rather than left half-typed, so the next digit starts a fresh number.
+	entryTimeout = 1200 * time.Millisecond
 )
 
 type (
 	scheduleMsg struct{ days []api.Day }
+	compsMsg    struct{ comps []api.CompetitionInfo }
 	liveMsg     struct{ matches []api.LiveMatch }
+	matchMsg    struct{ match *api.MatchDetail }
 	errMsg      struct{ err error }
 	tickMsg     time.Time
+	clockMsg    time.Time
+	entryMsg    int
 )
 
-// Model is the whole application state.
+// Model is the shell. Pages read the shared data from it and push their own
+// state; the shell owns navigation, the cursor and the chrome.
 type Model struct {
 	client *api.Client
 	ctx    context.Context
 
-	days []api.Day
-	idx  int
+	stack []page
+	lines []line
+	cur   int
 
-	vp            viewport.Model
-	width, height int
-	ready         bool
-	loading       bool
-	err           error
+	days  []api.Day
+	comps []api.CompetitionInfo
+
+	entry     string
+	entrySeq  int // bumped per keystroke, so a stale timeout cannot clear a fresh entry
+	clock     string
+	date      string
+	loading   bool
+	err       error
+	liveNow   int
+	vp        viewport.Model
+	width     int
+	height    int
+	ready     bool
+	dayIdx    int
+	lastMatch *api.MatchDetail
 }
 
-// New returns a model ready to be run by Bubble Tea.
+// New returns a model showing page 100.
 func New(ctx context.Context) Model {
-	return Model{client: api.New(), ctx: ctx, loading: true}
+	m := Model{client: api.New(), ctx: ctx, loading: true}
+	m.stack = []page{&todayPage{}}
+	return m
 }
 
-// Init kicks off the first fetch and the live-refresh ticker.
+func (m Model) current() page { return m.stack[len(m.stack)-1] }
+
+func (m Model) liveCount() int { return m.liveNow }
+
+// Init loads the shared data every page draws from, and starts the clock.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.fetchSchedule(), tick())
+	return tea.Batch(m.fetchSchedule(), m.fetchComps(), livePollCmd(), clockCmd())
 }
 
-func tick() tea.Cmd {
+func clockCmd() tea.Cmd {
+	return tea.Tick(clockTick, func(t time.Time) tea.Msg { return clockMsg(t) })
+}
+
+func livePollCmd() tea.Cmd {
 	return tea.Tick(livePoll, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
@@ -67,11 +99,21 @@ func (m Model) fetchSchedule() tea.Cmd {
 	}
 }
 
+func (m Model) fetchComps() tea.Cmd {
+	return func() tea.Msg {
+		comps, err := m.client.Competitions(m.ctx)
+		if err != nil {
+			return nil // the schedule is the page that matters; this is chrome
+		}
+		return compsMsg{comps}
+	}
+}
+
 func (m Model) fetchLive() tea.Cmd {
 	return func() tea.Msg {
 		live, err := m.client.Live(m.ctx)
 		if err != nil {
-			return nil // a failed live poll is not worth interrupting the page
+			return nil
 		}
 		return liveMsg{live}
 	}
@@ -82,39 +124,124 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		// The viewport owns everything between the masthead and the key bar.
-		h := max(msg.Height-chromeRows, 1)
+		h := max(msg.Height-chromeHeight, 1)
 		if !m.ready {
 			m.vp = viewport.New(msg.Width, h)
 			m.ready = true
 		} else {
 			m.vp.Width, m.vp.Height = msg.Width, h
 		}
-		m.vp.SetContent(m.body())
+		m.refresh()
 		return m, nil
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
+	case clockMsg:
+		t := time.Time(msg)
+		if loc, err := time.LoadLocation("Europe/Paris"); err == nil {
+			t = t.In(loc)
+		}
+		m.clock, m.date = t.Format("15:04:05"), theme.Upper(t.Format("Mon 02 Jan"))
+		return m, clockCmd()
+
+	case entryMsg:
+		// Only clear if no digit has been typed since this timeout was armed.
+		if int(msg) == m.entrySeq {
+			m.entry = ""
+		}
+		return m, nil
+
 	case scheduleMsg:
 		m.loading, m.err, m.days = false, nil, msg.days
-		m.idx = todayIndex(msg.days)
-		m.vp.SetContent(m.body())
-		m.vp.GotoTop()
+		m.dayIdx = todayIndex(msg.days)
+		m.refresh()
+		return m, nil
+
+	case compsMsg:
+		m.comps = msg.comps
+		m.refresh()
 		return m, nil
 
 	case liveMsg:
 		m.patchLive(msg.matches)
-		m.vp.SetContent(m.body())
+		m.refresh()
+		return m, nil
+
+	case matchMsg:
+		m.lastMatch = msg.match
+		m.refresh()
 		return m, nil
 
 	case errMsg:
 		m.loading, m.err = false, msg.err
-		m.vp.SetContent(m.body())
+		m.refresh()
 		return m, nil
 
 	case tickMsg:
-		return m, tea.Batch(m.fetchLive(), tick())
+		return m, tea.Batch(m.fetchLive(), livePollCmd())
+	}
+
+	if cmd, handled := m.current().Update(&m, msg); handled {
+		m.refresh()
+		return m, cmd
+	}
+	var cmd tea.Cmd
+	m.vp, cmd = m.vp.Update(msg)
+	return m, cmd
+}
+
+func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+
+	// Digits build a page number, exactly as on a set: three digits jump.
+	if len(key) == 1 && key[0] >= '0' && key[0] <= '9' {
+		m.entry += key
+		if len(m.entry) > 3 {
+			m.entry = m.entry[len(m.entry)-3:]
+		}
+		if len(m.entry) == 3 {
+			no := m.entry
+			m.entry = ""
+			return m, m.goToNumber(no)
+		}
+		m.entrySeq++
+		seq := m.entrySeq
+		return m, tea.Tick(entryTimeout, func(time.Time) tea.Msg { return entryMsg(seq) })
+	}
+
+	// Give the page first refusal, so a page with its own keys can claim them.
+	if cmd, handled := m.current().Update(m, msg); handled {
+		m.refresh()
+		return m, cmd
+	}
+
+	switch key {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+
+	case "backspace", "esc":
+		return m, m.back()
+
+	case "up":
+		m.moveCursor(-1)
+		return m, nil
+	case "down":
+		m.moveCursor(1)
+		return m, nil
+
+	case "enter":
+		if i := m.selected(); i >= 0 && m.lines[i].open != nil {
+			return m, m.lines[i].open(m)
+		}
+		return m, nil
+	}
+
+	// The four colour keys.
+	for _, k := range teletext.FastText {
+		if key == k.Key {
+			return m, m.goToPage(k.No, "")
+		}
 	}
 
 	var cmd tea.Cmd
@@ -122,28 +249,103 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "ctrl+c", "c":
-		return m, tea.Quit
-	case "left", "r":
-		return m.moveDay(-1)
-	case "right", "g":
-		return m.moveDay(1)
+// goToNumber resolves a typed number. An unassigned one does nothing, as on a
+// real set: typing a dead page left you where you were.
+func (m *Model) goToNumber(no string) tea.Cmd {
+	p, slug, ok := teletext.Resolve(no, m.comps)
+	if !ok {
+		return nil
 	}
-	var cmd tea.Cmd
-	m.vp, cmd = m.vp.Update(msg) // up/down/pgup/pgdn belong to the viewport
-	return m, cmd
+	return m.goToPage(p, slug)
 }
 
-func (m Model) moveDay(delta int) (tea.Model, tea.Cmd) {
-	if len(m.days) == 0 {
-		return m, nil
+func (m *Model) back() tea.Cmd {
+	if len(m.stack) <= 1 {
+		return nil
 	}
-	m.idx = min(max(m.idx+delta, 0), len(m.days)-1)
-	m.vp.SetContent(m.body())
+	m.stack = m.stack[:len(m.stack)-1]
+	m.cur = 0
+	m.refresh()
 	m.vp.GotoTop()
-	return m, nil
+	return nil
+}
+
+func (m *Model) push(p page) tea.Cmd {
+	m.stack = append(m.stack, p)
+	m.cur = 0
+	m.refresh()
+	m.vp.GotoTop()
+	return nil
+}
+
+// moveCursor walks the selectable lines, wrapping as the web client does.
+func (m *Model) moveCursor(delta int) {
+	sel := m.selectableIndexes()
+	if len(sel) == 0 {
+		m.vp.LineDown(delta)
+		return
+	}
+	pos := 0
+	for i, idx := range sel {
+		if idx == m.cur {
+			pos = i
+			break
+		}
+	}
+	pos = (pos + delta + len(sel)) % len(sel)
+	m.cur = sel[pos]
+	m.refresh()
+	m.ensureVisible()
+}
+
+func (m *Model) selectableIndexes() []int {
+	var out []int
+	for i, l := range m.lines {
+		if l.open != nil {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+func (m Model) selected() int {
+	if m.cur >= 0 && m.cur < len(m.lines) {
+		return m.cur
+	}
+	return -1
+}
+
+// ensureVisible scrolls just enough to keep the cursor on screen, the way
+// scrollIntoView({block:"nearest"}) does on the web.
+func (m *Model) ensureVisible() {
+	top := m.vp.YOffset
+	bottom := top + m.vp.Height - 1
+	switch {
+	case m.cur < top:
+		m.vp.SetYOffset(m.cur)
+	case m.cur > bottom:
+		m.vp.SetYOffset(m.cur - m.vp.Height + 1)
+	}
+}
+
+// refresh re-renders the current page into the viewport.
+func (m *Model) refresh() {
+	if !m.ready {
+		return
+	}
+	m.lines = m.current().Lines(m, m.width)
+	if m.cur >= len(m.lines) {
+		m.cur = 0
+	}
+	rows := make([]string, len(m.lines))
+	for i, l := range m.lines {
+		if i == m.cur && l.open != nil {
+			rows[i] = theme.Cursor.Render(theme.Pad(theme.Plain(l.text), m.width))
+		} else {
+			rows[i] = l.text
+		}
+	}
+	m.vp.SetContent(strings.Join(rows, "\n"))
 }
 
 func (m *Model) patchLive(live []api.LiveMatch) {
@@ -151,6 +353,7 @@ func (m *Model) patchLive(live []api.LiveMatch) {
 	for _, l := range live {
 		byID[l.ID] = l
 	}
+	m.liveNow = len(live)
 	for di := range m.days {
 		for mi := range m.days[di].Matches {
 			f := &m.days[di].Matches[mi]
@@ -165,23 +368,20 @@ func (m *Model) patchLive(live []api.LiveMatch) {
 	}
 }
 
-// View assembles the page: masthead, body, key bar.
+// View assembles service line, page, footer rows and hint.
 func (m Model) View() string {
 	if !m.ready {
 		return ""
 	}
-	return lipgloss.JoinVertical(lipgloss.Left, m.masthead(), m.vp.View(), m.keyBar())
+	return strings.Join([]string{
+		m.serviceLine(m.width),
+		m.vp.View(),
+		fastRow(teletext.FastText, m.width),
+		fastRow(teletext.More, m.width),
+		kbdHint(),
+	}, "\n")
 }
 
-func (m Model) day() *api.Day {
-	if m.idx < 0 || m.idx >= len(m.days) {
-		return nil
-	}
-	return &m.days[m.idx]
-}
-
-// todayIndex finds today in the fetched window, falling back to the next day
-// present so the page is never blank because of a timezone edge.
 func todayIndex(days []api.Day) int {
 	today := time.Now().Format("2006-01-02")
 	for i, d := range days {
@@ -195,4 +395,32 @@ func todayIndex(days []api.Day) int {
 		}
 	}
 	return 0
+}
+
+// competitionMsg carries a fetched competition, tagged with the slug so a
+// pending request for a page the user has already left cannot overwrite the
+// page they are now on.
+type competitionMsg struct {
+	slug   string
+	detail *api.CompetitionDetail
+}
+
+func (m Model) fetchCompetition(slug string) tea.Cmd {
+	return func() tea.Msg {
+		d, err := m.client.Competition(m.ctx, slug)
+		if err != nil {
+			return errMsg{err}
+		}
+		return competitionMsg{slug: slug, detail: d}
+	}
+}
+
+func (m Model) fetchMatch(id int) tea.Cmd {
+	return func() tea.Msg {
+		d, err := m.client.Match(m.ctx, id)
+		if err != nil {
+			return errMsg{err}
+		}
+		return matchMsg{match: d}
+	}
 }
