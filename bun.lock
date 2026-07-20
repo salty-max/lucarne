@@ -36,6 +36,17 @@
         "wrangler": "^4.111.0",
       },
     },
+    "apps/tui": {
+      "name": "@lucarne/tui",
+      "dependencies": {
+        "@lucarne/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.3.14",
+        "@types/node": "^26.1.1",
+        "typescript": "^5.9.3",
+      },
+    },
     "apps/web": {
       "name": "@lucarne/web",
       "dependencies": {
@@ -485,6 +496,8 @@
     "@lucarne/api": ["@lucarne/api@workspace:apps/api"],
 
     "@lucarne/shared": ["@lucarne/shared@workspace:packages/shared"],
+
+    "@lucarne/tui": ["@lucarne/tui@workspace:apps/tui"],
 
     "@lucarne/web": ["@lucarne/web@workspace:apps/web"],
 
