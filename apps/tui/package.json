@@ -3,7 +3,6 @@
   "private": true,
   "description": "Thin wrapper so the Go module joins the turbo pipeline: one `bun run test` still covers every app.",
   "scripts": {
-    "dev": "go run ./cmd/lucarne",
     "start": "go run ./cmd/lucarne",
     "build": "go build -trimpath -ldflags='-s -w' -o dist/lucarne ./cmd/lucarne",
     "typecheck": "go vet ./...",
