@@ -1,0 +1,21 @@
+# Rebuilt inside the image; never copy the host's.
+node_modules
+**/node_modules
+**/dist
+apps/api/.wrangler
+apps/tui/dist
+
+# Local state and secrets must not enter the image.
+**/local.db
+**/local.db-*
+**/.env
+**/.env.local
+*.backup-*
+
+# VCS / tooling noise.
+.git
+.github
+.turbo
+**/.turbo
+*.log
+scripts/*.backup-*

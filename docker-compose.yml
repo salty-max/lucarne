@@ -1,0 +1,42 @@
+# Local dev, mirroring Koyeb: a stateless app container + an external Postgres.
+#
+#   docker compose up db          # just Postgres — pair with `bun run dev` (fast HMR)
+#   docker compose up --build     # the full prod-like image + Postgres
+#
+# The `db` volume persists dev data across restarts. It does NOT survive the Mac
+# sleeping any better than a bare process would (containers freeze with the host)
+# — always-on is Koyeb's job, not docker's.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lucarne
+      POSTGRES_PASSWORD: lucarne
+      POSTGRES_DB: lucarne
+    ports:
+      - "5432:5432" # published so `bun run dev` on the host can reach it
+    volumes:
+      - lucarne_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lucarne -d lucarne"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://lucarne:lucarne@db:5432/lucarne
+      PORT: "3000"
+    # Secrets (API_FOOTBALL_KEY, CRON_SECRET, VAPID_*) come from apps/api/.env.local.
+    env_file:
+      - apps/api/.env.local
+    ports:
+      - "3000:3000"
+
+volumes:
+  lucarne_pg:
