@@ -1,5 +1,5 @@
 import { and, eq, gte, lte } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { matchEvents, matches, pushNotified, teams } from "@/db/schema";
 import { chunkRows } from "@/lib/d1";

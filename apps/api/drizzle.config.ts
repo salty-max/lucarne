@@ -1,12 +1,14 @@
 import { defineConfig } from "drizzle-kit";
 
-// SQLite (D1 in prod, bun:sqlite locally). `db:generate` emits migrations from
-// the schema (no DB needed); apply them with `db:migrate` (local) or
-// `wrangler d1 migrations apply` (D1).
+// Postgres. `db:generate` emits migrations from the schema; apply them with
+// `db:migrate` against DATABASE_URL.
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dialect: "sqlite",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: process.env.DATABASE_URL ?? "postgres://lucarne:lucarne@localhost:5432/lucarne",
+  },
   verbose: true,
   strict: true,
 });

@@ -2,21 +2,15 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "outputs": ["dist/**"]
+      "outputs": [
+        "dist/**"
+      ]
     },
     "typecheck": {},
     "test": {},
     "dev": {
       "cache": false,
       "persistent": true
-    },
-    "deploy": {
-      "cache": false,
-      "dependsOn": ["@lucarne/web#build"]
-    },
-    "dryrun": {
-      "cache": false,
-      "dependsOn": ["@lucarne/web#build"]
     }
   }
 }

@@ -1,22 +1,35 @@
-import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import type { MatchStatistics, TopPlayerEntry } from "@lucarne/shared";
 
 /**
- * SQLite schema (Cloudflare D1 in prod, bun:sqlite locally/tests).
- * Timestamps are stored as integer unix-ms (Drizzle maps them to/from `Date`),
- * dates as ISO `text` (lexicographic comparison), JSON blobs as `text` json.
+ * Postgres schema (managed Postgres in prod, a docker Postgres locally/tests).
+ * Timestamps are real `timestamp` columns that Drizzle maps to/from `Date` (the
+ * app still sees Date everywhere, unchanged from the old sqlite epoch-ms mapping);
+ * dates stay ISO `text` (lexicographic comparison); JSON is `jsonb`.
  */
 
-export const broadcasters = sqliteTable("broadcasters", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const broadcasters = pgTable("broadcasters", {
+  id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   color: text("color").notNull().default("#64748b"),
   logoUrl: text("logo_url"),
 });
 
-export const competitions = sqliteTable("competitions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const competitions = pgTable("competitions", {
+  id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   name: text("name").notNull(),
   apiFootballId: integer("api_football_id").notNull().unique(),
@@ -25,25 +38,25 @@ export const competitions = sqliteTable("competitions", {
   emblem: text("emblem"),
 });
 
-export const teams = sqliteTable("teams", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
   apiFootballId: integer("api_football_id").notNull().unique(),
   name: text("name").notNull(),
   shortName: text("short_name"),
   logo: text("logo"),
 });
 
-export const matches = sqliteTable(
+export const matches = pgTable(
   "matches",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     apiFootballId: integer("api_football_id").notNull().unique(),
     competitionId: integer("competition_id")
       .notNull()
       .references(() => competitions.id),
     season: integer("season").notNull(),
     round: text("round"),
-    kickoff: integer("kickoff", { mode: "timestamp_ms" }).notNull(),
+    kickoff: timestamp("kickoff", { mode: "date", withTimezone: true }).notNull(),
     statusShort: text("status_short").notNull().default("NS"),
     status: text("status").notNull().default("scheduled"),
     elapsed: integer("elapsed"),
@@ -65,10 +78,10 @@ export const matches = sqliteTable(
     awayFormation: text("away_formation"),
     homeCoach: text("home_coach"),
     awayCoach: text("away_coach"),
-    statistics: text("statistics", { mode: "json" }).$type<MatchStatistics>(),
+    statistics: jsonb("statistics").$type<MatchStatistics>(),
     // Player match ratings keyed by side then jersey number (lineups store
     // abbreviated names, so number is the reliable join to the lineup rows).
-    playerRatings: text("player_ratings", { mode: "json" }).$type<{
+    playerRatings: jsonb("player_ratings").$type<{
       home: Record<string, number>;
       away: Record<string, number>;
     }>(),
@@ -81,14 +94,14 @@ export const matches = sqliteTable(
     // Man of the match = the top-rated player, resolved when ratings land.
     motmName: text("motm_name"),
     motmSide: text("motm_side"), // "home" | "away"
-    motmRating: real("motm_rating"),
+    motmRating: doublePrecision("motm_rating"),
 
-    detailsFetchedAt: integer("details_fetched_at", { mode: "timestamp_ms" }),
-    lineupsFetchedAt: integer("lineups_fetched_at", { mode: "timestamp_ms" }),
-    statsFetchedAt: integer("stats_fetched_at", { mode: "timestamp_ms" }),
-    ratingsFetchedAt: integer("ratings_fetched_at", { mode: "timestamp_ms" }),
-    predictionsFetchedAt: integer("predictions_fetched_at", { mode: "timestamp_ms" }),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    detailsFetchedAt: timestamp("details_fetched_at", { mode: "date", withTimezone: true }),
+    lineupsFetchedAt: timestamp("lineups_fetched_at", { mode: "date", withTimezone: true }),
+    statsFetchedAt: timestamp("stats_fetched_at", { mode: "date", withTimezone: true }),
+    ratingsFetchedAt: timestamp("ratings_fetched_at", { mode: "date", withTimezone: true }),
+    predictionsFetchedAt: timestamp("predictions_fetched_at", { mode: "date", withTimezone: true }),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .notNull()
       .$defaultFn(() => new Date()),
   },
@@ -99,10 +112,10 @@ export const matches = sqliteTable(
   ],
 );
 
-export const matchEvents = sqliteTable(
+export const matchEvents = pgTable(
   "match_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     matchId: integer("match_id")
       .notNull()
       .references(() => matches.id),
@@ -119,10 +132,10 @@ export const matchEvents = sqliteTable(
   (t) => [index("match_events_match_idx").on(t.matchId)],
 );
 
-export const matchLineups = sqliteTable(
+export const matchLineups = pgTable(
   "match_lineups",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     matchId: integer("match_id")
       .notNull()
       .references(() => matches.id),
@@ -133,16 +146,16 @@ export const matchLineups = sqliteTable(
     number: integer("number"),
     pos: text("pos"), // "G" | "D" | "M" | "F"
     grid: text("grid"), // "row:col" for the starting XI, null for substitutes
-    starter: integer("starter", { mode: "boolean" }).notNull().default(true),
+    starter: boolean("starter").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (t) => [index("match_lineups_match_idx").on(t.matchId)],
 );
 
-export const standings = sqliteTable(
+export const standings = pgTable(
   "standings",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     competitionId: integer("competition_id")
       .notNull()
       .references(() => competitions.id),
@@ -169,10 +182,10 @@ export const standings = sqliteTable(
   (t) => [index("standings_competition_idx").on(t.competitionId, t.season)],
 );
 
-export const broadcastRules = sqliteTable(
+export const broadcastRules = pgTable(
   "broadcast_rules",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     competitionId: integer("competition_id")
       .notNull()
       .references(() => competitions.id),
@@ -187,10 +200,10 @@ export const broadcastRules = sqliteTable(
   (t) => [index("broadcast_rules_competition_idx").on(t.competitionId)],
 );
 
-export const broadcastOverrides = sqliteTable(
+export const broadcastOverrides = pgTable(
   "broadcast_overrides",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     matchId: integer("match_id")
       .notNull()
       .references(() => matches.id),
@@ -202,25 +215,25 @@ export const broadcastOverrides = sqliteTable(
   (t) => [uniqueIndex("broadcast_overrides_match_broadcaster_idx").on(t.matchId, t.broadcasterId)],
 );
 
-export const syncState = sqliteTable("sync_state", {
+export const syncState = pgTable("sync_state", {
   key: text("key").primaryKey(),
-  value: text("value", { mode: "json" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),
 });
 
 // Rolling history of scheduled-job outcomes (sync, live, lineups, eager/nightly
-// drain) so the cron behaviour is queryable from the app, not just `wrangler
-// tail`. Pruned to ~a week by `recordRun`; `detail` holds the job's result JSON.
-export const runLog = sqliteTable(
+// drain) so the cron behaviour is queryable from the app. Pruned to ~a week by
+// `recordRun`; `detail` holds the job's result JSON.
+export const runLog = pgTable(
   "run_log",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    at: integer("at", { mode: "timestamp_ms" }).notNull(),
+    id: serial("id").primaryKey(),
+    at: timestamp("at", { mode: "date", withTimezone: true }).notNull(),
     job: text("job").notNull(),
-    ok: integer("ok", { mode: "boolean" }).notNull(),
-    detail: text("detail", { mode: "json" }).$type<Record<string, unknown>>(),
+    ok: boolean("ok").notNull(),
+    detail: jsonb("detail").$type<Record<string, unknown>>(),
     ms: integer("ms"),
   },
   (t) => [index("run_log_at_idx").on(t.at)],
@@ -229,7 +242,7 @@ export const runLog = sqliteTable(
 // A browser's Web Push subscription + who/what it wants to hear about. `teams`
 // are the followed team names to match against; `triggers` are the event kinds
 // (goal, yellow, red, kickoff, ft) the user opted into.
-export const pushSubscription = sqliteTable("push_subscription", {
+export const pushSubscription = pgTable("push_subscription", {
   endpoint: text("endpoint").primaryKey(),
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
@@ -237,9 +250,9 @@ export const pushSubscription = sqliteTable("push_subscription", {
   // a DEVICE is surveilling (watched_match ∪ followed_team), not a teams[] list.
   // Nullable for legacy rows until they re-subscribe. `teams` is legacy/unused.
   deviceId: text("device_id"),
-  teams: text("teams", { mode: "json" }).$type<string[]>().notNull(),
-  triggers: text("triggers", { mode: "json" }).$type<string[]>().notNull(),
-  createdAt: integer("created_at", { mode: "timestamp_ms" })
+  teams: jsonb("teams").$type<string[]>().notNull(),
+  triggers: jsonb("triggers").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),
 });
@@ -247,13 +260,13 @@ export const pushSubscription = sqliteTable("push_subscription", {
 // A device's followed teams — the server-side mirror of the client's favourites,
 // synced independently of push (so auto-surveillance works without notifications).
 // Drives both live enrichment (auto-watch) and push targeting, per device.
-export const followedTeam = sqliteTable(
+export const followedTeam = pgTable(
   "followed_team",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     deviceId: text("device_id").notNull(),
     team: text("team").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .notNull()
       .$defaultFn(() => new Date()),
   },
@@ -266,12 +279,12 @@ export const followedTeam = sqliteTable(
 // Dedup ledger: one row per (match, event) already pushed, so re-fetching a
 // match's events on the next tick never sends a goal/card twice. `key` is a
 // stable event key, or "KO"/"FT" for the kickoff reminder + full-time.
-export const pushNotified = sqliteTable(
+export const pushNotified = pgTable(
   "push_notified",
   {
     matchId: integer("match_id").notNull(),
     key: text("key").notNull(),
-    at: integer("at", { mode: "timestamp_ms" })
+    at: timestamp("at", { mode: "date", withTimezone: true })
       .notNull()
       .$defaultFn(() => new Date()),
   },
@@ -280,20 +293,18 @@ export const pushNotified = sqliteTable(
 
 // Active surveillance ("radar"): one row per (device, match) the user chose to
 // monitor. Drives the per-minute live enrichment — only WATCHED live matches get
-// events/stats each tick, so a huge match day stays within budget — and (later)
-// push. Keyed by an anonymous client `deviceId`, so it works even without
-// notification permission. `matchId` → matches.id (no hard FK, like pushNotified).
-export const watchedMatch = sqliteTable(
+// events/stats each tick — and push. Keyed by an anonymous client `deviceId`.
+export const watchedMatch = pgTable(
   "watched_match",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     deviceId: text("device_id").notNull(),
     matchId: integer("match_id").notNull(),
     // "on" = watch this match; "off" = mute it, which OVERRIDES the followed-team
     // auto-surveillance (so you can drop one of your club's matches). Absent row =
     // default (auto-surveilled iff a followed team plays).
     state: text("state").notNull().default("on"),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
       .notNull()
       .$defaultFn(() => new Date()),
   },
@@ -306,7 +317,7 @@ export const watchedMatch = sqliteTable(
 
 // Top scorers / assists ranking per competition+season, stored as one JSON list
 // per kind. Refreshed on the daily sync alongside standings.
-export const topPlayers = sqliteTable(
+export const topPlayers = pgTable(
   "top_players",
   {
     competitionId: integer("competition_id")
@@ -314,8 +325,8 @@ export const topPlayers = sqliteTable(
       .references(() => competitions.id),
     season: integer("season").notNull(),
     kind: text("kind").notNull(), // "scorers" | "assists"
-    entries: text("entries", { mode: "json" }).$type<TopPlayerEntry[]>().notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    entries: jsonb("entries").$type<TopPlayerEntry[]>().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
       .notNull()
       .$defaultFn(() => new Date()),
   },

@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
+import { alias } from "drizzle-orm/pg-core";
 import type {
   BracketMatch,
   BracketRound,

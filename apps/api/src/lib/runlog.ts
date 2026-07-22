@@ -9,7 +9,7 @@ const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Persist a scheduled-job outcome to `run_log` so the cron history is queryable
- * from the app itself (not just ephemeral `wrangler tail` output). Best-effort:
+ * from the app itself (not just ephemeral the run_log table output). Best-effort:
  * a failed write is logged and swallowed so it never breaks the job that called
  * it. Only meaningful runs are recorded (the caller decides), so the table stays
  * signal-rich rather than one no-op row per minute.

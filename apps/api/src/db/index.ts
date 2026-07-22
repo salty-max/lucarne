@@ -1,14 +1,12 @@
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
 /**
- * One db type across runtimes. The concrete driver is injected at the entry
- * point via `setDb()`:
- *   - Cloudflare Workers → drizzle-orm/d1 with the D1 binding (worker.ts)
- *   - Bun (local/tests/VM) → drizzle-orm/bun-sqlite (server.ts, seed.ts, tests)
- * Both are SQLite; queries are always awaited, so the shared async D1 type fits.
+ * The app's db handle. The concrete connection is injected at the entry point
+ * via `setDb()` (server.ts, seed.ts, the db scripts, tests), so this module has
+ * no driver import and stays trivially mockable.
  */
-export type DB = DrizzleD1Database<typeof schema>;
+export type DB = PostgresJsDatabase<typeof schema>;
 
 let _db: DB | null = null;
 

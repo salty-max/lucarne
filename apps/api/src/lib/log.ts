@@ -1,7 +1,7 @@
 /**
  * Tiny structured logger. Zero dependencies, two output formats:
  *   - "json"   — one JSON line per event (default). Structured, greppable in
- *                `wrangler tail`, parseable by any log sink. Used on Workers.
+ *                the run_log table, parseable by any log sink. Used on Workers.
  *   - "pretty" — a colourised human line for a terminal. The Node entry opts
  *                into this (see server.ts).
  * Prefer stable dotted tags ("live.polled", "details.eager") + a context object

@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, inArray, isNull, lte, ne, or } from "drizzle-orm";
-import { alias } from "drizzle-orm/sqlite-core";
+import { alias } from "drizzle-orm/pg-core";
 import { chunkIds } from "@/lib/d1";
 import type {
   Day,

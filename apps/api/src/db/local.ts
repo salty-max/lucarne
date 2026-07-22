@@ -1,18 +1,22 @@
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { setDb, schema, type DB } from "@/db";
 
-// Bun-only local/test driver. Imported by server.ts / seed.ts / migrate.ts /
-// tests — never by worker.ts, so bun:sqlite stays out of the Workers bundle.
+// The app's Postgres connection, from DATABASE_URL. Imported by server.ts,
+// seed.ts and the db scripts. Kept named initLocalDb so its callers did not
+// change across the sqlite→postgres move; "local" now just means "this process's
+// db handle", pointed at whatever DATABASE_URL says (a docker Postgres in dev,
+// the managed Postgres in prod).
 
-export function localSqlitePath(): string {
-  return process.env.SQLITE_PATH ?? "local.db";
+export function databaseUrl(): string {
+  return process.env.DATABASE_URL ?? "postgres://lucarne:lucarne@localhost:5432/lucarne";
 }
 
-/** Open a bun:sqlite database and register it as the app's db. */
-export function initLocalDb(path = localSqlitePath()): Database {
-  const sqlite = new Database(path);
-  sqlite.exec("PRAGMA foreign_keys = ON;");
-  setDb(drizzle(sqlite, { schema }) as unknown as DB);
-  return sqlite;
+/** Open a Postgres connection and register it as the app's db. Returns the raw
+ *  client so scripts/tests can close it (`await sql.end()`) and let the process
+ *  exit — postgres.js holds the pool open otherwise. */
+export function initLocalDb(url = databaseUrl()): ReturnType<typeof postgres> {
+  const sql = postgres(url);
+  setDb(drizzle(sql, { schema }) as unknown as DB);
+  return sql;
 }

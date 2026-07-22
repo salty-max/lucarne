@@ -128,7 +128,7 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
           awayPenalties: sql`excluded.away_penalties`,
           venue: sql`excluded.venue`,
           referee: sql`excluded.referee`,
-          updatedAt: sql`(unixepoch() * 1000)`,
+          updatedAt: sql`now()`,
         },
       });
   }

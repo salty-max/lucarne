@@ -1,103 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1784206443353,
-      "tag": "0000_useful_swordsman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1784230168231,
-      "tag": "0001_real_pixie",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1784247241736,
-      "tag": "0002_neat_corsair",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1784296640454,
-      "tag": "0003_new_absorbing_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1784330054646,
-      "tag": "0004_lying_korvac",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1784332266141,
-      "tag": "0005_blue_zarek",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1784336125571,
-      "tag": "0006_blushing_vision",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1784399229079,
-      "tag": "0007_bored_rhino",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1784469438242,
-      "tag": "0008_messy_gargoyle",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1784470598531,
-      "tag": "0009_fantastic_leopardon",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1784472321801,
-      "tag": "0010_sour_boomer",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1784474406145,
-      "tag": "0011_overrated_veda",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1784475456166,
-      "tag": "0012_bitter_kylun",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "6",
-      "when": 1784481293042,
-      "tag": "0013_lame_caretaker",
+      "version": "7",
+      "when": 1784681070931,
+      "tag": "0000_young_mongoose",
       "breakpoints": true
     }
   ]

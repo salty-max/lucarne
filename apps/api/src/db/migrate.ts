@@ -1,11 +1,12 @@
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { localSqlitePath } from "@/db/local";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
+import { databaseUrl } from "@/db/local";
 
-// Apply generated migrations (drizzle/) to the local bun:sqlite database.
-// (Prod/D1 uses `wrangler d1 migrations apply` — see README.)
-const path = localSqlitePath();
-const db = drizzle(new Database(path));
-migrate(db, { migrationsFolder: "drizzle" });
-console.log(`Migrations applied to ${path}`);
+// Apply generated migrations (drizzle/) to the Postgres at DATABASE_URL.
+// A dedicated single-connection client (max: 1), as the migrator expects.
+const url = databaseUrl();
+const sql = postgres(url, { max: 1 });
+await migrate(drizzle(sql), { migrationsFolder: "drizzle" });
+await sql.end();
+console.log(`Migrations applied to ${url.replace(/:[^:@/]+@/, ":****@")}`);

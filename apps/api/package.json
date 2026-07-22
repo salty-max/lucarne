@@ -8,28 +8,26 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
-    "deploy": "wrangler deploy",
-    "dryrun": "wrangler deploy --dry-run --outdir .wrangler/dryrun",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:seed": "bun run src/db/seed.ts",
     "db:backfill-details": "bun run src/db/backfill-details.ts",
     "db:backfill-extras": "bun run src/db/backfill-extras.ts",
-    "db:sim": "bun run src/db/sim-match.ts"
+    "db:sim": "bun run src/db/sim-match.ts",
+    "db:migrate-from-sqlite": "bun run src/db/migrate-from-sqlite.ts"
   },
   "dependencies": {
     "@lucarne/shared": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.30",
-    "node-cron": "^4.6.0"
+    "node-cron": "^4.6.0",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260716.1",
     "@types/bun": "^1.3.14",
     "@types/node": "^26.1.1",
     "@types/node-cron": "^3.0.11",
     "drizzle-kit": "^0.31.10",
-    "typescript": "^5.9.3",
-    "wrangler": "^4.111.0"
+    "typescript": "^5.9.3"
   }
 }

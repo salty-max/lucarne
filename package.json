@@ -15,8 +15,6 @@
     "dev:pwa": "bun run --filter @lucarne/web build && bun run --filter @lucarne/api start",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
-    "deploy": "turbo run deploy",
-    "dryrun": "turbo run dryrun",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "turbo run test",
