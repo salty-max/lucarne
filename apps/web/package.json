@@ -1,5 +1,6 @@
 {
   "name": "@lucarne/web",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,7 +25,8 @@
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "workbox-window": "^7.4.1"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.10.6",

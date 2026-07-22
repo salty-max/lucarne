@@ -61,6 +61,10 @@ export function AboutDialog() {
               ♥ {t.about.donate}
             </a>
           </div>
+
+          <p className="mt-4 text-center text-xs uppercase tracking-widest text-muted-foreground">
+            Lucarne v{__APP_VERSION__} · {__BUILD_DATE__}
+          </p>
         </div>
       </div>
     </div>

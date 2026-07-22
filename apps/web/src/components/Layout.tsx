@@ -7,6 +7,7 @@ import { usePrefs } from "@/lib/prefs";
 import { LiveDot } from "@/components/common";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { AboutDialog } from "@/components/AboutDialog";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { GITHUB_URL, KOFI_URL } from "@/lib/about";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -249,6 +250,8 @@ export function Layout() {
       </div>
       <InstallPrompt />
       <AboutDialog />
+      {/* SW update banner — prod only (the dev SW regenerates constantly). */}
+      {import.meta.env.PROD && <UpdatePrompt />}
     </div>
   );
 }

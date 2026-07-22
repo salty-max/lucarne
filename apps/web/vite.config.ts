@@ -2,17 +2,28 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
-export default defineConfig(({ command }) => ({
+// App version (semver), injected at build time so the About dialog can show it.
+// package.json is the single source of truth — bump it to cut a release.
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
+  version: string;
+};
+
+export default defineConfig(() => ({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      // Build: autoUpdate (a new deploy's SW reloads clients). Dev: "prompt" so
-      // the dev SW registers (installable, HMR still works) WITHOUT auto-reloading
-      // on every regeneration — that was the reload loop.
-      registerType: command === "build" ? "autoUpdate" : "prompt",
+      // "prompt": a new deploy's SW waits and the app shows an "update available"
+      // banner (UpdatePrompt) instead of silently reloading — the user taps to
+      // reload. Fixes an installed PWA getting stuck on a stale build.
+      registerType: "prompt",
       includeAssets: ["icon.svg", "favicon-32.png", "apple-touch-icon.png"],
       manifest: {
         name: "Lucarne",

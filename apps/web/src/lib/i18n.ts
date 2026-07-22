@@ -107,6 +107,10 @@ const en = {
     close: "Close",
     open: "About & support",
   },
+  update: {
+    available: "New version available",
+    reload: "Reload",
+  },
   watch: {
     watch: "Watch",
     watching: "Watching",
@@ -356,6 +360,10 @@ const fr: Messages = {
     contribute: "Voir le code sur GitHub",
     close: "Fermer",
     open: "À propos & soutien",
+  },
+  update: {
+    available: "Nouvelle version disponible",
+    reload: "Recharger",
   },
   watch: {
     watch: "Surveiller",
