@@ -32,6 +32,13 @@ export const COMPETITIONS: CompetitionSeed[] = [
   // per-competition "current season" lookup exists. No French broadcaster holds
   // the rights, so fixtures show with no channel; that is expected, not a gap.
   { slug: "j1-league", name: "J1 League", apiFootballId: 98, country: "Japan", type: "league", season: 2027 },
+  // J3 also moved to autumn–spring, but API-Football labels ITS 2026-27 season
+  // **2026** (not 2027 like J1 — the labelling is inconsistent across the tiers),
+  // 380 fixtures from 2026-08-08. Same manual-bump caveat as J1; no French
+  // broadcaster either. J2 (id 99) is deliberately NOT here yet: API-Football
+  // still only has its finished 2025 calendar-year season — 0 fixtures for
+  // 2026/2027 — so there is nothing to show. Add it once they publish it.
+  { slug: "j3-league", name: "J3 League", apiFootballId: 100, country: "Japan", type: "league", season: 2026 },
 ];
 
 /** Read lazily (not at module eval) so it works on Workers where env is

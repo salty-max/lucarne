@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { initLocalDb } from "@/db/local";
-import { competitions, matches } from "@/db/schema";
+import { matches } from "@/db/schema";
 import { runSeed } from "@/db/seed-data";
 import { runFullResync } from "@/lib/poller";
 
@@ -9,29 +9,27 @@ import { runFullResync } from "@/lib/poller";
 // (`db:migrate && db:bootstrap && start`). Runs IN-PROCESS — no HTTP round-trip,
 // no CRON_SECRET — since it already has the DB handle and the API key.
 //
-// Idempotent + guarded so a restart or redeploy re-runs nothing and re-spends no
-// budget: seed only when there is no reference data, resync only when there are
-// no fixtures yet. The resync is best-effort — the daily cron + catch-up heal it
+// Seed runs on EVERY boot (idempotent upserts, local, no API cost) so a code
+// change to the reference data — a new competition, a broadcast rule — applies on
+// the next deploy without a manual step. Resync is guarded on an empty calendar
+// because it costs API budget; a new competition's fixtures are then pulled by the
+// weekly resync (or a manual one). Resync is best-effort — the daily cron heals it
 // if API-Football hiccups — so a failure never stops the server from starting.
 
 initLocalDb();
 
-async function rowCount(table: typeof competitions | typeof matches): Promise<number> {
-  const rows = await db.select({ n: sql<number>`count(*)` }).from(table);
+async function matchCount(): Promise<number> {
+  const rows = await db.select({ n: sql<number>`count(*)` }).from(matches);
   return Number(rows[0]?.n ?? 0);
 }
 
 try {
-  if ((await rowCount(competitions)) === 0) {
-    const r = await runSeed(db);
-    console.log(
-      `bootstrap: seeded ${r.competitions} competitions, ${r.broadcasters} broadcasters, ${r.rules} rules`,
-    );
-  } else {
-    console.log("bootstrap: reference data already present — skipping seed");
-  }
+  const r = await runSeed(db);
+  console.log(
+    `bootstrap: seeded ${r.competitions} competitions, ${r.broadcasters} broadcasters, ${r.rules} rules`,
+  );
 
-  if ((await rowCount(matches)) === 0) {
+  if ((await matchCount()) === 0) {
     console.log("bootstrap: empty calendar — running full-season resync…");
     try {
       const r = await runFullResync();
