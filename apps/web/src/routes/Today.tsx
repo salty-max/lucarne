@@ -75,7 +75,7 @@ export default function Today() {
     <>
       <TeletextHero />
       {!hasToday && <EmptyState title={t.today.noMatchesTitle}>{t.today.noMatchesBody}</EmptyState>}
-      <MatchTable groups={groups} />
+      <MatchTable groups={groups} groupByCompetition />
     </>
   );
 }

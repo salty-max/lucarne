@@ -448,6 +448,20 @@
   background: hsl(var(--tt-magenta));
   color: hsl(var(--tt-magenta-on));
 }
+/* Subordinate header — a competition label under a status bar (Direct page).
+   No fill, just muted uppercase text with a hairline rule, so it reads as a
+   sub-section, not a peer of the coloured status bars. */
+.tt-subbar {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  padding: 1px 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
 
 /* Solid colour block tag (broadcasters, statuses). */
 .tt-tag {
