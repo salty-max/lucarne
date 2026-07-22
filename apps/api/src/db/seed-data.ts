@@ -9,6 +9,7 @@ const BROADCASTERS = [
   { slug: "canal-plus", name: "CANAL+", color: "#4F46E5" },
   { slug: "bein-sports", name: "beIN SPORTS", color: "#DB2777" },
   { slug: "m6", name: "M6", color: "#14B8A6" },
+  { slug: "youtube", name: "YouTube", color: "#FF0000" },
 ];
 
 // Default validity spans the 2025-26 and 2026-27 club seasons; rules can
@@ -40,6 +41,10 @@ const RULES: {
   // World Cup 2026: M6 free-to-air (France, semis, final) + beIN Sports (all 104).
   { comp: "world-cup", broadcaster: "m6", coverage: "partial", note: "Free-to-air — France, semis & final", from: "2026-06-11", to: "2026-07-19" },
   { comp: "world-cup", broadcaster: "bein-sports", coverage: "full", note: "All 104 matches", from: "2026-06-11", to: "2026-07-19" },
+  // J1: no traditional French rights holder, so J.League International streams it
+  // free on YouTube (up to 4 matches/week, geo-open where there's no broadcaster).
+  // J2/J3 are NOT on that channel (J1-only) — left without a broadcaster.
+  { comp: "j1-league", broadcaster: "youtube", coverage: "partial", note: "J.League International — free, up to 4 matches/week" },
 ];
 
 export type SeedResult = { broadcasters: number; competitions: number; rules: number };

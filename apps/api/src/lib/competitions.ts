@@ -29,8 +29,8 @@ export const COMPETITIONS: CompetitionSeed[] = [
   // such season (2026-08 → 2027-06) is labelled 2027 in API-Football and is the
   // one marked current, so it needs the override — the default 2026 points at the
   // transitional half-season that ended in June 2026. Bump this each year until a
-  // per-competition "current season" lookup exists. No French broadcaster holds
-  // the rights, so fixtures show with no channel; that is expected, not a gap.
+  // per-competition "current season" lookup exists. No traditional French rights
+  // holder, so it streams free on YouTube (J.League International) — see seed-data.
   { slug: "j1-league", name: "J1 League", apiFootballId: 98, country: "Japan", type: "league", season: 2027 },
   // J3 also moved to autumn–spring, but API-Football labels ITS 2026-27 season
   // **2026** (not 2027 like J1 — the labelling is inconsistent across the tiers),
