@@ -21,13 +21,69 @@ API-Football Pro, que tu as déjà).
 > (depuis `apps/api/.env.local`) — personne d'autre n'y touche. Le `DATABASE_URL`
 > est fourni par l'addon (pas un secret à inventer).
 
-> ⚠️ Le free-tier Northflank est estampillé « sandbox / non-prod ». C'est un
-> risque de dépréciation (cf. Koyeb). Garde des **sauvegardes** de la base
-> (`scripts/backup.sh` vers R2) pour pouvoir repartir ailleurs sans rien perdre.
+> ⚠️ Le free-tier Northflank est estampillé « sandbox / non-prod » et **demande
+> une carte bancaire** à l'activation (ce n'est pas un tier sans engagement).
+> C'est aussi un risque de dépréciation (cf. Koyeb) : garde des **sauvegardes**
+> de la base (`scripts/backup.sh` vers R2) pour pouvoir repartir ailleurs.
 
 ---
 
-## Une seule fois : le setup
+## Option 1 (recommandée) : MEP en Infrastructure-as-Code
+
+Tout le stack — projet + addon Postgres + service — est décrit dans
+[`northflank.template.json`](northflank.template.json) : **un seul apply**,
+reproductible et versionné. Les secrets ne sont **pas** dans le fichier (ils
+passent en `arguments` au moment du run).
+
+```bash
+# 1. CLI + connexion (token : dashboard → Account → API tokens)
+npm i -g @northflank/cli
+northflank login -t <API_TOKEN>
+
+# 2. Pré-vol : confirme contre TON compte les 3 champs qui varient, et corrige
+#    le template si besoin (voir « À confirmer » plus bas) :
+northflank get addon-types        # slug Postgres exact ("postgresql") + versions
+northflank list plans             # ids de plan (nf-compute-20, buildPlan…)
+
+# 3. Applique le template (renseigne les secrets en arguments au run)
+northflank run template -f ./northflank.template.json
+#   → API_FOOTBALL_KEY, VAPID_*, CRON_SECRET : saisis-les ici, pas dans le fichier.
+```
+
+Ce que le template câble tout seul :
+- **`DATABASE_URL`** : le `SecretGroup` aliase le `POSTGRES_URI` de l'addon →
+  `DATABASE_URL` (via `addonDependencies`). Aucun copier-coller.
+- **Port** : `internalPort: 3000` (Northflank **n'injecte pas** `PORT`, donc le
+  serveur retombe sur 3000) exposé en HTTPS public → URL `…code.run`.
+- **CI** : `disabledCI: false` → chaque push sur `main` rebuild + redeploy.
+- **Migrations** : appliquées au boot par le `CMD` de l'image.
+
+Ensuite → **amorce les données** (section « Amorcer les données » plus bas).
+
+### À confirmer au 1er apply (sinon l'apply peut échouer)
+- **Slug + version de l'addon** : `"postgresql"` / `"latest"` — vérifie via
+  `northflank get addon-types` (certains comptes veulent `"postgres"` ou une
+  version épinglée type `"16-latest"`).
+- **Ids de plan** : `nf-compute-20` (0.2 vCPU / 512 Mo, un cran au-dessus du plus
+  petit pour laisser respirer Bun + migrations + cron) et `buildPlan` — confirme
+  via `northflank list plans`.
+- **TLS interne** : le template met `tlsEnabled: false` (base **interne** au
+  projet, réseau privé) pour un `DATABASE_URL` sans histoire de `sslmode`. Si tu
+  préfères TLS, passe-le à `true` et ajoute `?sslmode=require` à l'alias.
+- **Healthcheck** : volontairement **absent** du template (le schéma exact du
+  bloc `healthChecks` casse l'apply s'il est mal niché) — ajoute-le ensuite dans
+  l'UI (service → Health, sonde HTTP `GET /`, de préférence en *startup probe*
+  car les migrations au boot peuvent dépasser 30 s).
+
+Le reste de ce guide (**Option 2**) fait exactement la même chose **à la main
+dans le dashboard** — utile pour comprendre, ou si tu ne veux pas de CLI.
+
+---
+
+## Option 2 : à la main dans le dashboard
+
+Le même résultat, cliqué à la main — utile pour comprendre ce que fait le
+template, ou si tu ne veux pas de CLI.
 
 ### 0. Prérequis
 

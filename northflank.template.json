@@ -1,0 +1,125 @@
+{
+  "apiVersion": "v1.2",
+  "name": "lucarne",
+  "description": "Lucarne monolith (Bun/Hono: SPA + API + in-process cron) + Postgres addon",
+  "options": { "autorun": false, "concurrencyPolicy": "allow", "runOnUpdate": false },
+  "arguments": {
+    "API_FOOTBALL_KEY": "",
+    "VAPID_PUBLIC_KEY": "",
+    "VAPID_PRIVATE_KEY": "",
+    "VAPID_SUBJECT": "mailto:you@example.com",
+    "CRON_SECRET": "",
+    "CURRENT_SEASON": "2026",
+    "LOG_FORMAT": "json"
+  },
+  "spec": {
+    "kind": "Workflow",
+    "spec": {
+      "type": "sequential",
+      "steps": [
+        {
+          "kind": "Project",
+          "ref": "project",
+          "spec": {
+            "name": "Lucarne",
+            "region": "europe-west",
+            "networking": { "allowedIngressProjects": [] }
+          }
+        },
+        {
+          "kind": "Workflow",
+          "spec": {
+            "type": "sequential",
+            "context": { "projectId": "${refs.project.id}" },
+            "steps": [
+              {
+                "kind": "Addon",
+                "ref": "database",
+                "spec": {
+                  "name": "lucarne-db",
+                  "type": "postgresql",
+                  "version": "latest",
+                  "externalAccessEnabled": false,
+                  "tlsEnabled": false,
+                  "billing": {
+                    "replicas": 1,
+                    "storage": 4096,
+                    "deploymentPlan": "nf-compute-20"
+                  }
+                }
+              },
+              {
+                "kind": "CombinedService",
+                "ref": "app",
+                "spec": {
+                  "name": "lucarne",
+                  "billing": {
+                    "deploymentPlan": "nf-compute-20",
+                    "buildPlan": "nf-compute-400-16"
+                  },
+                  "vcsData": {
+                    "projectType": "github",
+                    "projectUrl": "https://github.com/salty-max/lucarne",
+                    "projectBranch": "main"
+                  },
+                  "buildSettings": {
+                    "dockerfile": {
+                      "buildEngine": "kaniko",
+                      "useCache": true,
+                      "dockerWorkDir": "/",
+                      "dockerFilePath": "/Dockerfile"
+                    }
+                  },
+                  "disabledCI": false,
+                  "deployment": { "instances": 1 },
+                  "ports": [
+                    {
+                      "name": "p01",
+                      "internalPort": 3000,
+                      "protocol": "HTTP",
+                      "public": true,
+                      "domains": [],
+                      "disableNfDomain": false
+                    }
+                  ],
+                  "runtimeEnvironment": {
+                    "VAPID_PUBLIC_KEY": "${args.VAPID_PUBLIC_KEY}",
+                    "VAPID_SUBJECT": "${args.VAPID_SUBJECT}",
+                    "CURRENT_SEASON": "${args.CURRENT_SEASON}",
+                    "LOG_FORMAT": "${args.LOG_FORMAT}"
+                  }
+                }
+              },
+              {
+                "kind": "SecretGroup",
+                "ref": "secrets",
+                "spec": {
+                  "name": "lucarne-secrets",
+                  "type": "secret",
+                  "secretType": "environment",
+                  "priority": 10,
+                  "secrets": {
+                    "variables": {
+                      "API_FOOTBALL_KEY": "${args.API_FOOTBALL_KEY}",
+                      "VAPID_PRIVATE_KEY": "${args.VAPID_PRIVATE_KEY}",
+                      "CRON_SECRET": "${args.CRON_SECRET}"
+                    }
+                  },
+                  "addonDependencies": [
+                    {
+                      "addonId": "${refs.database.id}",
+                      "keys": [
+                        { "keyName": "POSTGRES_URI", "aliases": ["DATABASE_URL"] }
+                      ]
+                    }
+                  ],
+                  "restrictions": { "restricted": false, "nfObjects": [], "tags": [] }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
