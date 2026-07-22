@@ -47,6 +47,7 @@ const COUNTRY_FR: Record<string, string> = {
   Spain: "Espagne",
   Germany: "Allemagne",
   Italy: "Italie",
+  Japan: "Japon",
   Europe: "Europe",
   World: "Monde",
 };

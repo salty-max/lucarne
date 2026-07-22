@@ -115,6 +115,7 @@ var countryFR = map[string]string{
 	"Spain":   "Espagne",
 	"Germany": "Allemagne",
 	"Italy":   "Italie",
+	"Japan":   "Japon",
 	"Europe":  "Europe",
 	"World":   "Monde",
 }
