@@ -1,6 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <pattern id="scan" width="512" height="6" patternUnits="userSpaceOnUse">
+      <rect y="4" width="512" height="2" fill="#000"/>
+    </pattern>
+  </defs>
   <rect width="512" height="512" fill="#05080f"/>
   <rect x="152" y="136" width="64" height="224" fill="#14ffff"/>
   <rect x="152" y="296" width="176" height="64" fill="#14ffff"/>
-  <circle cx="372" cy="330" r="30" fill="#ff5cce"/>
+  <rect x="342" y="296" width="64" height="64" fill="#14ff14"/>
+  <!-- CRT scanlines over the mark -->
+  <rect width="512" height="512" fill="url(#scan)" opacity="0.22"/>
 </svg>

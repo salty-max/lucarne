@@ -36,6 +36,13 @@
       html {
         background: #05080f;
       }
+      /* The teletext face, inlined here so the splash wordmark renders in it
+         before the app's CSS loads (same file the app's font pref uses). */
+      @font-face {
+        font-family: "Teletext50";
+        src: url("/fonts/teletext50-condensed.woff2") format("woff2");
+        font-display: block;
+      }
       #splash {
         position: fixed;
         inset: 0;
@@ -43,6 +50,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        overflow: hidden;
         background: #05080f;
         transition: opacity 0.35s ease;
       }
@@ -50,10 +58,50 @@
         opacity: 0;
         pointer-events: none;
       }
+      .splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+        animation: splashPulse 1.6s ease-in-out infinite;
+      }
       #splash svg {
         width: 84px;
         height: 84px;
-        animation: splashPulse 1.4s ease-in-out infinite;
+        filter: drop-shadow(0 0 7px rgba(20, 255, 255, 0.55));
+      }
+      .splash-word {
+        font-family: "Teletext50", "Cascadia Mono", monospace;
+        font-size: 32px;
+        letter-spacing: 0.5em;
+        text-indent: 0.5em;
+        color: #14ffff;
+        text-shadow: 0 0 8px rgba(20, 255, 255, 0.6);
+      }
+      /* CRT: scanlines over everything, plus a soft vignette. */
+      #splash::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0) 0,
+          rgba(0, 0, 0, 0) 2px,
+          rgba(0, 0, 0, 0.3) 2px,
+          rgba(0, 0, 0, 0.3) 3px
+        );
+      }
+      #splash::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0) 55%,
+          rgba(0, 0, 0, 0.55) 100%
+        );
       }
       @keyframes splashPulse {
         0%,
@@ -61,11 +109,11 @@
           opacity: 1;
         }
         50% {
-          opacity: 0.4;
+          opacity: 0.55;
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        #splash svg {
+        .splash-inner {
           animation: none;
         }
       }
@@ -97,11 +145,14 @@
   </head>
   <body>
     <div id="splash" aria-hidden="true">
-      <svg viewBox="127 98 300 300" xmlns="http://www.w3.org/2000/svg">
-        <rect x="152" y="136" width="64" height="224" fill="#14ffff" />
-        <rect x="152" y="296" width="176" height="64" fill="#14ffff" />
-        <circle cx="372" cy="330" r="30" fill="#ff5cce" />
-      </svg>
+      <div class="splash-inner">
+        <svg viewBox="127 98 300 300" xmlns="http://www.w3.org/2000/svg">
+          <rect x="152" y="136" width="64" height="224" fill="#14ffff" />
+          <rect x="152" y="296" width="176" height="64" fill="#14ffff" />
+          <rect x="342" y="296" width="64" height="64" fill="#14ff14" />
+        </svg>
+        <div class="splash-word">LUCARNE</div>
+      </div>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
