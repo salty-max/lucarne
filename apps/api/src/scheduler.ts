@@ -32,12 +32,17 @@ const CATCH_UP = standardCatchUp({
   resync: () => runFullResync(memoryCache),
 });
 
+// Everything is Paris-local. node-cron resolves the offset itself (it does not
+// read the container's tzdata), so the dated jobs fire at the intended local
+// hour even though the prod container runs in UTC.
+const TZ = { timezone: "Europe/Paris" } as const;
+
 export function startScheduler(): void {
-  cron.schedule("0 5 * * *", () => runJob("sync", () => runFixtureSync(memoryCache)));
+  cron.schedule("0 5 * * *", () => runJob("sync", () => runFixtureSync(memoryCache)), TZ);
 
   // Weekly full-season re-sync (~10 requests) — catches fixtures scheduled after
   // a draw across the whole calendar, not just the daily rolling window.
-  cron.schedule("0 6 * * 1", () => runJob("resync", () => runFullResync(memoryCache)));
+  cron.schedule("0 6 * * 1", () => runJob("resync", () => runFullResync(memoryCache)), TZ);
 
   // Live cadence, every minute: scores, imminent lineups, eager post-match drain.
   // Sequential (not parallel) so the three don't race on the shared budget
@@ -53,11 +58,11 @@ export function startScheduler(): void {
     await runJob("unwatch", () => cleanupWatched(), (r) => r > 0);
     // …and heal any daily/weekly slot the machine slept through (see runCatchUp).
     await runJob("catchup", () => runCatchUp(CATCH_UP), (r) => r.length > 0);
-  });
+  }, TZ);
 
   // Nightly deep drain — backstop that also stamps matches the API never enriches
   // (so the eager drain stops chasing them), on a fresh budget bucket.
-  cron.schedule("0 2,4 * * *", () => runJob("details", () => runDetailsDrain(40)));
+  cron.schedule("0 2,4 * * *", () => runJob("details", () => runDetailsDrain(40)), TZ);
 
   log.info("scheduler.started", {
     fixtures: "05:00",
