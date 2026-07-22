@@ -157,9 +157,11 @@ resync seulement s'il n'y a pas de fixtures), donc un redémarrage ne re-seede r
 et ne re-dépense pas de budget. Un resync raté (API qui hoquette) ne bloque pas le
 démarrage — le cron quotidien rattrape.
 
-**Optionnel — rapatrier l'historique des détails d'un coup** (buteurs, compos,
-stats, notes des matchs déjà joués). Le `bootstrap` ne le fait pas (trop long au
-boot) ; le cron le remplit au fil de l'eau, ou tu forces tout via un script qui
+**Recommandé une fois après le 1er déploiement — rapatrier l'historique des
+détails** (buteurs, compos, stats, notes des matchs **déjà joués** : Coupe du
+Monde, J1 League à mi-saison, barrages UEFA…). Le `bootstrap` ne le fait pas
+(trop long au boot), et le drain nocturne ne rattrape que **les ~3 derniers
+jours** — donc les matchs plus anciens ont besoin de cette passe unique, qui
 **boucle le backfill** jusqu'à épuisement :
 
 ```bash
@@ -168,7 +170,8 @@ scripts/seed-prod.sh "https://<ton-service>.northflank.app" "<ton CRON_SECRET>"
 ```
 
 Il rejoue seed → resync (idempotents) → puis `backfill-details` en boucle tant que
-`matches > 0`. Un `401` = mauvais `CRON_SECRET`.
+`matches > 0`. Ensuite, en régime normal, l'eager + le drain nocturne suffisent.
+Un `401` = mauvais `CRON_SECRET`.
 
 <details><summary>…ou à la main (les mêmes appels)</summary>
 

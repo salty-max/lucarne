@@ -350,12 +350,13 @@ export async function runDetailsDrain(
   return { matches: count, events, lineups, stats, ratings, maxAttempts, budgetRemaining: budgetRemaining(next) };
 }
 
-/** Eager retry budget: with a 1/min cadence this is ~45 min of post-full-time
- *  coverage — enough for stats/ratings that settle late — after which the eager
- *  pass stamps-empty and gives up. Bounds waste to ≈this many requests per
- *  never-published endpoint per match, instead of chasing it for the whole
- *  window (a match in a stats-less competition used to burn hundreds). */
-const EAGER_ATTEMPT_CAP = 45;
+/** Eager retry budget: with a 1/min cadence this is ~20 min of post-full-time
+ *  coverage — late stats/ratings almost always settle within that — after which
+ *  the eager pass stamps-empty and gives up. Bounds waste to ≈this many requests
+ *  per never-published endpoint per match, instead of chasing it for the whole
+ *  window (a match in a stats-less competition used to burn hundreds); the
+ *  nightly drain is the backstop for anything that surfaces later. */
+const EAGER_ATTEMPT_CAP = 20;
 
 /**
  * Eager post-match drain, folded into the live cadence (every minute). Chases
