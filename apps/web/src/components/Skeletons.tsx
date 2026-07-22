@@ -133,14 +133,16 @@ export function MatchDetailSkel() {
 export function CalendarSkel() {
   return (
     <Wrap>
+      {/* Match the real day selector's height (3 lines: weekday / date / count,
+          ≈66px) and arrow width (w-7) so the page doesn't jump when it loads. */}
       <div className="mb-2 flex items-stretch gap-1">
-        <Skel className="h-12 w-6 shrink-0" />
+        <Skel className="h-16 w-7 shrink-0" />
         <div className="grid flex-1 grid-cols-7 gap-1">
           {Array.from({ length: 7 }).map((_, i) => (
-            <Skel key={i} className="h-12" />
+            <Skel key={i} className="h-16" />
           ))}
         </div>
-        <Skel className="h-12 w-6 shrink-0" />
+        <Skel className="h-16 w-7 shrink-0" />
       </div>
       <div className="mb-3 flex flex-wrap gap-1">
         {Array.from({ length: 5 }).map((_, i) => (
