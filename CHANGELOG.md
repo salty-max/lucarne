@@ -4,6 +4,14 @@ Notable changes to Lucarne. Versioning follows [Semantic Versioning](https://sem
 the version shown in the app's **About** dialog comes from `apps/web/package.json`.
 Dates are Europe/Paris.
 
+## [0.2.2] — 2026-07-23
+
+### Fixed
+
+- "My teams" search now finds teams from a newly added competition (e.g. the J3
+  League) without reinstalling the PWA. The team list was cached hard for 30 min;
+  it now uses the default staleTime + refetch-on-focus, like the competition list.
+
 ## [0.2.1] — 2026-07-23
 
 ### Fixed

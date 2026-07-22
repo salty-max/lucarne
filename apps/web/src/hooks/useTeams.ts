@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchTeams } from "@/api";
 
-/** Fetch the full team list once (cached hard), for the "My teams" follow picker. */
+/** The team list for the "My teams" follow picker. Uses the default 60s staleTime
+ *  + refetch-on-focus (not a hard 30-min cache), so a newly added competition's
+ *  teams — e.g. the J3 League — show up in search without reinstalling the PWA. */
 export function useTeams() {
   const q = useQuery({
     queryKey: ["teams"],
     queryFn: fetchTeams,
-    staleTime: 30 * 60_000,
   });
   return { teams: q.data ?? null, error: q.isError };
 }
