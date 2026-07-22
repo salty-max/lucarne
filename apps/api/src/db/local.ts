@@ -16,7 +16,7 @@ export function databaseUrl(): string {
  *  client so scripts/tests can close it (`await sql.end()`) and let the process
  *  exit — postgres.js holds the pool open otherwise. */
 export function initLocalDb(url = databaseUrl()): ReturnType<typeof postgres> {
-  const sql = postgres(url);
+  const sql = postgres(url, { onnotice: () => {} }); // quiet the idempotent NOTICEs
   setDb(drizzle(sql, { schema }) as unknown as DB);
   return sql;
 }

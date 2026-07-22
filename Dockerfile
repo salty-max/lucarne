@@ -31,5 +31,6 @@ WORKDIR /app/apps/api
 EXPOSE 3000
 # Apply migrations, seed a fresh DB (idempotent + guarded — see db/bootstrap.ts),
 # then start. All three are safe on a restart: migrate and seed no-op when already
-# applied, so only the first boot pays for them.
-CMD ["sh", "-c", "bun run db:migrate && bun run db:bootstrap && bun run start"]
+# applied, so only the first boot pays for them. Files are invoked directly (not
+# `bun run <script>`) so bun doesn't echo the `$ bun …` command line to stderr.
+CMD ["sh", "-c", "bun src/db/migrate.ts && bun src/db/bootstrap.ts && bun src/server.ts"]
