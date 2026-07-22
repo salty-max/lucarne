@@ -200,6 +200,7 @@ export type DrainResult = {
   lineups: number; // lineup rows stored this run
   stats: number; // matches with statistics stored this run
   ratings: number; // matches with player ratings stored this run
+  maxAttempts: number; // deepest eager retry count among touched matches (0 = nightly / none)
   budgetRemaining: number;
 };
 
@@ -239,7 +240,7 @@ export async function runDetailsDrain(
   // `reserve` keeps the day-time eager drain off the budget floor reserved for
   // live scores; the nightly drain passes 0 (it may use the whole fresh bucket).
   if (remaining <= reserve)
-    return { matches: 0, events: 0, lineups: 0, stats: 0, ratings: 0, budgetRemaining: remaining };
+    return { matches: 0, events: 0, lineups: 0, stats: 0, ratings: 0, maxAttempts: 0, budgetRemaining: remaining };
 
   const cutoff = sinceMs == null ? null : new Date(nowMs - sinceMs);
   const home = alias(teams, "home");
@@ -283,6 +284,7 @@ export async function runDetailsDrain(
   let ratings = 0;
   let requests = 0;
   let count = 0;
+  let maxAttempts = 0;
   for (const m of candidates) {
     if (remaining <= reserve) break;
     let touched = false;
@@ -334,6 +336,7 @@ export async function runDetailsDrain(
       count += 1;
       // Count this eager attempt so the cap above can eventually give up.
       if (attemptCap != null) {
+        maxAttempts = Math.max(maxAttempts, m.attempts + 1);
         await db
           .update(matches)
           .set({ drainAttempts: m.attempts + 1 })
@@ -344,7 +347,7 @@ export async function runDetailsDrain(
 
   const next = { ...state, requestsToday: state.requestsToday + requests };
   await saveBudget(next);
-  return { matches: count, events, lineups, stats, ratings, budgetRemaining: budgetRemaining(next) };
+  return { matches: count, events, lineups, stats, ratings, maxAttempts, budgetRemaining: budgetRemaining(next) };
 }
 
 /** Eager retry budget: with a 1/min cadence this is ~45 min of post-full-time
