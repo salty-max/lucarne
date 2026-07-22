@@ -10,6 +10,7 @@
     "test:coverage": "bun test --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
+    "db:bootstrap": "bun run src/db/bootstrap.ts",
     "db:seed": "bun run src/db/seed.ts",
     "db:backfill-details": "bun run src/db/backfill-details.ts",
     "db:backfill-extras": "bun run src/db/backfill-extras.ts",

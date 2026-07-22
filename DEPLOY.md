@@ -148,21 +148,29 @@ du trafic (c'est idempotent, un redémarrage est sans risque).
 
 ### 6. Amorcer les données
 
-Deux options — choisis-en **une**.
+**En fait, il n'y a rien à faire.** Le conteneur s'auto-amorce au **premier
+boot** : le `CMD` enchaîne `db:migrate && db:bootstrap && start`, et
+[`db:bootstrap`](apps/api/src/db/bootstrap.ts) — en process, sans HTTP ni
+`CRON_SECRET` — **seed** les données de référence puis **resync** le calendrier
+complet. C'est **idempotent + gardé** (seed seulement s'il n'y a pas de référence,
+resync seulement s'il n'y a pas de fixtures), donc un redémarrage ne re-seede rien
+et ne re-dépense pas de budget. Un resync raté (API qui hoquette) ne bloque pas le
+démarrage — le cron quotidien rattrape.
 
-**Option A — repartir de zéro (le plus simple).** Un script enchaîne tout et
-**boucle le backfill** jusqu'à épuisement du backlog :
+**Optionnel — rapatrier l'historique des détails d'un coup** (buteurs, compos,
+stats, notes des matchs déjà joués). Le `bootstrap` ne le fait pas (trop long au
+boot) ; le cron le remplit au fil de l'eau, ou tu forces tout via un script qui
+**boucle le backfill** jusqu'à épuisement :
 
 ```bash
 scripts/seed-prod.sh "https://<ton-service>.northflank.app" "<ton CRON_SECRET>"
 # ou : URL=… CRON_SECRET=… scripts/seed-prod.sh
 ```
 
-Il fait, dans l'ordre : `seed` (compétitions/diffuseurs/règles) → `resync`
-(calendrier complet) → `backfill-details` en boucle tant que `matches > 0`. Un
-`401` = mauvais `CRON_SECRET`.
+Il rejoue seed → resync (idempotents) → puis `backfill-details` en boucle tant que
+`matches > 0`. Un `401` = mauvais `CRON_SECRET`.
 
-<details><summary>…ou à la main (les 3 mêmes appels)</summary>
+<details><summary>…ou à la main (les mêmes appels)</summary>
 
 ```bash
 URL="https://<ton-service>.northflank.app"; SECRET="<ton CRON_SECRET>"

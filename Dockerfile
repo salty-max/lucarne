@@ -29,6 +29,7 @@ COPY --from=build /app/apps/web/dist ./apps/web/dist
 
 WORKDIR /app/apps/api
 EXPOSE 3000
-# Apply migrations, then start. Migrate is idempotent, so a restart is safe; a
-# fresh Postgres gets its schema before the server takes traffic.
-CMD ["sh", "-c", "bun run db:migrate && bun run start"]
+# Apply migrations, seed a fresh DB (idempotent + guarded — see db/bootstrap.ts),
+# then start. All three are safe on a restart: migrate and seed no-op when already
+# applied, so only the first boot pays for them.
+CMD ["sh", "-c", "bun run db:migrate && bun run db:bootstrap && bun run start"]
