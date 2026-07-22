@@ -420,16 +420,17 @@ export default function MatchDetail() {
         )
       )}
 
-      <section className="mt-3">
-        <SectionLabel>{t.match.whereToWatch}</SectionLabel>
-        <div className="flex flex-col">
-          {match.broadcasters.length > 0 ? (
-            match.broadcasters.map((b) => <BroadcasterRow key={b.id} b={b} />)
-          ) : (
-            <p className="py-2 italic text-muted-foreground">{t.match.broadcasterTBC}</p>
-          )}
-        </div>
-      </section>
+      {/* No broadcaster → hide the section entirely (no "TBC" placeholder). */}
+      {match.broadcasters.length > 0 && (
+        <section className="mt-3">
+          <SectionLabel>{t.match.whereToWatch}</SectionLabel>
+          <div className="flex flex-col">
+            {match.broadcasters.map((b) => (
+              <BroadcasterRow key={b.id} b={b} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-3">
         <SectionLabel>{t.match.info}</SectionLabel>

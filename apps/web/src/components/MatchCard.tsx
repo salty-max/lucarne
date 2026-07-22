@@ -126,7 +126,8 @@ export function MatchCard({
         </span>
       </td>
       <td className="py-2.5 pl-3 text-right align-middle sm:py-1.5">
-        {hideBroadcasters ? null : m.broadcasters.length > 0 ? (
+        {/* No broadcaster → show nothing (not a "TBC" placeholder). */}
+        {hideBroadcasters || m.broadcasters.length === 0 ? null : (
           // Wrap to a second line (right-aligned) when the row is too tight for
           // all broadcasters — stays one line whenever there's room (desktop).
           <span className="flex flex-wrap items-center justify-end gap-1">
@@ -136,8 +137,6 @@ export function MatchCard({
               </Tag>
             ))}
           </span>
-        ) : (
-          <span className="italic text-muted-foreground">{t.card.tbc}</span>
         )}
       </td>
     </tr>
