@@ -1,117 +1,110 @@
 # Mise en prod — Lucarne
 
-Guide pas-à-pas, sans prérequis dev-ops. Tout tourne sur **Cloudflare** (un seul
-compte, un seul outil) et **rentre dans le free-tier** — coût : **0 €** (le seul
-abonnement payant, c'est API-Football Pro, que tu as déjà).
+Guide pas-à-pas, sans prérequis dev-ops. Lucarne se déploie comme **une seule
+image Docker** (le serveur Hono sert la SPA + l'API + le cron sur un port) sur
+**Northflank**, en free-tier — coût : **0 €** (le seul abonnement payant, c'est
+API-Football Pro, que tu as déjà).
 
-- **Temps** : ~20 min la première fois, ~30 s les fois suivantes (`bun run deploy`).
-- **Ce qu'on déploie** : le Worker (API + crons) + la base D1 + le SPA React, servis
-  depuis le edge Cloudflare.
-- Toutes les commandes `wrangler` se lancent **depuis `apps/api/`** (là où vit
-  `wrangler.jsonc`). Le `bun run deploy` final se lance **depuis la racine**.
+- **Ce qu'on déploie** : 1 **service** Northflank (l'image du `Dockerfile`) +
+  1 **addon Postgres**. Ça rentre pile dans le free-tier (2 services / 1 base).
+- **Pourquoi Northflank et pas Vercel** : le cron live tourne **chaque minute,
+  24/7** dans le process Node. Vercel est serverless (cron Hobby = 1×/jour max) ;
+  il faut un compute **always-on**, ce que Northflank offre gratuitement (« no
+  sleeping »). Son Postgres est aussi always-on, donc pas de compteur d'heures.
+- **Le front n'a pas besoin de Vercel** : le serveur le sert déjà depuis
+  `apps/web/dist` (mêmes origines → les appels `/api/*` relatifs marchent tels
+  quels).
 
-> 🔑 **Sécurité** : les deux secrets (clé API-Football, token admin) se posent avec
-> `wrangler secret` et ne finissent **jamais** dans un fichier. En revanche les
-> `database_id`/`kv id` qu'on colle dans `wrangler.jsonc` ne sont **pas** des
-> secrets (juste des identifiants de ressources) — tu peux committer le fichier.
+> 🔑 **Sécurité** : les secrets (`API_FOOTBALL_KEY`, `VAPID_PRIVATE_KEY`,
+> `CRON_SECRET`) se collent dans l'UI Northflank comme **secret env vars** et ne
+> finissent **jamais** dans git ni dans l'image. C'est **toi** qui les saisis
+> (depuis `apps/api/.env.local`) — personne d'autre n'y touche. Le `DATABASE_URL`
+> est fourni par l'addon (pas un secret à inventer).
+
+> ⚠️ Le free-tier Northflank est estampillé « sandbox / non-prod ». C'est un
+> risque de dépréciation (cf. Koyeb). Garde des **sauvegardes** de la base
+> (`scripts/backup.sh` vers R2) pour pouvoir repartir ailleurs sans rien perdre.
 
 ---
 
 ## Une seule fois : le setup
 
-### 0. Compte + connexion
+### 0. Prérequis
 
-1. Crée un compte Cloudflare (gratuit) : https://dash.cloudflare.com/sign-up
-2. Connecte le CLI (ouvre le navigateur, tu cliques « Allow ») :
+- Un compte **Northflank** (gratuit) : https://northflank.com
+- Le repo **GitHub** `salty-max/lucarne` (déjà là) — Northflank build depuis lui.
+- Le `Dockerfile` à la racine (déjà là) — rien à écrire.
 
-```bash
-cd apps/api
-bunx wrangler login
-```
+### 1. Créer le projet + l'addon Postgres
 
-### 1. Créer la base de données (D1)
+1. Dans Northflank : **Create project** (choisis une région proche, ex. Europe).
+2. **Add addon → PostgreSQL** (la « 1 free database »). Laisse la version par
+   défaut. Une fois prêt, ouvre l'onglet **Connection details** : tu y trouves
+   l'URI de connexion **interne** (celle en `.internal` / réseau privé du projet).
+   Garde-la sous la main pour l'étape 3.
 
-```bash
-bunx wrangler d1 create lucarne
-```
+### 2. Générer les secrets
 
-Ça imprime un bloc avec une ligne `database_id = "xxxxxxxx-...."`.
-**Copie ce `database_id`** et colle-le dans `apps/api/wrangler.jsonc` à la place de
-`REPLACE_WITH_D1_DATABASE_ID`.
+- **CRON_SECRET** (protège les routes `/api/admin/*` et `/api/cron/*`) :
+  ```bash
+  openssl rand -hex 32
+  ```
+- **VAPID** : réutilise les 3 valeurs déjà dans `apps/api/.env.local`
+  (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`). Pas besoin d'en
+  régénérer — sinon les navigateurs déjà abonnés perdraient leurs notifications.
+- **API_FOOTBALL_KEY** : la même que dans `.env.local`.
 
-### 2. Créer le cache live (KV)
+### 3. Créer le service (build + deploy depuis le repo)
 
-```bash
-bunx wrangler kv namespace create SCHEDULE_KV
-```
+1. **Add service → Combined service** (build **et** run au même endroit).
+2. **Source** : connecte GitHub, choisis `salty-max/lucarne`, branche `main`.
+3. **Build** : type **Dockerfile**, chemin `./Dockerfile`, contexte `.` (racine).
+4. **Networking / Ports** : expose le port **3000** en HTTP (public). Northflank
+   te donnera une URL `https://<service>--<project>.<region>.northflank.app` et
+   injecte `PORT` — le serveur lit `PORT ?? 3000`, donc ça tombe juste.
+5. **Ressources** : le plus petit plan suffit largement (l'app est légère).
 
-Ça imprime un `id = "yyyyyyyy"`. Colle-le dans `wrangler.jsonc` à la place de
-`REPLACE_WITH_KV_NAMESPACE_ID`.
+### 4. Poser les variables d'environnement
 
-### 3. Créer les tables sur la base (migrations)
+Sur le service, onglet **Environment** (marque les 3 secrets comme *secret*) :
 
-```bash
-bunx wrangler d1 migrations apply lucarne --remote
-```
+| Variable | Valeur | Secret ? |
+|---|---|---|
+| `DATABASE_URL` | l'URI **interne** de l'addon (étape 1). Ajoute `?sslmode=require` si la connexion refuse en clair. | — |
+| `API_FOOTBALL_KEY` | ta clé API-Football | ✅ |
+| `VAPID_PUBLIC_KEY` | depuis `.env.local` | — |
+| `VAPID_PRIVATE_KEY` | depuis `.env.local` | ✅ |
+| `VAPID_SUBJECT` | ex. `mailto:toi@exemple.fr` | — |
+| `CRON_SECRET` | le token de l'étape 2 | ✅ |
+| `CURRENT_SEASON` | ex. `2026` | — |
+| `LOG_FORMAT` | `json` (logs structurés pour le viewer) | — |
 
-Ça liste les 7 migrations, tu confirmes avec `y`, et ça crée toutes les tables.
-(`--remote` = sur la vraie base Cloudflare ; sans, ça toucherait une base locale.)
+> Le fuseau est géré **dans le code** (node-cron reçoit `Europe/Paris`), donc pas
+> besoin de `TZ` sur le conteneur même s'il tourne en UTC.
 
-### 4. Premier déploiement
+### 5. Déployer
 
-Depuis la **racine** du repo :
+Lance le build. Au démarrage, l'image fait `db:migrate && start` : sur une base
+**vierge**, les migrations créent tout le schéma **avant** que le serveur prenne
+du trafic (c'est idempotent, un redémarrage est sans risque).
 
-```bash
-cd ..              # (retour à lucarne/ depuis apps/api)
-bun run deploy
-```
-
-`turbo` build le front **puis** déploie le Worker. À la fin, wrangler affiche
-l'URL de ton app :
-
-```
-https://lucarne.<ton-sous-domaine>.workers.dev
-```
-
-👉 **Note cette URL.** (Les crons commencent à tourner tout de suite — ils vont
-« échouer » quelques minutes avec `Missing API_FOOTBALL_KEY`, c'est **normal** :
-on pose les secrets juste après.)
-
-### 5. Poser les deux secrets
-
-Génère d'abord un token admin (garde-le, il sert à l'amorçage juste après) :
-
-```bash
-openssl rand -hex 32
-```
-
-Puis, depuis `apps/api/` :
-
-```bash
-cd apps/api
-
-bunx wrangler secret put API_FOOTBALL_KEY
-# → colle ta clé API-Football (la même que dans apps/api/.env.local)
-
-bunx wrangler secret put CRON_SECRET
-# → colle le token généré au-dessus
-```
-
-Dès que les secrets sont posés, les crons se mettent à marcher tout seuls. Plus
-besoin de redéployer.
+👉 **Note l'URL publique** du service.
 
 ### 6. Amorcer les données
 
-Remplace `URL` et `SECRET` par ton URL (étape 4) et ton token (étape 5) :
+Deux options — choisis-en **une**.
+
+**Option A — repartir de zéro (le plus simple).** Remplace `URL` et `SECRET`,
+puis, depuis ton poste :
 
 ```bash
-URL="https://lucarne.<ton-sous-domaine>.workers.dev"
+URL="https://<ton-service>.northflank.app"
 SECRET="<ton CRON_SECRET>"
 
-# a) données de référence : compétitions, diffuseurs, règles de diffusion
+# a) référence : compétitions, diffuseurs, règles de diffusion
 curl -X POST "$URL/api/admin/seed" -H "Authorization: Bearer $SECRET"
 
-# b) tout le calendrier de la saison (fixtures des 10 compétitions)
+# b) tout le calendrier de la saison (fixtures de toutes les compétitions)
 curl "$URL/api/cron/resync" -H "Authorization: Bearer $SECRET"
 
 # c) (optionnel) détails historiques : buteurs, compos, stats, notes.
@@ -119,17 +112,29 @@ curl "$URL/api/cron/resync" -H "Authorization: Bearer $SECRET"
 curl -X POST "$URL/api/admin/backfill-details" -H "Authorization: Bearer $SECRET"
 ```
 
-Une réponse `{"ok":true,...}` = c'est bon. Un `401 Unauthorized` = le `SECRET`
-ne correspond pas.
+`{"ok":true,...}` = bon ; `401 Unauthorized` = mauvais `SECRET`.
+
+**Option B — transférer ta base locale déjà enrichie.** Si tu veux garder tel
+quel ce que tu as en local (16 k+ lignes, historique compris), une fois le
+service démarré (schéma créé) :
+
+```bash
+# depuis ton poste, PG_LOCAL = ta base locale, PG_PROD = l'URI EXTERNE de l'addon
+pg_dump --data-only --no-owner "$PG_LOCAL" | psql "$PG_PROD"
+```
+
+(Data-only car le schéma est déjà créé par les migrations au boot. Si des
+insertions échouent ensuite sur des ids en doublon, c'est un décalage de
+séquences `serial` — le script `apps/api/src/db/migrate-from-sqlite.ts` montre
+comment les remettre à niveau avec `setval`.)
 
 ### 7. Vérifier
 
-- Ouvre ton `URL` dans le navigateur → l'app télétexte s'affiche, le calendrier
-  est rempli.
-- `URL/api/logs` → du JSON (l'historique des crons).
-- Dans l'app, tape `800` (ou clique **800 LOGS**) → tu vois les jobs défiler.
-- À partir de là, tout est **autonome** : les crons rafraîchissent scores, compos,
-  stats et notes sans que tu touches à rien.
+- Ouvre l'`URL` → l'app télétexte s'affiche, le calendrier est rempli.
+- `URL/api/logs` → du JSON (historique des crons).
+- Dans l'app, tape `800` (**800 LOGS**) → les jobs défilent.
+- Ensuite tout est **autonome** : le cron rafraîchit scores, compos, stats et
+  notes sans que tu touches à rien.
 
 🎉 C'est en prod.
 
@@ -137,30 +142,16 @@ ne correspond pas.
 
 ## Au quotidien
 
-- **Redéployer après une modif de code** (depuis la racine) :
-  ```bash
-  bun run deploy
-  ```
-  (rebuild le front + redéploie le Worker en une commande.)
-
-- **Nouvelle migration de base** (si tu as changé le schéma) : lance-la **avant**
-  le deploy, depuis `apps/api/` :
-  ```bash
-  bunx wrangler d1 migrations apply lucarne --remote
-  ```
-
-- **Voir les logs en direct** (les crons en JSON, depuis `apps/api/`) :
-  ```bash
-  bunx wrangler tail
-  ```
-
-- **Changement de saison** (ex. reprise des championnats en août) : passe
-  `CURRENT_SEASON` de `"2025"` à `"2026"` dans `wrangler.jsonc`, puis
-  `bun run deploy`.
-
-- **Passer les logs en debug le temps d'une enquête** : ajoute
-  `"LOG_LEVEL": "debug"` dans le bloc `vars` de `wrangler.jsonc`, redéploie,
-  puis remets-le à `"info"` (ou enlève-le) ensuite.
+- **Redéployer après une modif** : `git push` sur `main` → Northflank rebuild +
+  redeploy tout seul (si l'auto-deploy est activé sur le service).
+- **Nouvelle migration de base** : rien à faire — elle s'applique au boot
+  (`db:migrate`) au prochain déploiement.
+- **Voir les logs** : onglet **Logs** du service dans Northflank (format JSON).
+  Pour enquêter, ajoute `LOG_LEVEL=debug` en env var, redéploie, puis retire-le.
+- **Changement de saison** (reprise des championnats) : passe `CURRENT_SEASON`
+  à l'année suivante et redéploie.
+- **Sauvegarde de la base** : `scripts/backup.sh` (dump → R2) ; à planifier ou
+  lancer avant toute opération risquée.
 
 ---
 
@@ -168,20 +159,21 @@ ne correspond pas.
 
 | Symptôme | Cause probable | Fix |
 |---|---|---|
-| Logs : `Missing API_FOOTBALL_KEY` | secret pas (ou mal) posé | re-lance `bunx wrangler secret put API_FOOTBALL_KEY` depuis `apps/api/` |
-| `curl` renvoie `401 Unauthorized` | mauvais `CRON_SECRET` dans la commande | vérifie que `$SECRET` = le token posé à l'étape 5 |
+| Logs : `Missing API_FOOTBALL_KEY` | env var pas (ou mal) posée | recolle `API_FOOTBALL_KEY` dans l'onglet Environment, redéploie |
+| Boot échoue sur `db not initialized` / connexion refusée | `DATABASE_URL` faux ou TLS requis | vérifie l'URI interne de l'addon ; ajoute `?sslmode=require` |
+| `curl` renvoie `401 Unauthorized` | mauvais `CRON_SECRET` | vérifie que `$SECRET` = le token posé à l'étape 4 |
 | Calendrier vide dans l'app | l'amorçage n'a pas tourné | relance l'étape 6 (a puis b) |
-| `deploy` échoue sur les bindings D1/KV | `database_id`/`kv id` encore en `REPLACE_...` | recopie les vrais ids dans `wrangler.jsonc` (étapes 1–2) |
-| Les crons ne semblent rien faire | rien n'est « live » à cet instant | normal — les ticks sans match sont des no-op ; regarde la P800 pendant un match |
+| Jobs datés à la mauvaise heure | (ne devrait plus arriver) le cron force `Europe/Paris` | vérifie que le déploiement est à jour |
+| Le cron « ne fait rien » | rien de live à cet instant | normal — les ticks sans match sont des no-op ; regarde la P800 pendant un match |
 
 ---
 
 ## Ce qui reste gratuit
 
-- **Workers** : 100 000 requêtes/jour (nos crons = ~1 440/jour + ton trafic).
-- **D1** : 5 Go, 5 M lignes lues/jour, 100 k écrites/jour.
-- **KV** : 100 k lectures/jour (le gate live en lit ~1 440).
-- **Cron Triggers + Static Assets** : gratuits.
+- **Northflank sandbox** : 2 services + 1 base + 2 cron jobs, **always-on**
+  (on utilise 1 service + 1 base, et zéro cron-job Northflank car le scheduler
+  vit dans le process).
+- **Stockage Postgres** : la base fait quelques Mo — négligeable.
 
 Le budget API-Football (7 500 req/jour, plan Pro) est la seule ressource « chère »,
 et on plafonne bien en dessous (`DAILY_API_BUDGET = 7000`, un très gros soir ≈ 500).
