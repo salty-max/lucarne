@@ -7,7 +7,7 @@ import { usePrefs } from "@/lib/prefs";
 import { LiveDot } from "@/components/common";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { AboutDialog } from "@/components/AboutDialog";
-import { KOFI_URL } from "@/lib/about";
+import { GITHUB_URL, KOFI_URL } from "@/lib/about";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { formatShort } from "@/lib/dates";
@@ -224,15 +224,26 @@ export function Layout() {
               ))}{" "}
               = {t.kbd.sections} · <span className="k">⌫</span> {t.kbd.back}
             </span>
-            <a
-              className="tt-kofi"
-              href={KOFI_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t.about.donate}
-            >
-              ♥ Ko-fi
-            </a>
+            <span className="tt-foot-links">
+              <a
+                className="tt-gh"
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t.about.contribute}
+              >
+                ‹/› GitHub
+              </a>
+              <a
+                className="tt-kofi"
+                href={KOFI_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t.about.donate}
+              >
+                ♥ Ko-fi
+              </a>
+            </span>
           </div>
         </div>
       </div>

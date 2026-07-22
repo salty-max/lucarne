@@ -661,7 +661,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
   gap: 0.3rem 1.5ch;
   padding: 0.4rem 0.8rem 0.7rem;
   color: hsl(var(--muted-foreground));
@@ -674,15 +673,29 @@
   padding: 0 0.4ch;
   font-weight: 800;
 }
-/* Support link — always visible in the footer (never buried in a menu). Magenta
-   to echo the "support" accent from the About dialog. */
+/* Footer links — always visible (never buried in a menu). GitHub (contribute)
+   in cyan, Ko-fi (support) in magenta to echo the About dialog accent. */
+.tt-foot-links {
+  display: flex;
+  align-items: baseline;
+  gap: 1.6ch;
+  margin-left: auto; /* pin to the right; stays right-aligned when it wraps */
+  white-space: nowrap;
+}
+.tt-gh,
 .tt-kofi {
-  color: hsl(var(--tt-magenta));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
+.tt-gh {
+  color: hsl(var(--tt-cyan));
+}
+.tt-kofi {
+  color: hsl(var(--tt-magenta));
+}
+.tt-gh:hover,
 .tt-kofi:hover {
   text-decoration: underline;
 }
@@ -714,6 +727,10 @@
   }
   .tt-kbd-hints {
     display: none;
+  }
+  /* No hints to sit beside, so centre the links instead of right-pinning. */
+  .tt-foot-links {
+    margin-left: 0;
   }
 
   /* Bigger touch targets for the FastText nav + service-line controls. */
