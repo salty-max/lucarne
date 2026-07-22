@@ -63,7 +63,7 @@ export type ApiFixture = {
     date: string; // ISO 8601 with offset
     referee: string | null;
     venue: { name: string | null };
-    status: { short: string; elapsed: number | null };
+    status: { short: string; elapsed: number | null; extra: number | null };
   };
   league: { id: number; season: number; round: string };
   teams: {

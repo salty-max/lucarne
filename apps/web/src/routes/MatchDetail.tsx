@@ -22,7 +22,7 @@ type Result = "win" | "loss" | "none";
 
 function statusLine(m: Detail, t: Messages): { text: string; live: boolean } | null {
   if (m.status === "live") {
-    const min = m.elapsed != null ? `${m.elapsed}'` : "";
+    const min = eventMinute(m.elapsed, m.elapsedExtra);
     const at =
       m.statusShort === "HT"
         ? t.card.ht

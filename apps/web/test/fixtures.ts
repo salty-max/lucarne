@@ -29,6 +29,7 @@ export const match = (over: Partial<Match> = {}): Match => ({
   status: "scheduled",
   statusShort: "NS",
   elapsed: null,
+  elapsedExtra: null,
   homeGoals: null,
   awayGoals: null,
   homePenalties: null,

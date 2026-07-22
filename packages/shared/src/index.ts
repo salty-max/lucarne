@@ -41,6 +41,7 @@ export type Match = {
   status: MatchStatus;
   statusShort: string;
   elapsed: number | null;
+  elapsedExtra: number | null; // 2nd-half/1st-half stoppage minutes (the +X in 90+X)
   homeGoals: number | null;
   awayGoals: number | null;
   homePenalties: number | null; // shootout result; null unless decided on penalties
@@ -62,6 +63,7 @@ export type LiveMatch = {
   id: number;
   status: MatchStatus;
   elapsed: number | null;
+  elapsedExtra: number | null;
   homeGoals: number | null;
   awayGoals: number | null;
   homePenalties: number | null;

@@ -222,7 +222,15 @@ export async function runDetailsDrain(
     sinceMs = 3 * 24 * 60 * 60 * 1000,
     stampWhenEmpty = true,
     reserve = 0,
-  }: { sinceMs?: number | null; stampWhenEmpty?: boolean; reserve?: number } = {},
+    attemptCap,
+  }: {
+    sinceMs?: number | null;
+    stampWhenEmpty?: boolean;
+    reserve?: number;
+    /** Eager only: after this many attempts on a match, stamp-empty and give up
+     *  (so stats/ratings a competition never provides aren't chased for hours). */
+    attemptCap?: number;
+  } = {},
 ): Promise<DrainResult> {
   const now = new Date();
   const nowMs = now.getTime();
@@ -249,6 +257,7 @@ export async function runDetailsDrain(
       hasLineups: matches.lineupsFetchedAt,
       hasStats: matches.statsFetchedAt,
       hasRatings: matches.ratingsFetchedAt,
+      attempts: matches.drainAttempts,
     })
     .from(matches)
     .innerJoin(home, eq(matches.homeTeamId, home.id))
@@ -277,9 +286,13 @@ export async function runDetailsDrain(
   for (const m of candidates) {
     if (remaining <= reserve) break;
     let touched = false;
+    // Eager path: once a match has been retried `attemptCap` times, stop leaving
+    // its empty endpoints un-stamped — stamp them so it drops out of the drain
+    // instead of being re-fetched every minute until the nightly backstop.
+    const stampEmpty = stampWhenEmpty || (attemptCap != null && m.attempts >= attemptCap);
     if (m.hasDetails == null && remaining > reserve) {
       try {
-        events += await storeMatchEvents(m, { stampWhenEmpty });
+        events += await storeMatchEvents(m, { stampWhenEmpty: stampEmpty });
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -289,7 +302,7 @@ export async function runDetailsDrain(
     }
     if (m.hasLineups == null && remaining > reserve) {
       try {
-        lineups += await storeMatchLineups(m, { stampWhenEmpty });
+        lineups += await storeMatchLineups(m, { stampWhenEmpty: stampEmpty });
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -299,7 +312,7 @@ export async function runDetailsDrain(
     }
     if (m.hasStats == null && remaining > reserve) {
       try {
-        stats += (await storeMatchStatistics(m, { stampWhenEmpty })) > 0 ? 1 : 0;
+        stats += (await storeMatchStatistics(m, { stampWhenEmpty: stampEmpty })) > 0 ? 1 : 0;
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -309,7 +322,7 @@ export async function runDetailsDrain(
     }
     if (m.hasRatings == null && remaining > reserve) {
       try {
-        ratings += (await storeMatchPlayerRatings(m, { stampWhenEmpty })) > 0 ? 1 : 0;
+        ratings += (await storeMatchPlayerRatings(m, { stampWhenEmpty: stampEmpty })) > 0 ? 1 : 0;
         remaining -= 1;
         requests += 1;
         touched = true;
@@ -317,7 +330,16 @@ export async function runDetailsDrain(
         log.warn("details.ratings.fail", { matchId: m.id, err: String(err) });
       }
     }
-    if (touched) count += 1;
+    if (touched) {
+      count += 1;
+      // Count this eager attempt so the cap above can eventually give up.
+      if (attemptCap != null) {
+        await db
+          .update(matches)
+          .set({ drainAttempts: m.attempts + 1 })
+          .where(eq(matches.id, m.id));
+      }
+    }
   }
 
   const next = { ...state, requestsToday: state.requestsToday + requests };
@@ -325,18 +347,27 @@ export async function runDetailsDrain(
   return { matches: count, events, lineups, stats, ratings, budgetRemaining: budgetRemaining(next) };
 }
 
+/** Eager retry budget: with a 1/min cadence this is ~45 min of post-full-time
+ *  coverage — enough for stats/ratings that settle late — after which the eager
+ *  pass stamps-empty and gives up. Bounds waste to ≈this many requests per
+ *  never-published endpoint per match, instead of chasing it for the whole
+ *  window (a match in a stats-less competition used to burn hundreds). */
+const EAGER_ATTEMPT_CAP = 45;
+
 /**
  * Eager post-match drain, folded into the live cadence (every minute). Chases
- * only games that finished in the last few hours and — crucially — does NOT
- * stamp empty stats/ratings (`stampWhenEmpty: false`), so the ones that publish
- * minutes after full-time are retried until they land. Time-bounded, so a fixture
- * the API never enriches isn't chased forever — the nightly `runDetailsDrain`
- * (which stamps) closes it out.
+ * only games whose kickoff was in the last ~3h (so a just-finished match's
+ * late-publishing stats/ratings are caught) and — crucially — does NOT stamp
+ * empty stats/ratings until `EAGER_ATTEMPT_CAP` retries have passed. Twice
+ * bounded (short window + attempt cap), so a fixture the API never enriches
+ * isn't chased for hours; the nightly `runDetailsDrain` (which stamps) is the
+ * final backstop.
  */
 export function runEagerDrain(): Promise<DrainResult> {
   return runDetailsDrain(8, {
-    sinceMs: 5 * 60 * 60 * 1000,
+    sinceMs: 3 * 60 * 60 * 1000,
     stampWhenEmpty: false,
+    attemptCap: EAGER_ATTEMPT_CAP,
     reserve: LIVE_BUDGET_RESERVE, // never eat the budget floor reserved for scores
   });
 }

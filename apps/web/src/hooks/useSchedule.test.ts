@@ -10,6 +10,7 @@ const m = (id: number, over: Partial<M> = {}): M => ({
   status: "scheduled",
   statusShort: "NS",
   elapsed: null,
+  elapsedExtra: null,
   homeGoals: null,
   awayGoals: null,
   homePenalties: null,
@@ -29,7 +30,7 @@ describe("patchLive", () => {
     const days = [day([m(1)])];
     expect(patchLive(days, [])).toBe(days);
     const noMatch: LiveMatch[] = [
-      { id: 999, status: "live", elapsed: 10, homeGoals: 1, awayGoals: 0, homePenalties: null, awayPenalties: null },
+      { id: 999, status: "live", elapsed: 10, elapsedExtra: null, homeGoals: 1, awayGoals: 0, homePenalties: null, awayPenalties: null },
     ];
     expect(patchLive(days, noMatch)).toBe(days);
   });
@@ -37,7 +38,7 @@ describe("patchLive", () => {
   it("patches status/elapsed/score for matching matches only", () => {
     const days = [day([m(1), m(2)])];
     const live: LiveMatch[] = [
-      { id: 2, status: "live", elapsed: 55, homeGoals: 2, awayGoals: 1, homePenalties: null, awayPenalties: null },
+      { id: 2, status: "live", elapsed: 55, elapsedExtra: null, homeGoals: 2, awayGoals: 1, homePenalties: null, awayPenalties: null },
     ];
     const next = patchLive(days, live);
 

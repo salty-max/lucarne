@@ -85,7 +85,7 @@ const poll = () => runLivePollTick(new Date(Date.now() + ++pollN * 120_000));
 
 function fixture(short: string, elapsed: number | null, h: number | null, a: number | null, id = FIX): ApiFixture {
   return {
-    fixture: { id, date: kickoffISO, referee: "Sim Referee", venue: { name: "Sim Stadium" }, status: { short, elapsed } },
+    fixture: { id, date: kickoffISO, referee: "Sim Referee", venue: { name: "Sim Stadium" }, status: { short, elapsed, extra: null } },
     league: { id: LEAGUE, season, round: "3rd Place Final" },
     teams: { home: { id: HOME_API, name: HOME, logo: "" }, away: { id: AWAY_API, name: AWAY, logo: "" } },
     goals: { home: h, away: a },

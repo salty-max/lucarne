@@ -11,6 +11,7 @@ const sampleDay = (): ScheduleDay => ({
       status: "scheduled",
       statusShort: "NS",
       elapsed: null,
+      elapsedExtra: null,
       homeGoals: null,
       awayGoals: null,
       homePenalties: null,

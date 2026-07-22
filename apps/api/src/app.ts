@@ -117,6 +117,7 @@ app.get("/api/live", async (c) => {
         id: matches.id,
         status: matches.status,
         elapsed: matches.elapsed,
+        elapsedExtra: matches.elapsedExtra,
         homeGoals: matches.homeGoals,
         awayGoals: matches.awayGoals,
         homePenalties: matches.homePenalties,

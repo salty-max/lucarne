@@ -21,6 +21,7 @@ export function patchLive(days: Day[], live: LiveMatch[]): Day[] {
         ...m,
         status: u.status,
         elapsed: u.elapsed,
+        elapsedExtra: u.elapsedExtra,
         homeGoals: u.homeGoals,
         awayGoals: u.awayGoals,
         homePenalties: u.homePenalties,

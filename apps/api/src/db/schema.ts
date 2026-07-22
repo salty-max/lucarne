@@ -60,6 +60,13 @@ export const matches = pgTable(
     statusShort: text("status_short").notNull().default("NS"),
     status: text("status").notNull().default("scheduled"),
     elapsed: integer("elapsed"),
+    // 2nd-half (or 1st-half) stoppage minutes — the +X in "90+X". API-Football
+    // caps `elapsed` at 90 during added time and carries the extra here.
+    elapsedExtra: integer("elapsed_extra"),
+    // Eager post-match drain attempt counter — once it passes the cap the eager
+    // pass stamps-empty and gives up, so a fixture whose stats/ratings never
+    // publish isn't re-fetched every minute for hours (see runEagerDrain).
+    drainAttempts: integer("drain_attempts").notNull().default(0),
     homeTeamId: integer("home_team_id")
       .notNull()
       .references(() => teams.id),

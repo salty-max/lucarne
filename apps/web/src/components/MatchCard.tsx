@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { parisTime } from "@/lib/time";
+import { eventMinute, parisTime } from "@/lib/time";
 import type { Match } from "@lucarne/shared";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
@@ -16,7 +16,8 @@ function StatusCell({ m }: { m: Match }) {
   const t = useT();
   if (m.status === "live") {
     // HT / shootout / extra-time break get their own tag; otherwise the running
-    // minute (which keeps counting through stoppage 90'+ and extra time to 120').
+    // minute — with stoppage as 90+X (the API caps `elapsed` at 90 and carries
+    // the added minutes in `elapsedExtra`), up to 120' in extra time.
     const label =
       m.statusShort === "HT"
         ? t.card.ht
@@ -25,7 +26,7 @@ function StatusCell({ m }: { m: Match }) {
           : m.statusShort === "BT"
             ? t.card.bt
             : m.elapsed != null
-              ? `${m.elapsed}'`
+              ? eventMinute(m.elapsed, m.elapsedExtra)
               : t.card.live;
     return (
       <span className="flex items-center gap-1 font-bold tabular-nums text-live">

@@ -95,6 +95,7 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
         statusShort: f.fixture.status.short,
         status: normalizeStatus(f.fixture.status.short),
         elapsed: f.fixture.status.elapsed,
+        elapsedExtra: f.fixture.status.extra,
         homeTeamId,
         awayTeamId,
         homeGoals: f.goals.home,
@@ -122,6 +123,7 @@ export async function upsertFixtures(all: ApiFixture[]): Promise<number> {
           statusShort: sql`excluded.status_short`,
           status: sql`excluded.status`,
           elapsed: sql`excluded.elapsed`,
+          elapsedExtra: sql`excluded.elapsed_extra`,
           homeGoals: sql`excluded.home_goals`,
           awayGoals: sql`excluded.away_goals`,
           homePenalties: sql`excluded.home_penalties`,
@@ -334,6 +336,7 @@ function liveSet(f: ApiFixture) {
     statusShort: f.fixture.status.short,
     status: normalizeStatus(f.fixture.status.short),
     elapsed: f.fixture.status.elapsed,
+    elapsedExtra: f.fixture.status.extra,
     homeGoals: f.goals.home,
     awayGoals: f.goals.away,
     homePenalties: f.score?.penalty?.home ?? null,
@@ -395,7 +398,7 @@ export async function applyLiveUpdate(): Promise<{
     if (m.kickoff.getTime() <= stuckCeiling) {
       await db
         .update(matches)
-        .set({ status: "finished", statusShort: "FT", elapsed: null })
+        .set({ status: "finished", statusShort: "FT", elapsed: null, elapsedExtra: null })
         .where(eq(matches.id, m.id));
       finalized++;
     }
