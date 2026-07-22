@@ -31,3 +31,6 @@ dev-dist
 *.pem
 *.log
 *.tsbuildinfo
+
+# local dev Postgres data (scripts/db.sh)
+.pgdata/

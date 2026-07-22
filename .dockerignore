@@ -19,3 +19,4 @@ apps/tui/dist
 **/.turbo
 *.log
 scripts/*.backup-*
+.pgdata
