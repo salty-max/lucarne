@@ -25,6 +25,13 @@ export const COMPETITIONS: CompetitionSeed[] = [
   { slug: "conference-league", name: "Conference League", apiFootballId: 848, country: "Europe", type: "cup" },
   { slug: "nations-league", name: "Nations League", apiFootballId: 5, country: "Europe", type: "cup" },
   { slug: "world-cup", name: "World Cup", apiFootballId: 1, country: "World", type: "cup", season: 2026 },
+  // J1 League switched from a spring–autumn calendar to autumn–spring: the first
+  // such season (2026-08 → 2027-06) is labelled 2027 in API-Football and is the
+  // one marked current, so it needs the override — the default 2026 points at the
+  // transitional half-season that ended in June 2026. Bump this each year until a
+  // per-competition "current season" lookup exists. No French broadcaster holds
+  // the rights, so fixtures show with no channel; that is expected, not a gap.
+  { slug: "j1-league", name: "J1 League", apiFootballId: 98, country: "Japan", type: "league", season: 2027 },
 ];
 
 /** Read lazily (not at module eval) so it works on Workers where env is
