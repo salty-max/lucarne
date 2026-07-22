@@ -27,6 +27,7 @@ import {
   saveBudget,
 } from "@/lib/live";
 import { log } from "@/lib/log";
+import { recordRun } from "@/lib/runlog";
 import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 import type { ScheduleCache } from "@/lib/scheduleCache";
 
@@ -374,6 +375,52 @@ export function runEagerDrain(): Promise<DrainResult> {
     attemptCap: EAGER_ATTEMPT_CAP,
     reserve: LIVE_BUDGET_RESERVE, // never eat the budget floor reserved for scores
   });
+}
+
+/**
+ * One-time historical catch-up, run in the background at startup (see server.ts).
+ * Drains the WHOLE finished-match backlog (details/lineups/stats/ratings, `sinceMs:
+ * null`) in a loop until it's clear — this is what fills a fresh deploy's already-
+ * played matches (World Cup, mid-season J1, UEFA play-offs) that the 3-day nightly
+ * drain never reaches. Non-blocking (never delays readiness), budget-RESERVED (the
+ * live score poll always comes first), and naturally idempotent: once a match is
+ * stamped it drops out, so a restart with a drained backlog is a single cheap pass.
+ * Each productive pass is logged AND written to run_log, so progress shows in the
+ * log stream and on the P800 page.
+ */
+export async function runHistoricalBackfill(): Promise<void> {
+  const MAX_PASSES = 500; // safety net; the real backlog is a few dozen passes
+  let pass = 0;
+  let drained = 0;
+  while (pass < MAX_PASSES) {
+    pass += 1;
+    const started = Date.now();
+    let r: DrainResult;
+    try {
+      r = await runDetailsDrain(50, { sinceMs: null, reserve: LIVE_BUDGET_RESERVE });
+    } catch (err) {
+      log.warn("backfill.fail", { pass, err: String(err) });
+      return;
+    }
+    const ms = Date.now() - started;
+
+    // matches === 0 means the backlog is clear OR the budget floor was reached;
+    // either way we stop and let a later run (next restart / next day) continue.
+    if (r.matches === 0) {
+      if (drained > 0) {
+        log.info("backfill.done", { passes: pass - 1, drained });
+        await recordRun({ job: "backfill", ok: true, detail: { done: true, passes: pass - 1, drained }, ms });
+      }
+      return;
+    }
+
+    drained += r.matches;
+    const detail = { pass, ...r };
+    log.info("backfill", { ...detail, ms });
+    await recordRun({ job: "backfill", ok: true, detail, ms });
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // gentle pacing
+  }
+  log.warn("backfill.capped", { passes: MAX_PASSES });
 }
 
 export type LiveEnrichResult = {

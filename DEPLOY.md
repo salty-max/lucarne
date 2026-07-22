@@ -148,21 +148,25 @@ du trafic (c'est idempotent, un redémarrage est sans risque).
 
 ### 6. Amorcer les données
 
-**En fait, il n'y a rien à faire.** Le conteneur s'auto-amorce au **premier
-boot** : le `CMD` enchaîne `db:migrate && db:bootstrap && start`, et
-[`db:bootstrap`](apps/api/src/db/bootstrap.ts) — en process, sans HTTP ni
-`CRON_SECRET` — **seed** les données de référence puis **resync** le calendrier
-complet. C'est **idempotent + gardé** (seed seulement s'il n'y a pas de référence,
-resync seulement s'il n'y a pas de fixtures), donc un redémarrage ne re-seede rien
-et ne re-dépense pas de budget. Un resync raté (API qui hoquette) ne bloque pas le
-démarrage — le cron quotidien rattrape.
+**Il n'y a rien à faire — tout est automatique.** Le conteneur s'amorce seul :
 
-**Recommandé une fois après le 1er déploiement — rapatrier l'historique des
-détails** (buteurs, compos, stats, notes des matchs **déjà joués** : Coupe du
-Monde, J1 League à mi-saison, barrages UEFA…). Le `bootstrap` ne le fait pas
-(trop long au boot), et le drain nocturne ne rattrape que **les ~3 derniers
-jours** — donc les matchs plus anciens ont besoin de cette passe unique, qui
-**boucle le backfill** jusqu'à épuisement :
+1. Le `CMD` enchaîne `db:migrate && db:bootstrap && start`, et
+   [`db:bootstrap`](apps/api/src/db/bootstrap.ts) — en process, sans HTTP ni
+   `CRON_SECRET` — **seed** les données de référence puis **resync** le calendrier
+   complet. Idempotent + gardé (seed seulement sans référence, resync seulement
+   sans fixtures), donc un redémarrage ne re-seede rien et ne re-dépense pas de
+   budget. Un resync raté ne bloque pas le démarrage — le cron quotidien rattrape.
+2. Une fois le serveur up, une **tâche de fond** ([`runHistoricalBackfill`](apps/api/src/lib/poller.ts))
+   draine tout l'**historique des détails** des matchs déjà joués (Coupe du Monde,
+   J1 à mi-saison, barrages UEFA…) — buteurs, compos, stats, notes — en boucle
+   jusqu'à épuisement. Non-bloquante (ne retarde pas le démarrage), **réservée en
+   budget** (les scores live passent toujours avant), idempotente. Sa progression
+   s'affiche dans les logs **et sur la page 800** (`backfill  pass 3 — matches: 42 …`).
+
+Ensuite, en régime normal, l'eager + le drain nocturne suffisent.
+
+**Optionnel — forcer le backfill à la main** (par ex. après un import ou pour le
+relancer d'un coup) :
 
 ```bash
 scripts/seed-prod.sh "https://<ton-service>.northflank.app" "<ton CRON_SECRET>"
@@ -170,8 +174,7 @@ scripts/seed-prod.sh "https://<ton-service>.northflank.app" "<ton CRON_SECRET>"
 ```
 
 Il rejoue seed → resync (idempotents) → puis `backfill-details` en boucle tant que
-`matches > 0`. Ensuite, en régime normal, l'eager + le drain nocturne suffisent.
-Un `401` = mauvais `CRON_SECRET`.
+`matches > 0`. Un `401` = mauvais `CRON_SECRET`.
 
 <details><summary>…ou à la main (les mêmes appels)</summary>
 
