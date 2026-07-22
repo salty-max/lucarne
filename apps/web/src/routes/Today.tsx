@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import { useSchedule } from "@/hooks/useSchedule";
+import { useCompetitions } from "@/hooks/useCompetitions";
 import { keepCompetitions, useHiddenCompetitions } from "@/lib/competitionFilter";
 import { parisDayKey } from "@/lib/time";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { dayKeyToDate, formatLong } from "@/lib/dates";
+import type { Match } from "@lucarne/shared";
 import { MatchTable, type MatchGroup } from "@/components/DaySection";
 import { EmptyState, Loading, TeletextHero } from "@/components/common";
 import { MatchTableSkel } from "@/components/Skeletons";
@@ -15,8 +18,13 @@ export default function Today() {
   const { days, error } = useSchedule({ from: yesterdayKey, days: 9 }, { live: true });
   const { dateFormat, lang } = useSettings();
   const hidden = useHiddenCompetitions();
+  const comps = useCompetitions();
   const t = useT();
   const todayKey = parisDayKey();
+
+  // Canonical competition order (same ranking the calendar uses), so each section
+  // groups matches by competition instead of interleaving them by kickoff.
+  const rank = useMemo(() => new Map((comps ?? []).map((c, i) => [c.slug, i])), [comps]);
 
   if (!days) {
     return (
@@ -28,6 +36,11 @@ export default function Today() {
   }
 
   const todayMatches = keepCompetitions(days.find((d) => d.key === todayKey)?.matches ?? [], hidden);
+  // Group by competition (canonical order), then kickoff. The lists are already
+  // kickoff-ordered and Array.sort is stable, so this yields (competition, time).
+  const byComp = (a: Match, b: Match) =>
+    (rank.get(a.competition.slug) ?? 99) - (rank.get(b.competition.slug) ?? 99) ||
+    a.kickoff.localeCompare(b.kickoff);
   // Still-live matches from before today (kicked off last night, ran past midnight).
   const carryover = days
     .filter((d) => d.key < todayKey)
@@ -35,12 +48,14 @@ export default function Today() {
     .filter((m) => m.status === "live");
   const upcoming = days
     .filter((d) => d.key > todayKey)
-    .map((d) => ({ ...d, matches: keepCompetitions(d.matches, hidden) }))
+    .map((d) => ({ ...d, matches: keepCompetitions(d.matches, hidden).sort(byComp) }))
     .filter((d) => d.matches.length > 0);
 
-  const live = [...carryover, ...todayMatches.filter((m) => m.status === "live")];
-  const up = todayMatches.filter((m) => m.status === "scheduled");
-  const done = todayMatches.filter((m) => m.status === "finished" || m.status === "postponed");
+  const live = [...carryover, ...todayMatches.filter((m) => m.status === "live")].sort(byComp);
+  const up = todayMatches.filter((m) => m.status === "scheduled").sort(byComp);
+  const done = todayMatches
+    .filter((m) => m.status === "finished" || m.status === "postponed")
+    .sort(byComp);
   const hasToday = todayMatches.length > 0 || carryover.length > 0;
 
   const groups: MatchGroup[] = hasToday
