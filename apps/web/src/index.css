@@ -658,6 +658,11 @@
   padding-top: 2px;
 }
 .tt-kbd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 1.5ch;
   padding: 0.4rem 0.8rem 0.7rem;
   color: hsl(var(--muted-foreground));
   letter-spacing: 0.03em;
@@ -668,6 +673,18 @@
   color: hsl(var(--tt-white-on));
   padding: 0 0.4ch;
   font-weight: 800;
+}
+/* Support link — always visible in the footer (never buried in a menu). Magenta
+   to echo the "support" accent from the About dialog. */
+.tt-kofi {
+  color: hsl(var(--tt-magenta));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.tt-kofi:hover {
+  text-decoration: underline;
 }
 
 /* Phones / narrow screens. */
@@ -689,8 +706,13 @@
   }
 
   /* No physical keyboard on phones, so the shortcut legend is noise (the
-     FastText buttons + back arrow are the touch nav). */
+     FastText buttons + back arrow are the touch nav) — but keep the footer row
+     itself for the always-visible support link, centred on its own. */
   .tt-kbd {
+    justify-content: center;
+    padding: 0.35rem 0.5rem 0.55rem;
+  }
+  .tt-kbd-hints {
     display: none;
   }
 
