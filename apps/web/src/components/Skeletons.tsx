@@ -13,7 +13,7 @@ function Wrap({ children, className }: { children: ReactNode; className?: string
   const t = useT();
   return (
     <div role="status" aria-busy="true" className={cn("animate-pulse", className)}>
-      <span className="r-only">{t.loading}</span>
+      <span className="sr-only">{t.loading}</span>
       {children}
     </div>
   );
