@@ -4,6 +4,15 @@ Notable changes to Lucarne. Versioning follows [Semantic Versioning](https://sem
 the version shown in the app's **About** dialog comes from `apps/web/package.json`.
 Dates are Europe/Paris.
 
+## [0.2.1] — 2026-07-23
+
+### Fixed
+
+- The update banner now actually surfaces. The service worker re-checks for a new
+  deploy on a 30-min timer and whenever the app regains focus or comes back online,
+  instead of only at a cold start — so an installed PWA that stays open no longer
+  gets stuck on an old build.
+
 ## [0.2.0] — 2026-07-23
 
 Everything since the first production deploy.
