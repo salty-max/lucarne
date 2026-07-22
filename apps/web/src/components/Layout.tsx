@@ -213,6 +213,7 @@ export function Layout() {
             ))}
           </nav>
           <div className="tt-kbd">
+            <span className="tt-version">v{__APP_VERSION__}</span>
             <span className="tt-kbd-hints">
               <span className="k">###</span> = {t.kbd.goToPage} · <span className="k">↑</span>{" "}
               <span className="k">↓</span> <span className="k">←</span> <span className="k">→</span> {t.kbd.navigate}{" "}
