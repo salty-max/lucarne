@@ -97,6 +97,15 @@ const en = {
     gotIt: "Got it",
     howTo: "How do I install it?",
   },
+  about: {
+    title: "About Lucarne",
+    tagline: "Football fixtures and their French broadcaster — built by one fan.",
+    body: "Lucarne is a passion project. It is, and will stay, free — no ads, no accounts, no tracking. The only running cost is the football data feed, about $19 a month.",
+    donateWhy: "If you find it cool and feel like chipping in toward that bill, you're very welcome to. No pressure — the app stays free either way.",
+    donate: "Support on Ko-fi",
+    close: "Close",
+    open: "About & support",
+  },
   watch: {
     watch: "Watch",
     watching: "Watching",
@@ -336,6 +345,15 @@ const fr: Messages = {
     later: "Plus tard",
     gotIt: "C'est fait",
     howTo: "Comment l'installer ?",
+  },
+  about: {
+    title: "À propos de Lucarne",
+    tagline: "Le programme des matchs et leur diffuseur français — fait par un passionné.",
+    body: "Lucarne est un projet de passionné. Il est, et restera, gratuit — sans pub, sans compte, sans pistage. Le seul coût, c'est le flux de données football, environ 19 $ par mois.",
+    donateWhy: "Si tu le trouves cool et que tu veux participer à cette facture, tu es le bienvenu. Aucune pression — l'app reste gratuite dans tous les cas.",
+    donate: "Soutenir sur Ko-fi",
+    close: "Fermer",
+    open: "À propos & soutien",
   },
   watch: {
     watch: "Surveiller",

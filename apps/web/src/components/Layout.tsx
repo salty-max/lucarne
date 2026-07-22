@@ -6,6 +6,7 @@ import { resyncPush, syncFollows } from "@/lib/notifications";
 import { usePrefs } from "@/lib/prefs";
 import { LiveDot } from "@/components/common";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { AboutDialog } from "@/components/AboutDialog";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { formatShort } from "@/lib/dates";
@@ -224,6 +225,7 @@ export function Layout() {
         </div>
       </div>
       <InstallPrompt />
+      <AboutDialog />
     </div>
   );
 }

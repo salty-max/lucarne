@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { PageHeader, SectionLabel } from "@/components/common";
 import { disablePush, enablePush, pushPermission, pushSupport } from "@/lib/notifications";
 import { openInstallGuide } from "@/lib/install";
+import { openAbout } from "@/lib/about";
 import { forgetDevice } from "@/api";
 import { getDeviceId } from "@/lib/device";
 import { setPrefs, usePrefs } from "@/lib/prefs";
@@ -313,6 +314,18 @@ export default function Settings() {
             );
           })}
         </div>
+      </div>
+
+      <div className="mt-5">
+        <SectionLabel>{t.about.title}</SectionLabel>
+        <p className="mb-1 text-muted-foreground">{t.about.tagline}</p>
+        <button
+          data-nav
+          onClick={openAbout}
+          className="tt-tag mt-1 bg-[hsl(var(--tt-magenta))] py-1 text-[hsl(var(--tt-magenta-on))]"
+        >
+          {t.about.open}
+        </button>
       </div>
     </>
   );
