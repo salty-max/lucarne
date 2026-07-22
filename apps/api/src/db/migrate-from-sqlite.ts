@@ -55,8 +55,15 @@ function convert(columnType: string, value: unknown): unknown {
   if (value == null) return null;
   switch (columnType) {
     case "PgTimestamp":
-    case "PgTimestampString":
-      return new Date(Number(value)); // sqlite stored epoch-ms
+    case "PgTimestampString": {
+      // sqlite is dynamically typed and this app's history left kickoff stored
+      // two ways: epoch-ms integers for most rows, ISO strings for ~150. Handle
+      // both, and fail loudly rather than write an Invalid Date.
+      const s = String(value).trim();
+      const d = /^\d+$/.test(s) ? new Date(Number(s)) : new Date(s);
+      if (Number.isNaN(d.getTime())) throw new Error(`bad timestamp value ${JSON.stringify(value)}`);
+      return d;
+    }
     case "PgBoolean":
       return Boolean(value);
     case "PgJsonb":
@@ -66,6 +73,11 @@ function convert(columnType: string, value: unknown): unknown {
       return value;
   }
 }
+
+// Empty every target table first, so this is safe to re-run (e.g. after fixing
+// a conversion). RESTART IDENTITY resets the serial sequences too.
+const names = ORDER.map(({ table }) => `"${sqliteName(table)}"`).join(", ");
+await db.execute(sql.raw(`TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`));
 
 let grandTotal = 0;
 for (const { table, hasSerialId } of ORDER) {
