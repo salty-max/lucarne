@@ -150,25 +150,28 @@ du trafic (c'est idempotent, un redémarrage est sans risque).
 
 Deux options — choisis-en **une**.
 
-**Option A — repartir de zéro (le plus simple).** Remplace `URL` et `SECRET`,
-puis, depuis ton poste :
+**Option A — repartir de zéro (le plus simple).** Un script enchaîne tout et
+**boucle le backfill** jusqu'à épuisement du backlog :
 
 ```bash
-URL="https://<ton-service>.northflank.app"
-SECRET="<ton CRON_SECRET>"
-
-# a) référence : compétitions, diffuseurs, règles de diffusion
-curl -X POST "$URL/api/admin/seed" -H "Authorization: Bearer $SECRET"
-
-# b) tout le calendrier de la saison (fixtures de toutes les compétitions)
-curl "$URL/api/cron/resync" -H "Authorization: Bearer $SECRET"
-
-# c) (optionnel) détails historiques : buteurs, compos, stats, notes.
-#    À relancer EN BOUCLE tant que la réponse contient "matches" > 0.
-curl -X POST "$URL/api/admin/backfill-details" -H "Authorization: Bearer $SECRET"
+scripts/seed-prod.sh "https://<ton-service>.northflank.app" "<ton CRON_SECRET>"
+# ou : URL=… CRON_SECRET=… scripts/seed-prod.sh
 ```
 
-`{"ok":true,...}` = bon ; `401 Unauthorized` = mauvais `SECRET`.
+Il fait, dans l'ordre : `seed` (compétitions/diffuseurs/règles) → `resync`
+(calendrier complet) → `backfill-details` en boucle tant que `matches > 0`. Un
+`401` = mauvais `CRON_SECRET`.
+
+<details><summary>…ou à la main (les 3 mêmes appels)</summary>
+
+```bash
+URL="https://<ton-service>.northflank.app"; SECRET="<ton CRON_SECRET>"
+curl -X POST "$URL/api/admin/seed"             -H "Authorization: Bearer $SECRET"
+curl        "$URL/api/cron/resync"             -H "Authorization: Bearer $SECRET"
+# à relancer tant que la réponse contient "matches" > 0 :
+curl -X POST "$URL/api/admin/backfill-details" -H "Authorization: Bearer $SECRET"
+```
+</details>
 
 **Option B — transférer ta base locale déjà enrichie.** Si tu veux garder tel
 quel ce que tu as en local (16 k+ lignes, historique compris), une fois le
