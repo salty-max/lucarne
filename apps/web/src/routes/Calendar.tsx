@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Match } from "@lucarne/shared";
 import { useSchedule } from "@/hooks/useSchedule";
 import { useCompetitions } from "@/hooks/useCompetitions";
@@ -9,29 +9,13 @@ import { useT } from "@/lib/i18n";
 import { competitionLabel } from "@/lib/labels";
 import { dayKeyToDate, weekdayShort } from "@/lib/dates";
 import { MatchTable } from "@/components/DaySection";
+import { CompetitionFilter } from "@/components/CompetitionFilter";
 import { EmptyState, Loading, PageHeader } from "@/components/common";
 import { CalendarSkel } from "@/components/Skeletons";
 import { cn } from "@/lib/utils";
 
 const WINDOW = 7; // day cells shown at once (fixed, never scrolls)
 const pad = (n: number) => String(n).padStart(2, "0");
-
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "shrink-0 whitespace-nowrap border border-border px-2 py-0.5 uppercase transition-colors",
-        active
-          ? "border-[hsl(var(--tt-cyan))] bg-[hsl(var(--tt-cyan))] font-bold text-black"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 export default function Calendar() {
   const { lang } = useSettings();
@@ -198,20 +182,7 @@ export default function Calendar() {
           </div>
 
           {/* Competition filter — wraps, never scrolls */}
-          <div className="mb-3 flex flex-wrap items-center gap-1">
-            <Chip active={!filter} onClick={() => setFilter(null)}>
-              {t.calendar.all}
-            </Chip>
-            {presentComps.map((c) => (
-              <Chip
-                key={c.slug}
-                active={filter === c.slug}
-                onClick={() => setFilter(filter === c.slug ? null : c.slug)}
-              >
-                {competitionLabel(c.name, lang)}
-              </Chip>
-            ))}
-          </div>
+          <CompetitionFilter comps={presentComps} value={filter} onChange={setFilter} />
 
           {groups.length === 0 ? (
             <EmptyState title={t.calendar.noFilter} />

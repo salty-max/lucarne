@@ -4,6 +4,19 @@ Notable changes to Lucarne. Versioning follows [Semantic Versioning](https://sem
 the version shown in the app's **About** dialog comes from `apps/web/package.json`.
 Dates are Europe/Paris.
 
+## [0.3.0] — 2026-07-23
+
+### Added
+
+- A competition filter (the single-select chip row from the calendar) on **Direct**
+  and **Radar** — extracted into a shared component and reused across all three.
+
+### Changed
+
+- **Radar** is now grouped: a LIVE section on top, then one section per upcoming
+  day, each sub-grouped by competition (was a flat live/upcoming list sorted only
+  by kickoff).
+
 ## [0.2.2] — 2026-07-23
 
 ### Fixed
