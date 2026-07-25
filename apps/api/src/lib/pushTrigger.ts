@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { matchEvents, matches, pushNotified, teams } from "@/db/schema";
 import { chunkRows } from "@/lib/d1";
+import type { NotifyMessage } from "@/lib/notify";
 import { deliver, getVapid, type PushTrigger } from "@/lib/push";
 import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 
@@ -111,14 +112,14 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
      *  used to mark it notified regardless, losing the event for good instead of
      *  retrying it on the next tick. Retries are bounded by the match window of
      *  the query above, so a permanently failing endpoint can't be chased forever. */
-    const fire = async (key: string, trigger: PushTrigger, body: string) => {
+    const fire = async (key: string, trigger: PushTrigger, message: NotifyMessage) => {
       if (notified.has(key)) return;
       fired++;
       // One tag PER EVENT: notifications sharing a tag replace each other in the
       // tray, so a single match-wide tag meant full-time was wiped out by the
       // man-of-the-match push, and the kick-off by the first goal.
       const r = await deliver(
-        { title, body, matchId: m.id, tag: `m${m.id}:${key}` },
+        { title, message, matchId: m.id, tag: `m${m.id}:${key}` },
         { deviceIds: watchers, trigger },
       );
       sent += r.sent;
@@ -126,9 +127,9 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
     };
 
     // Lineups (~40 min out) + kickoff reminder.
-    if (m.lineupsFetchedAt != null) await fire("LINEUPS", "lineups", "Compositions disponibles");
+    if (m.lineupsFetchedAt != null) await fire("LINEUPS", "lineups", { id: "lineups" });
     if (m.status === "scheduled" && m.kickoff.getTime() - nowMs <= KICKOFF_LEAD_MS && m.kickoff.getTime() > nowMs) {
-      await fire("KO", "kickoff", "⏰ Coup d'envoi imminent");
+      await fire("KO", "kickoff", { id: "kickoffSoon" });
     }
 
     // Phase transitions — each fires once.
@@ -138,11 +139,11 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       // else happens, a watched match always announces its own kick-off.
       const started =
         m.elapsed != null ? m.elapsed <= STARTED_MAX_ELAPSED : nowMs - m.kickoff.getTime() <= STARTED_MAX_MS;
-      if (started) await fire("START", "start", "🟢 Coup d'envoi");
+      if (started) await fire("START", "start", { id: "kickoff" });
 
-      if (m.statusShort === "HT") await fire("HT", "ht", `⏸ Mi-temps · ${score(m)}`);
-      else if (m.statusShort === "ET" || m.statusShort === "BT") await fire("ET", "phase", "⏱ Prolongations");
-      else if (m.statusShort === "P") await fire("PENS", "phase", "🥅 Séance de tirs au but");
+      if (m.statusShort === "HT") await fire("HT", "ht", { id: "halfTime", score: score(m) });
+      else if (m.statusShort === "ET" || m.statusShort === "BT") await fire("ET", "phase", { id: "extraTime" });
+      else if (m.statusShort === "P") await fire("PENS", "phase", { id: "shootout" });
     }
 
     // Goals + cards (need the events; also reused for the full-time scorers).
@@ -165,14 +166,20 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
         if (!e.player) continue; // never notify without the player's name — wait a tick
         const key = `${bucket}:${n}`;
         if (notified.has(key)) continue;
-        const min = minuteLabel(e.minute, e.extraMinute);
-        if (cat === "PM") await fire(key, "goal", `❌ Penalty manqué · ${e.player} ${min}`.trim());
+        const minute = minuteLabel(e.minute, e.extraMinute);
+        const player = e.player;
+        if (cat === "PM") await fire(key, "goal", { id: "penaltyMissed", player, minute });
         else if (cat === "G") {
-          const og = e.detail === "Own Goal" ? " (csc)" : "";
-          await fire(key, "goal", `⚽ ${score(m)} · ${e.player}${og} ${min}`.trim());
-        } else if (cat === "Y2") await fire(key, "red", `🟥 Expulsion (2e jaune) · ${e.player} ${min}`.trim());
-        else if (cat === "R") await fire(key, "red", `🟥 Carton rouge · ${e.player} ${min}`.trim());
-        else if (cat === "Y") await fire(key, "yellow", `🟨 Carton jaune · ${e.player} ${min}`.trim());
+          await fire(key, "goal", {
+            id: "goal",
+            score: score(m),
+            player,
+            minute,
+            ownGoal: e.detail === "Own Goal",
+          });
+        } else if (cat === "Y2") await fire(key, "red", { id: "secondYellow", player, minute });
+        else if (cat === "R") await fire(key, "red", { id: "red", player, minute });
+        else if (cat === "Y") await fire(key, "yellow", { id: "yellow", player, minute });
       }
 
       // Substitutions — notify each exactly ONCE (keyed by team + outgoing player,
@@ -207,7 +214,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
           const r = await deliver(
             {
               title,
-              body: `🔄 ${min}\n${lines.join("\n")}`,
+              message: { id: "subs", minute: min, lines },
               matchId: m.id,
               tag: `m${m.id}:SUBS:${min}`,
             },
@@ -227,13 +234,12 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
           .map((e) => lastName(e.player as string))
           .join(", ");
       const line = [scorers(m.homeId), scorers(m.awayId)].filter(Boolean).join(" / ");
-      await fire("FT", "ft", `⏱ Fin · ${score(m)}${line ? ` · ${line}` : ""}`);
+      await fire("FT", "ft", { id: "fullTime", score: score(m), scorers: line });
     }
 
     // Man of the match — once the ratings resolved it.
     if (m.status === "finished" && m.motmName != null) {
-      const r = m.motmRating != null ? ` (${m.motmRating})` : "";
-      await fire("MOTM", "motm", `⭐ Homme du match · ${m.motmName}${r}`);
+      await fire("MOTM", "motm", { id: "motm", player: m.motmName, rating: m.motmRating });
     }
 
     // 2 columns per row — chunked like every other bulk write (D1 caps a

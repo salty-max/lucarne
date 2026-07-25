@@ -24,6 +24,7 @@ import {
   vapidPublicKey,
   type PushTrigger,
 } from "@/lib/push";
+import { asNotifyLang, DEFAULT_NOTIFY_LANG } from "@/lib/notify";
 import { pickCache } from "@/lib/scheduleCache";
 import { getMatchDetail, getSchedule, toWire, toWireMatchDetail } from "@/lib/schedule";
 import { startOfParisDay } from "@/lib/time";
@@ -165,6 +166,7 @@ app.post("/api/push/subscribe", async (c) => {
       subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
       deviceId?: unknown;
       triggers?: unknown;
+      lang?: unknown;
       welcome?: boolean;
     };
     const sub = body.subscription;
@@ -180,9 +182,12 @@ app.post("/api/push/subscribe", async (c) => {
     const triggers = Array.isArray(body.triggers)
       ? body.triggers.filter((t): t is PushTrigger => (ALL_TRIGGERS as string[]).includes(t as string))
       : ALL_TRIGGERS;
+    // The language notifications are written in — this browser's UI language,
+    // re-sent whenever it changes (the trigger runs on the server, long after).
+    const lang = asNotifyLang(body.lang) ?? DEFAULT_NOTIFY_LANG;
     const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
-    await saveSubscription(pushSub, deviceId, triggers);
-    if (body.welcome) await sendWelcome(pushSub);
+    await saveSubscription(pushSub, deviceId, triggers, lang);
+    if (body.welcome) await sendWelcome(pushSub, lang);
     return c.json({ ok: true });
   } catch (err) {
     console.error("[/api/push/subscribe]", err);

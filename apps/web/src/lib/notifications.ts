@@ -3,6 +3,7 @@
 // The user opted into every event kind, so we send the full trigger set.
 import { getDeviceId } from "@/lib/device";
 import { canInstall } from "@/lib/install";
+import { getSettings } from "@/lib/settings";
 
 const TRIGGERS = [
   "goal",
@@ -57,7 +58,15 @@ async function postSubscribe(sub: PushSubscription, welcome = false): Promise<vo
   await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subscription: sub.toJSON(), deviceId: getDeviceId(), triggers: TRIGGERS, welcome }),
+    body: JSON.stringify({
+      subscription: sub.toJSON(),
+      deviceId: getDeviceId(),
+      triggers: TRIGGERS,
+      // Notification bodies are written server-side, so the language travels with
+      // the subscription; `resyncPush` re-sends it whenever the setting changes.
+      lang: getSettings().lang,
+      welcome,
+    }),
   });
 }
 
@@ -107,8 +116,9 @@ export async function disablePush(): Promise<void> {
 }
 
 /** If already subscribed, re-register so the subscription is linked to this
- *  device (push targets the matches a device surveils). Cheap idempotent upsert;
- *  run on load to migrate subscriptions made before the teams→device switch. */
+ *  device (push targets the matches a device surveils) and carries the current
+ *  UI language. Cheap idempotent upsert; run on load and whenever the language
+ *  changes — it also migrates subscriptions made before the teams→device switch. */
 export async function resyncPush(): Promise<void> {
   if (!pushSupported()) return;
   const reg = await navigator.serviceWorker.ready;

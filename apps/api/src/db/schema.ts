@@ -259,6 +259,11 @@ export const pushSubscription = pgTable("push_subscription", {
   deviceId: text("device_id"),
   teams: jsonb("teams").$type<string[]>().notNull(),
   triggers: jsonb("triggers").$type<string[]>().notNull(),
+  // UI language of the browser that subscribed, so the notification body can be
+  // written in it (the trigger runs long after that browser last spoke to us).
+  // Nullable for rows created before this existed — they fall back to the default
+  // until the app re-subscribes them on next load.
+  lang: text("lang"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),

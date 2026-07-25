@@ -23,6 +23,9 @@ Dates are Europe/Paris.
 
 - A notification when a watched match **actually kicks off**, on top of the
   existing "starts in ~10 minutes" reminder.
+- Notifications now follow the app's **language setting** (they were always in
+  French). The language travels with the subscription and is re-sent whenever
+  you change it, since the text is written on the server.
 
 ## [0.3.0] — 2026-07-23
 

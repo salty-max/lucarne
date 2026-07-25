@@ -1,6 +1,8 @@
 # Lucarne
 
-Le programme des matchs de football et leur **diffuseur français** (Ligue 1/2, Premier League, Liga, Bundesliga, Champions/Europa/Conference/Nations League, Coupe du Monde). Cible : hébergement **free-tier**. Fuseau : **Europe/Paris**. UI en **anglais** pour l'instant (i18n prévu plus tard — pas de FR hardcodé).
+Le programme des matchs de football et leur **diffuseur français** (Ligue 1/2, Premier League, Liga, Bundesliga, Champions/Europa/Conference/Nations League, Coupe du Monde). Cible : hébergement **free-tier**. Fuseau : **Europe/Paris**.
+
+**Langues : `en` + `fr`, défaut `fr`.** Aucun texte visible en dur : côté web tout passe par `apps/web/src/lib/i18n.ts` (le catalogue `fr` est typé sur la forme exacte de `en`). Les **notifications push sont écrites côté serveur**, longtemps après le dernier échange avec le navigateur : le trigger émet un descripteur neutre et `apps/api/src/lib/notify.ts` le rend dans la langue que le device a stockée avec son abonnement (`push_subscription.lang`).
 
 ## Monorepo (Turborepo + Bun workspaces, `bun@1.3.13`)
 
@@ -35,7 +37,7 @@ Plan **API-Football Pro** (7 500 req/j). Budget quotidien partagé `DAILY_API_BU
 
 - **Commits** : Conventional Commits (hooks husky : `pre-commit` = lint-staged `eslint --fix`, `commit-msg` = commitlint). **Sujets en minuscules** (pas de sentence-case). Découper le travail en commits logiques.
 - Réutiliser les **types de `@lucarne/shared`** de bout en bout.
-- **UI en anglais** pour l'instant (i18n plus tard) ; dates via `en-GB`, fuseau `Europe/Paris`. Les touches FastText (R/G/Y/C) suivent la locale.
+- **Rien en dur côté texte** : toute copie visible passe par le catalogue i18n (web) ou `notify.ts` (notifications). Dates via `en-GB`, fuseau `Europe/Paris`. Les touches FastText (R/G/Y/C) suivent la locale.
 
 ## ⚠️ Sécurité
 
@@ -43,4 +45,4 @@ La clé API-Football vit **uniquement** dans `apps/api/.env.local` (gitignored).
 
 ## En cours
 
-Refonte **UI télétexte** en cours et **non committée** — voir la mémoire `teletext-conversion` (design language, fichiers, maquette de référence, reprise). Le dev de l'utilisateur tourne déjà (HMR) : ne pas relancer de serveur.
+La refonte **UI télétexte** est **livrée et committée** ; son design language reste la référence pour toute nouvelle vue — voir la mémoire `teletext-conversion` (tokens, classes, maquette d'origine). Le dev de l'utilisateur tourne déjà (HMR) : ne pas relancer de serveur.

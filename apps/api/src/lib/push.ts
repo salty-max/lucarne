@@ -3,6 +3,13 @@ import { db } from "@/db";
 import { chunkIds } from "@/lib/d1";
 import { pushSubscription } from "@/db/schema";
 import { log } from "@/lib/log";
+import {
+  asNotifyLang,
+  DEFAULT_NOTIFY_LANG,
+  renderNotify,
+  type NotifyLang,
+  type NotifyMessage,
+} from "@/lib/notify";
 import { sendPush, type PushSub, type Vapid } from "@/lib/webpush";
 
 export type PushTrigger =
@@ -114,6 +121,7 @@ export async function saveSubscription(
   sub: PushSub,
   deviceId: string | null,
   triggers: PushTrigger[],
+  lang: NotifyLang,
 ): Promise<void> {
   await db
     .insert(pushSubscription)
@@ -124,10 +132,11 @@ export async function saveSubscription(
       deviceId,
       teams: [],
       triggers,
+      lang,
     })
     .onConflictDoUpdate({
       target: pushSubscription.endpoint,
-      set: { p256dh: sub.keys.p256dh, auth: sub.keys.auth, deviceId, triggers },
+      set: { p256dh: sub.keys.p256dh, auth: sub.keys.auth, deviceId, triggers, lang },
     });
 }
 
@@ -137,13 +146,13 @@ export async function removeSubscription(endpoint: string): Promise<void> {
 
 /** One-off confirmation push, so enabling notifications proves the whole chain
  *  (encryption → push service → SW) end-to-end straight away. Best-effort. */
-export async function sendWelcome(sub: PushSub): Promise<void> {
+export async function sendWelcome(sub: PushSub, lang: NotifyLang): Promise<void> {
   const vapid = getVapid();
   if (!vapid) return;
   try {
     await sendPush(
       sub,
-      { title: "Lucarne", body: "Notifications activées ✓", tag: "welcome" },
+      { title: "Lucarne", body: renderNotify({ id: "welcome" }, lang), tag: "welcome" },
       vapid,
       { ttl: 60, urgency: "high" },
     );
@@ -152,9 +161,22 @@ export async function sendWelcome(sub: PushSub): Promise<void> {
   }
 }
 
-export type PushPayload = {
+/** What the service worker actually receives. */
+type PushPayload = {
   title: string;
   body: string;
+  matchId: number;
+  tag?: string;
+};
+
+/**
+ * A notification before it's been put into words: the trigger says WHAT happened
+ * and each recipient gets it rendered in their own language (see notify.ts).
+ */
+export type MatchNotification = {
+  /** Always the fixture ("Home – Away"), so two live matches are distinguishable. */
+  title: string;
+  message: NotifyMessage;
   matchId: number;
   /** Notification tag. Notifications sharing a tag REPLACE each other in the
    *  tray, so this is unique per event — one tag per match would mean full-time
@@ -177,7 +199,7 @@ export type DeliveryResult = {
  * and opted into `trigger`. Dead subscriptions (404/410) are pruned.
  */
 export async function deliver(
-  payload: PushPayload,
+  notification: MatchNotification,
   opts: { deviceIds: Set<string>; trigger: PushTrigger },
 ): Promise<DeliveryResult> {
   const vapid = getVapid();
@@ -192,6 +214,14 @@ export async function deliver(
   const dead: string[] = [];
   for (const s of targets) {
     try {
+      // Rendered per recipient: a device stores its UI language when it
+      // subscribes, and legacy rows (no language yet) get the default.
+      const payload: PushPayload = {
+        title: notification.title,
+        body: renderNotify(notification.message, asNotifyLang(s.lang) ?? DEFAULT_NOTIFY_LANG),
+        matchId: notification.matchId,
+        tag: notification.tag,
+      };
       const r = await sendPush(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         payload,

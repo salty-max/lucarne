@@ -15,6 +15,13 @@
       "when": 1784745943073,
       "tag": "0001_cute_omega_flight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785003960201,
+      "tag": "0002_common_leper_queen",
+      "breakpoints": true
     }
   ]
 }

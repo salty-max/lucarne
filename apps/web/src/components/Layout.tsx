@@ -39,10 +39,11 @@ export function Layout() {
   }, [favorites]);
 
   // Re-link an existing push subscription to this device (migrates subs made
-  // before push moved from teams to per-device surveillance).
+  // before push moved from teams to per-device surveillance), and re-send the
+  // language so server-written notification bodies follow the UI setting.
   useEffect(() => {
     if (notifications) void resyncPush();
-  }, [notifications]);
+  }, [notifications, lang]);
 
   const [now, setNow] = useState(() => new Date());
   const [entry, setEntry] = useState("");

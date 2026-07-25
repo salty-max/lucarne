@@ -1,0 +1,1 @@
+ALTER TABLE "push_subscription" ADD COLUMN "lang" text;
