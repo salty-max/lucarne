@@ -10,7 +10,8 @@ export type PushTrigger =
   | "yellow"
   | "red"
   | "lineups"
-  | "kickoff"
+  | "kickoff" // pre-match reminder (~10 min out)
+  | "start" // the match has actually kicked off
   | "ft"
   | "ht" // half-time
   | "phase" // extra time / penalty shootout starting
@@ -22,6 +23,7 @@ export const ALL_TRIGGERS: PushTrigger[] = [
   "red",
   "lineups",
   "kickoff",
+  "start",
   "ft",
   "ht",
   "phase",
@@ -45,7 +47,8 @@ export const ALL_TRIGGERS: PushTrigger[] = [
  */
 const TTL_SECONDS: Record<PushTrigger, number> = {
   lineups: 30 * 60, // useful right up to kickoff
-  kickoff: 10 * 60, // "starts in ~10 min" — moot after that
+  kickoff: 10 * 60, // "starts in ~10 min" — moot after that; `start` takes over
+  start: 60 * 60,
   goal: 60 * 60,
   yellow: 60 * 60,
   red: 60 * 60,

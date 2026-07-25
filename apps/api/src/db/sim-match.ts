@@ -12,7 +12,7 @@
  * page update live; if a push subscription follows the home/away team, real
  * notifications fire for the fake events.
  */
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { initLocalDb } from "@/db/local";
 import { db } from "@/db";
 import {
@@ -31,6 +31,7 @@ import { app } from "@/app";
 import { runEagerDrain, runLineupPoll, runLivePollTick } from "@/lib/poller";
 import { runLiveEnrich } from "@/lib/poller";
 import { runPushNotify } from "@/lib/pushTrigger";
+import { ALL_TRIGGERS } from "@/lib/push";
 import type { ApiEvent, ApiFixture, ApiLineup } from "@/lib/api-football";
 
 const arg = (name: string, def: string) =>
@@ -60,8 +61,13 @@ const state: {
   lineups: Record<number, ApiLineup[]>;
 } = { live: [], byId: {}, events: {}, lineups: {} };
 
+// Status the fake push service answers with. 201 = accepted; flip it to 500 to
+// simulate a push service hiccup (see the DELIVERY FAILURE stage).
+let pushStatus = 201;
+
 globalThis.fetch = (async (input: string | URL) => {
   const url = new URL(String(input));
+  if (url.origin === new URL(SIM_ENDPOINT).origin) return new Response(null, { status: pushStatus });
   const p = url.pathname;
   const q = url.searchParams;
   let data: unknown = [];
@@ -206,7 +212,7 @@ async function seed() {
     auth,
     deviceId: SIM_DEVICE,
     teams: [],
-    triggers: ["goal", "yellow", "red", "kickoff", "ft"],
+    triggers: ALL_TRIGGERS,
   });
 }
 
@@ -221,6 +227,39 @@ async function main() {
   season = Number(process.env.CURRENT_SEASON ?? "2026");
   console.log(`Simulating ${HOME} vs ${AWAY} (World Cup) — delay ${DELAY / 1000}s/stage\n`);
   await seed();
+
+  // The pre-match reminder is the only TIME-WINDOWED trigger (status scheduled +
+  // kickoff within ~10 min), so it's the one that silently never fires again if
+  // its window is missed — and it had no coverage at all. Rather than move the
+  // fixture, run the trigger with a clock set 10 min before its kickoff.
+  // Doubles as the regression test for a failed delivery: a push the service
+  // refuses must NOT be marked notified, or it's lost for good.
+  await stage("T-10  RAPPEL", "coup d'envoi imminent → notif de rappel, retentée si l'envoi échoue", async () => {
+    const beforeKO = () => runPushNotify(new Date(Date.now() - 10 * 60_000));
+    const simMatchId = (await dbMatch()).id;
+    const koRows = async () =>
+      (
+        await db
+          .select()
+          .from(pushNotified)
+          .where(and(eq(pushNotified.matchId, simMatchId), eq(pushNotified.key, "KO")))
+      ).length;
+
+    pushStatus = 500; // the push service hiccups
+    const failed = await beforeKO();
+    check("rappel coup d'envoi déclenché", failed.fired === 1, `fired=${failed.fired}`);
+    check("rien envoyé (service HS)", failed.sent === 0, `sent=${failed.sent}`);
+    check("PAS marqué notifié → retentable", (await koRows()) === 0);
+
+    pushStatus = 201; // …and recovers
+    const ok = await beforeKO();
+    check("rappel RE-tenté au tick suivant", ok.fired === 1, `fired=${ok.fired}`);
+    check("envoyé cette fois", ok.sent === 1, `sent=${ok.sent}`);
+    check("marqué notifié", (await koRows()) === 1);
+
+    const again = await beforeKO();
+    check("pas de doublon une fois envoyé", again.fired === 0, `fired=${again.fired}`);
+  });
 
   await stage("T-0  LINEUPS", "compos publiées → front: fiche match affiche les compos", async () => {
     state.lineups[FIX] = [lineup(HOME_API), lineup(AWAY_API)];
@@ -239,6 +278,9 @@ async function main() {
     check("polled", r.polled === true);
     check("status live", m.status === "live", m.status);
     check("elapsed 1", m.elapsed === 1);
+    // State-based, so unlike the T-10 reminder it can't be lost to a missed tick.
+    const p = await runPushNotify();
+    check("notif « c'est parti » déclenchée", p.fired === 1, `fired=${p.fired}`);
   });
 
   await stage("GOAL 23' (home)", "1-0 + buteur → front: score + notif but", async () => {

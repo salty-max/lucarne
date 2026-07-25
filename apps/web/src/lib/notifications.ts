@@ -4,7 +4,19 @@
 import { getDeviceId } from "@/lib/device";
 import { canInstall } from "@/lib/install";
 
-const TRIGGERS = ["goal", "yellow", "red", "lineups", "kickoff", "ft", "ht", "phase", "motm", "subst"];
+const TRIGGERS = [
+  "goal",
+  "yellow",
+  "red",
+  "lineups",
+  "kickoff", // pre-match reminder
+  "start", // the match kicking off
+  "ft",
+  "ht",
+  "phase",
+  "motm",
+  "subst",
+];
 
 export function pushSupported(): boolean {
   return (

@@ -4,6 +4,26 @@ Notable changes to Lucarne. Versioning follows [Semantic Versioning](https://sem
 the version shown in the app's **About** dialog comes from `apps/web/package.json`.
 Dates are Europe/Paris.
 
+## [0.3.1] — 2026-07-25
+
+### Fixed
+
+- **Notifications that never arrived.** Every push was sent with a two-minute
+  lifetime, so anything a sleeping phone didn't pick up in time was thrown away
+  by Apple/Google — never retried. Kick-off and full-time alerts, which land
+  when you're least likely to be holding your phone, were the usual casualties.
+  Each kind of alert now stays valid for as long as it's worth reading, and is
+  sent at high priority.
+- Notifications for the same match no longer overwrite each other: full-time
+  used to be replaced in the notification centre by the man-of-the-match alert
+  that follows it, and the kick-off reminder by the first goal.
+- An alert whose delivery failed is now retried instead of being written off.
+
+### Added
+
+- A notification when a watched match **actually kicks off**, on top of the
+  existing "starts in ~10 minutes" reminder.
+
 ## [0.3.0] — 2026-07-23
 
 ### Added

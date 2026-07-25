@@ -15,13 +15,15 @@ describe("pushTtl", () => {
   });
 
   it("keeps the match-defining moments alive for an hour", () => {
-    for (const t of ["goal", "red", "ft", "motm"] as const) {
+    for (const t of ["start", "goal", "red", "ft", "motm"] as const) {
       expect(pushTtl(t), t).toBe(60 * 60);
     }
   });
 
   it("does not outlive its own subject: the pre-match reminder dies at kickoff", () => {
-    // "starts in ~10 min" delivered half an hour late is noise.
+    // "starts in ~10 min" delivered half an hour late is noise — the state-based
+    // `start` push is what covers a phone that was away.
     expect(pushTtl("kickoff")).toBeLessThanOrEqual(10 * 60);
+    expect(pushTtl("kickoff")).toBeLessThan(pushTtl("start"));
   });
 });

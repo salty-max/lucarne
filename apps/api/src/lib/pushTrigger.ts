@@ -8,6 +8,14 @@ import { devicesWatching, loadWatchState } from "@/lib/surveillance";
 
 const KICKOFF_LEAD_MS = 11 * 60_000; // notify up to ~10 min before kickoff
 
+/** How far into a match the "it's under way" push may still fire. Unlike the
+ *  pre-match reminder this trigger is STATE-based (it fires on the first tick
+ *  that sees the match live, so a missed tick — a deploy, a slow cron — just
+ *  fires it a minute later), and this bound is what stops it announcing a
+ *  kick-off to someone who started watching at the hour mark. */
+const STARTED_MAX_ELAPSED = 15;
+const STARTED_MAX_MS = 30 * 60_000; // fallback when the API hasn't sent `elapsed` yet
+
 /** Notifiable category of an event, or null to ignore it. Used to bucket events
  *  per (team, category) so each gets a stable ordinal key (see runPushNotify).
  *  G = goal, PM = missed penalty, Y = yellow, Y2 = second yellow (sending-off),
@@ -125,6 +133,13 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
 
     // Phase transitions — each fires once.
     if (m.status === "live") {
+      // The match is under way. Driven by the STATE (not by a pre-kickoff time
+      // window like the reminder above), so it survives a missed tick: whatever
+      // else happens, a watched match always announces its own kick-off.
+      const started =
+        m.elapsed != null ? m.elapsed <= STARTED_MAX_ELAPSED : nowMs - m.kickoff.getTime() <= STARTED_MAX_MS;
+      if (started) await fire("START", "start", "🟢 Coup d'envoi");
+
       if (m.statusShort === "HT") await fire("HT", "ht", `⏸ Mi-temps · ${score(m)}`);
       else if (m.statusShort === "ET" || m.statusShort === "BT") await fire("ET", "phase", "⏱ Prolongations");
       else if (m.statusShort === "P") await fire("PENS", "phase", "🥅 Séance de tirs au but");
