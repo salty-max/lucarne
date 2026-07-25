@@ -29,6 +29,40 @@ export const ALL_TRIGGERS: PushTrigger[] = [
   "subst",
 ];
 
+/**
+ * Per-trigger message lifetime (seconds), handed to the push service as the RFC
+ * 8030 TTL. This is the single most important knob for actually RECEIVING a
+ * notification: a phone that's asleep, in low-power mode or off-network only
+ * picks its messages up when it wakes, and APNs/FCM silently DROP anything whose
+ * TTL has run out in the meantime. So each trigger gets the window over which its
+ * message is still worth reading:
+ *   - in-play facts (goals, cards, phases) stay true for the rest of the match;
+ *   - the pre-kickoff reminder is pointless once the match has started;
+ *   - full-time and man-of-the-match are worth an hour.
+ * (Before this, every push shipped a flat 120 s — anything the phone didn't pick
+ * up within two minutes was thrown away, which is exactly how kick-off and
+ * full-time notifications went missing.)
+ */
+const TTL_SECONDS: Record<PushTrigger, number> = {
+  lineups: 30 * 60, // useful right up to kickoff
+  kickoff: 10 * 60, // "starts in ~10 min" — moot after that
+  goal: 60 * 60,
+  yellow: 60 * 60,
+  red: 60 * 60,
+  subst: 30 * 60,
+  ht: 30 * 60,
+  phase: 30 * 60,
+  ft: 60 * 60,
+  motm: 60 * 60,
+};
+
+/** How long the push service may hold this trigger's message (seconds). The map
+ *  is a total `Record<PushTrigger, …>`, so a new trigger can't silently ship
+ *  without one. */
+export function pushTtl(trigger: PushTrigger): number {
+  return TTL_SECONDS[trigger];
+}
+
 /** VAPID config from the environment, or null if push isn't set up. */
 export function getVapid(): Vapid | null {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -104,7 +138,12 @@ export async function sendWelcome(sub: PushSub): Promise<void> {
   const vapid = getVapid();
   if (!vapid) return;
   try {
-    await sendPush(sub, { title: "Lucarne", body: "Notifications activées ✓", tag: "welcome" }, vapid, 60);
+    await sendPush(
+      sub,
+      { title: "Lucarne", body: "Notifications activées ✓", tag: "welcome" },
+      vapid,
+      { ttl: 60, urgency: "high" },
+    );
   } catch {
     /* best effort */
   }
@@ -114,25 +153,37 @@ export type PushPayload = {
   title: string;
   body: string;
   matchId: number;
-  tag?: string; // coalesce related notifications (e.g. one per match)
+  /** Notification tag. Notifications sharing a tag REPLACE each other in the
+   *  tray, so this is unique per event — one tag per match would mean full-time
+   *  being silently swallowed by the man-of-the-match push that follows it. */
+  tag?: string;
+};
+
+/**
+ * What a fan-out actually achieved. `targets` (how many subscriptions we tried)
+ * is what lets the caller tell "nobody to notify" from "everybody failed" — the
+ * first is final, the second deserves a retry on the next tick.
+ */
+export type DeliveryResult = {
+  sent: number; // pushes the push services accepted
+  targets: number; // subscriptions we attempted
 };
 
 /**
  * Fan a notification out to every subscription whose DEVICE surveils this match
- * and opted into `trigger`. Dead subscriptions (404/410) are pruned. Returns how
- * many pushes were accepted by the push services.
+ * and opted into `trigger`. Dead subscriptions (404/410) are pruned.
  */
 export async function deliver(
   payload: PushPayload,
   opts: { deviceIds: Set<string>; trigger: PushTrigger },
-): Promise<number> {
+): Promise<DeliveryResult> {
   const vapid = getVapid();
-  if (!vapid) return 0;
+  if (!vapid) return { sent: 0, targets: 0 };
   const subs = await db.select().from(pushSubscription);
   const targets = subs.filter(
     (s) => s.deviceId != null && opts.deviceIds.has(s.deviceId) && s.triggers.includes(opts.trigger),
   );
-  if (targets.length === 0) return 0;
+  if (targets.length === 0) return { sent: 0, targets: 0 };
 
   let sent = 0;
   const dead: string[] = [];
@@ -142,7 +193,9 @@ export async function deliver(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         payload,
         vapid,
-        payload.tag === "ft" ? 3600 : 120,
+        // Live football is worthless late: ask for immediate delivery, and give
+        // the message a lifetime that matches how long it stays interesting.
+        { ttl: pushTtl(opts.trigger), urgency: "high" },
       );
       if (r.ok) sent++;
       else if (r.gone) dead.push(s.endpoint);
@@ -154,5 +207,8 @@ export async function deliver(
   for (const slice of chunkIds(dead)) {
     await db.delete(pushSubscription).where(inArray(pushSubscription.endpoint, slice));
   }
-  return sent;
+  // A subscription the push service has dropped is not a failure to retry — it's
+  // gone. Don't count it as a target, or its match's notifications would be
+  // re-attempted every tick for nobody.
+  return { sent, targets: targets.length - dead.length };
 }

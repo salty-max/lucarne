@@ -54,6 +54,7 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       status: matches.status,
       statusShort: matches.statusShort,
       kickoff: matches.kickoff,
+      elapsed: matches.elapsed,
       homeGoals: matches.homeGoals,
       awayGoals: matches.awayGoals,
       homeId: matches.homeTeamId,
@@ -97,17 +98,29 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
       ),
     );
     const fresh: string[] = [];
+    /** Send one notification, once. The dedup key is only burned when the push is
+     *  actually OUT (or there was nobody to send it to): a push-service hiccup
+     *  used to mark it notified regardless, losing the event for good instead of
+     *  retrying it on the next tick. Retries are bounded by the match window of
+     *  the query above, so a permanently failing endpoint can't be chased forever. */
     const fire = async (key: string, trigger: PushTrigger, body: string) => {
       if (notified.has(key)) return;
-      fresh.push(key);
       fired++;
-      sent += await deliver({ title, body, matchId: m.id, tag: `match-${m.id}` }, { deviceIds: watchers, trigger });
+      // One tag PER EVENT: notifications sharing a tag replace each other in the
+      // tray, so a single match-wide tag meant full-time was wiped out by the
+      // man-of-the-match push, and the kick-off by the first goal.
+      const r = await deliver(
+        { title, body, matchId: m.id, tag: `m${m.id}:${key}` },
+        { deviceIds: watchers, trigger },
+      );
+      sent += r.sent;
+      if (r.sent > 0 || r.targets === 0) fresh.push(key);
     };
 
     // Lineups (~40 min out) + kickoff reminder.
     if (m.lineupsFetchedAt != null) await fire("LINEUPS", "lineups", "Compositions disponibles");
     if (m.status === "scheduled" && m.kickoff.getTime() - nowMs <= KICKOFF_LEAD_MS && m.kickoff.getTime() > nowMs) {
-      await fire("KO", "kickoff", "Coup d'envoi imminent");
+      await fire("KO", "kickoff", "⏰ Coup d'envoi imminent");
     }
 
     // Phase transitions — each fires once.
@@ -175,12 +188,18 @@ export async function runPushNotify(now = new Date()): Promise<{ sent: number; f
             const team = teamOf(e);
             return team ? `${team} · ${io}` : io;
           });
-          list.forEach((e) => fresh.push(subKey(e)));
           fired++;
-          sent += await deliver(
-            { title, body: `🔄 ${min}\n${lines.join("\n")}`, matchId: m.id, tag: `match-${m.id}` },
+          const r = await deliver(
+            {
+              title,
+              body: `🔄 ${min}\n${lines.join("\n")}`,
+              matchId: m.id,
+              tag: `m${m.id}:SUBS:${min}`,
+            },
             { deviceIds: watchers, trigger: "subst" },
           );
+          sent += r.sent;
+          if (r.sent > 0 || r.targets === 0) list.forEach((e) => fresh.push(subKey(e)));
         }
       }
     }

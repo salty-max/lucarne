@@ -135,12 +135,27 @@ export async function encryptPayload(
 
 export type SendResult = { ok: boolean; status: number; gone: boolean };
 
-/** Deliver one push. `gone` = the subscription is dead (404/410) → drop it. */
+/**
+ * RFC 8030 §5.3 message urgency. The push service uses it to decide whether a
+ * message is worth waking a sleeping device for; APNs maps `high` to priority 10
+ * (deliver now) and the lower levels to batched delivery. Live match alerts are
+ * worthless late, so they ship `high`.
+ */
+export type PushUrgency = "very-low" | "low" | "normal" | "high";
+
+/**
+ * Deliver one push. `gone` = the subscription is dead (404/410) → drop it.
+ *
+ * `ttl` (seconds) is how long the push service may hold the message for a device
+ * it can't reach — a phone with the screen off, in iOS low-power or Android Doze.
+ * Past it the message is DISCARDED and never retried, so it has to cover the
+ * window over which the notification is still worth reading (see `pushTtl`).
+ */
 export async function sendPush(
   sub: PushSub,
   payload: unknown,
   vapid: Vapid,
-  ttl = 60,
+  { ttl = 60, urgency = "normal" }: { ttl?: number; urgency?: PushUrgency } = {},
 ): Promise<SendResult> {
   const body = await encryptPayload(sub, te(JSON.stringify(payload)));
   const res = await fetch(sub.endpoint, {
@@ -150,6 +165,7 @@ export async function sendPush(
       "Content-Encoding": "aes128gcm",
       "Content-Type": "application/octet-stream",
       TTL: String(ttl),
+      Urgency: urgency,
     },
     body: body as BodyInit,
   });
