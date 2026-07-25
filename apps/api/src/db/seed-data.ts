@@ -29,6 +29,18 @@ const RULES: {
   { comp: "ligue-1", broadcaster: "ligue-1-plus", coverage: "partial", note: "8 of 9 matches" },
   { comp: "ligue-1", broadcaster: "amazon-prime", coverage: "partial", note: "Ligue 1 Pass — selected fixtures" },
   { comp: "ligue-2", broadcaster: "bein-sports", coverage: "full", note: "All of Ligue 2 BKT" },
+  // Ligue 3 only exists from 2026-07-01 (the National turning professional), and
+  // Ligue 1+ took it exclusively for three seasons — hence the explicit `from`,
+  // so the rule can't be applied to anything played before the competition did.
+  { comp: "ligue-3", broadcaster: "ligue-1-plus", coverage: "full", note: "Exclusive — three seasons from 2026-27", from: "2026-07-01" },
+  // The Trophée des Champions follows the Ligue 1 rights cycle: the August 2026
+  // edition (Lens–PSG) is on Ligue 1+, whereas the January 2026 one predates that
+  // deal — so this is scoped to the new cycle rather than the default window.
+  { comp: "trophee-des-champions", broadcaster: "ligue-1-plus", coverage: "full", note: "With the Ligue 1 rights", from: "2026-07-01" },
+  // Coupe de France: DELIBERATELY no rule. The beIN SPORTS + France Télévisions
+  // deals expired after 2025-26 and, as of July 2026, no 2026-27 broadcaster has
+  // been signed. Matches therefore show with no channel — which is the truth, not
+  // a gap to fill in. Add the rule once the FFF announces the buyer.
   { comp: "premier-league", broadcaster: "canal-plus", coverage: "full", note: "Exclusive until 2028" },
   { comp: "la-liga", broadcaster: "bein-sports", coverage: "full", note: "Until 2027" },
   { comp: "bundesliga", broadcaster: "bein-sports", coverage: "full", note: "Until 2029" },

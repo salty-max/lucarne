@@ -1,8 +1,8 @@
 # Lucarne ⚽
 
-The complete schedule of football fixtures and their **French TV broadcaster** — Ligue 1 &
-2, the Premier League, La Liga, the Bundesliga, the Champions / Europa / Conference /
-Nations League, and the World Cup.
+The complete schedule of football fixtures and their **French TV broadcaster** — Ligue 1,
+2 & 3, the Coupe de France, the Trophée des Champions, the Premier League, La Liga, the
+Bundesliga, the Champions / Europa / Conference / Nations League, and the World Cup.
 
 The infrastructure runs on **free-tier hosting** (Cloudflare Workers + D1); the one paid
 dependency is **API-Football**, since the current season isn't available on its free plan.
@@ -95,6 +95,10 @@ they live in `broadcast_rules` bounded by `[valid_from, valid_to]`.
 | Competition | French broadcaster |
 |---|---|
 | Ligue 1 | Ligue 1+ (8 of 9) + Amazon Prime Video (marquee matches) |
+| Ligue 2 | beIN SPORTS |
+| Ligue 3 | Ligue 1+ (exclusive, three seasons from 2026-27) |
+| Coupe de France | *none* — the beIN + France Télévisions deals expired after 2025-26 and no 2026-27 buyer has signed |
+| Trophée des Champions | Ligue 1+ (follows the Ligue 1 cycle) |
 | Premier League | CANAL+ |
 | La Liga | beIN SPORTS |
 | Bundesliga | beIN SPORTS |

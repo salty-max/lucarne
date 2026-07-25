@@ -17,6 +17,19 @@ export type CompetitionSeed = {
 export const COMPETITIONS: CompetitionSeed[] = [
   { slug: "ligue-1", name: "Ligue 1", apiFootballId: 61, country: "France", type: "league" },
   { slug: "ligue-2", name: "Ligue 2", apiFootballId: 62, country: "France", type: "league" },
+  // France's third tier turned professional on 2026-07-01: the Championnat
+  // National became **Ligue 3** (18 clubs, 2026-08-07 → 2027-05-21). API-Football
+  // kept the old label — league 63 is still called "National 1" there — but it's
+  // the same competition and season 2026 already holds the full 306-fixture
+  // calendar, so no override is needed.
+  { slug: "ligue-3", name: "Ligue 3", apiFootballId: 63, country: "France", type: "league" },
+  // The Coupe de France only enters API-Football once its LFP-stage draw is made
+  // (the 2025-26 edition ran 2025-11-14 → 2026-05-22), so season 2026 is EMPTY
+  // until the autumn and the competition shows up with no matches until then —
+  // expected, and it fills itself from the sync cron. No season override: the
+  // API labels the 2025-26 edition 2025, so the default already points at 2026-27.
+  { slug: "coupe-de-france", name: "Coupe de France", apiFootballId: 66, country: "France", type: "cup" },
+  { slug: "trophee-des-champions", name: "Trophée des Champions", apiFootballId: 526, country: "France", type: "cup" },
   { slug: "premier-league", name: "Premier League", apiFootballId: 39, country: "England", type: "league" },
   { slug: "la-liga", name: "La Liga", apiFootballId: 140, country: "Spain", type: "league" },
   { slug: "bundesliga", name: "Bundesliga", apiFootballId: 78, country: "Germany", type: "league" },

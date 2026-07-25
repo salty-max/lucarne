@@ -4,6 +4,23 @@ Notable changes to Lucarne. Versioning follows [Semantic Versioning](https://sem
 the version shown in the app's **About** dialog comes from `apps/web/package.json`.
 Dates are Europe/Paris.
 
+## [0.4.0] — 2026-07-26
+
+### Added
+
+- Three French competitions: **Ligue 3** (the Championnat National, professional
+  from 1 July 2026 — 18 clubs, 7 Aug → 21 May, exclusively on Ligue 1+), the
+  **Coupe de France**, and the **Trophée des Champions**.
+
+### Notes
+
+- The Coupe de France shows **no broadcaster**: the beIN SPORTS and France
+  Télévisions deals expired after 2025-26 and no 2026-27 buyer has signed yet.
+- Its 2026-27 fixtures don't exist yet either — the competition starts in
+  November, and the schedule fills itself in as soon as the draw is published.
+- The **Coupe de la Ligue** could not be added: it was abolished in 2020 and the
+  data source has nothing past the 2019 edition.
+
 ## [0.3.1] — 2026-07-25
 
 ### Fixed
