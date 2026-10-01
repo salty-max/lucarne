@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useT } from "@/lib/i18n";
+import { applyUpdate } from "@/lib/swUpdate";
 
 // How often to ask the browser to re-check for a newer service worker while the
 // app stays open. Without this, vite-plugin-pwa only checks at cold start — so an
@@ -18,12 +20,13 @@ const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000; // 30 min
  */
 export function UpdatePrompt() {
   const t = useT();
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const {
     needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
+      registrationRef.current = registration;
       const recheck = () => {
         // Offline / transient failures are fine — the next tick retries.
         void registration.update().catch(() => {});
@@ -45,7 +48,7 @@ export function UpdatePrompt() {
         {t.update.available}
       </span>
       <button
-        onClick={() => updateServiceWorker(true)}
+        onClick={() => applyUpdate(registrationRef.current, { reload: () => window.location.reload() })}
         className="tt-tag bg-[hsl(var(--tt-green))] py-1 text-[hsl(var(--tt-green-on))]"
       >
         {t.update.reload}

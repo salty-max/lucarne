@@ -45,6 +45,10 @@ export default defineConfig(() => ({
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
         importScripts: ["push-sw.js"], // push + notificationclick handlers
+        // Take control of open pages as soon as a SW activates. Without it the
+        // first session after install stays uncontrolled: no controllerchange,
+        // so the update banner's Reload had nothing to react to.
+        clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,ico}"],
         // Keep the precache to the app shell: skip the unused crest/logo assets
         // (~9.5 MB) and the iOS launch images (~335 KB, fetched on demand by iOS).

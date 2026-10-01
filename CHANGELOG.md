@@ -4,6 +4,15 @@ Notable changes to Lucarne. Versioning follows [Semantic Versioning](https://sem
 the version shown in the app's **About** dialog comes from `apps/web/package.json`.
 Dates are Europe/Paris.
 
+## [0.4.1] — 2026-10-01
+
+### Fixed
+
+- The "new version — reload" banner did nothing during the first session after
+  installing the PWA: the page wasn't controlled by the service worker yet, so
+  the plugin's reload never fired. The button now always reloads into the new
+  version, and the service worker takes control of open pages on activation.
+
 ## [0.4.0] — 2026-07-26
 
 ### Added
